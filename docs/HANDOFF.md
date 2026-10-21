@@ -63,28 +63,26 @@ control patches.
 | `b075850` (tag `backup-before-redesign`) | Full port + E2E fixes (below) |
 | `71fdd50` | Keep-list (47 screens), reports/dashboards APIs off, Windows-safe `npm run dev`, keep-list test, audit/plan doc |
 | `e34a1a7` | Reports & dashboards removed from codebase; `reports/format.js` -> `lib/format.js` |
+| `182dce1` | Phase 1: specs/page code trimmed to the keep-list (now 56 screens), `lib/sql.js`, parity scripts pruned. Regression equal to baseline |
+| `551ef5f` | Phases 2-3: client on the **QMAS design system** (owner asked to use QMAS's design) |
 
 E2E test (21 Oct, browser, test DB): freezer F390GL24 (22600118), route 12502 (17 stations) from order PO82603053 to
 FG label; rework, hold/cancel, ~47 scenarios. Report: https://claude.ai/artifact/A3Ddeh4NKpLysYmtfPUaQS (private to
 the owner). Bugs fixed then: write.js key check (stage completion), WIPCapture ViewState on first load, dropdown items
 not posted (defect add / assignment reset), first-table key set on row (no double key).
 
-## 5. In progress right now (UNCOMMITTED, Phase 1)
+## 5. Design (Phases 2-3, done)
 
-Working-tree changes not yet committed:
-- `forms.json` trimmed 335 -> 47 specs (2.6 MB -> 375 KB); `extract-forms.mjs` filters by KEEP.
-- `forms/routes.js`: `FORMS` = specs ∩ KEEP (PORTED/ENABLED/NOT_USED lists removed).
-- `pages.js`: 12 hidden screens' sections removed (work-centre availability/tax, monthly/daily/planning order/machine
-  availability/process-order plan, area cleaning, workstation utilisation, scrap posting, ProcessOrder, ReWorkOrder,
-  ProductionCapture); `PAGE_CANCEL`/`PAGE_UPDATE`/`p2` moved to the shared part; orphan imports removed.
-- `planning.js` deleted; unused exports removed (production.js validateJobcard/processActivityWithoutRouting,
-  qc.js qcChecked, write.js remove).
-- New `lib/sql.js`; duplicated `num`/`lit`/`digitsOrEmpty`/`requireDigits` removed from production/quality/labels/pages.
-- Parity scripts pruned to kept screens (events/forms/print/grid-db/page-writes/production-writes/upload);
-  `order-writes-parity.mjs` deleted.
+The owner chose QMAS's design (`Custom App/QMAS/frontend`) instead of a new one. Copied from QMAS: index.css,
+styles/dark.css, app/theme.js (key `garuda.theme`), app/confirm.js + layouts/ConfirmHost.jsx, ui/ (Button, Badge,
+fields, Loader, Modal, PopMenu, DataTable, PageHeader), utils/ (prefs, csv), logo/login background. Deps added:
+lucide-react, react-hot-toast. Shell: layouts/Navbar, Sidebar, CommandPalette (Ctrl+K), nav.js (group order/icons,
+home tiles). Engine screens: `pages/forms/` EngineForm (container) -> RecordList (DataTable, server-paged) /
+RecordForm (fire/act logic unchanged) + FormControls, Grid, QCPanel, engineState. Calendar control dropped (unused).
+Checked in the browser (test DB): home, sidebar, UOM list + record, WIP Capture department postback.
+Regression suites for the server were not rerun after this commit (client-only change).
 
-Verified so far: `node --check` all files, 23/23 unit tests, a dead-code scan (no unused imports/declarations left).
-**Regression still running when this was written** (background, output in the agent's temp dir; just rerun it):
+Parity regression commands (run ONE AT A TIME, they share rows):
 
 ```
 cd server
@@ -99,11 +97,8 @@ node --env-file=.env scripts/parity/page-writes-parity.mjs "%B%"
 node --env-file=.env scripts/parity/production-writes-parity.mjs "%B%"
 node --env-file=.env scripts/parity/grid-db-parity.mjs "%B%"
 ```
-Expected baselines before Phase 1: events 294/300 identical (5 fail alike, 1 known ParameterForm harness limit);
-forms ~206/231 (rest timestamps / fail alike); WIP comp/qc/fg identical; print 9/10 (1 fails alike); rework 2/2.
-Run suites ONE AT A TIME (they share rows). wip/print parity start their own listener on 127.0.0.1:9100.
-**Next step: check results; if equal to baseline, commit Phase 1** ("Phase 1: trim specs and page code to the
-shop-floor scope; one SQL guard module").
+Baselines after Phase 1: events 196/202 (5 fail alike, 1 ParameterForm harness limit); forms 127/138, 0 different;
+WIP comp/qc/fg identical; print 9/10 (1 fails alike); rework/upload/page-writes/production-writes/grid-db identical.
 
 ## 6. Agreed decisions (owner, 21 Oct)
 
@@ -121,17 +116,7 @@ Recovery of anything removed: `git checkout backup-before-redesign -- <path>` or
 
 ## 7. Remaining plan (see AUDIT-AND-PLAN.md §3)
 
-- **Phase 2 design system (next):** tokens in `client/src/index.css` (@theme): steel-blue primary, status colours
-  (ok green, hold amber, rejected red, info blue, rework violet), system font stack (plant PCs may be offline),
-  ≥40px targets, tabular numbers. Components in `client/src/ui/`: Button, Field/Input/Select/Textarea, Card,
-  PageHeader, Badge/StatusBadge, Banner, Toast (provider+hook), ConfirmDialog (native <dialog>), Spinner/Skeleton,
-  EmptyState, Table, Icon (inline SVG, no new dependency). New AppLayout (grouped sidebar with icons, collapsible,
-  Ctrl+K menu search, user/line/department chip, logout/change password), Home page with big shop-floor tiles,
-  restyled Login/ChangePassword. Two menu groups are both captioned "Production" (setup vs floor): rename the setup
-  one to "Production Setup".
-- **Phase 3:** rebuild EngineForm on the design system (sections, inline validation, dirty-state guard, confirm
-  delete, server-paged lists); split remaining master-screen code out of pages.js into `forms/screens/*.js`.
-- **Phase 4:** dedicated flow screens + APIs (scan-first WIP Capture: station -> serial, big status banner, sound/
+- **Phase 4 (next), on the QMAS ui/ kit:** dedicated flow screens + APIs (scan-first WIP Capture: station -> serial, big status banner, sound/
   colour feedback, route progress, component checklist, QC panel with checklist/defects, FG serial/asset/printer).
 - **Phase 5:** messages + rule fixes (§6). **Phase 6:** parameterise remaining spliced SQL, login rate limit,
   security headers, secure cookie by config, request IDs + log file, Serial index. **Phase 7:** cleanup, README
