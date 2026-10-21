@@ -9,27 +9,27 @@ import Badge from '../../ui/Badge.jsx';
 import Button from '../../ui/Button.jsx';
 import { FormError } from '../../ui/fields.jsx';
 import Modal, { ModalFooter } from '../../ui/Modal.jsx';
-import { applyPatch, panelState, uiOf, valuesOf } from './engineState.js';
+import { uiOf, valuesOf } from './engineState.js';
 import { CheckList, ComboField, EngineField, FileField, GuideView, ImageField, Panel, RoleTree } from './FormControls.jsx';
 import Grid from './Grid.jsx';
 import { PAGES } from './pages.js';
 import QCPanel from './QCPanel.jsx';
+import useEngine from './useEngine.js';
+import { ScanBox } from '../flow/kit.jsx';
 
 const EDITOR_TYPES = ['TextBox', 'DropDownList', 'CheckBox', 'Button', 'ImageButton', 'FileUpload', 'Image'];
+const WIDE = ['GridView', 'QC', 'CheckBoxList', 'TreeView', 'Picture', 'Footer', 'Panel'];
+const INPUT_TYPES = [...EDITOR_TYPES, 'ComboBox', 'GridView', 'QC', 'CheckBoxList', 'TreeView'];
 
-export default function RecordForm({ path, state, mode: initialMode, notice, buttons: specButtons, callNewOnSave, copyOptions, events, print, printers, onCopy, onBack, onDone, onReload, onListFilter }) {
+export default function RecordForm({ path, state, mode: initialMode, notice, buttons: specButtons, callNewOnSave, copyOptions, events, print, printers, onCopy, onBack, onDone, onReload, onListFilter, layout }) {
   const page = PAGES[path] ?? {};
   // TitleControl buttons, as the page's display code may switch them for the record (e.g. Display_Update(false))
-  const [buttonPatch, setButtonPatch] = useState({});
-  const buttons = { ...specButtons, ...(state.buttons ?? {}), ...buttonPatch };
+  const e = useEngine({ path, state, events, onDone, onListFilter, initialError: notice && !notice.ok ? notice.text : undefined });
+  const { controls, values, setValues, viewState, busy, setBusy, error, setError, fire, change, pick, shown, live, vis, ctl } = e;
+  const buttons = { ...specButtons, ...(state.buttons ?? {}), ...e.buttonPatch };
   const [mode, setMode] = useState(initialMode);
-  const [controls, setControls] = useState(state.controls);
-  const [values, setValues] = useState(() => valuesOf(state));
-  const [error, setError] = useState(notice && !notice.ok ? notice.text : state.statusMessage ?? '');
-  const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(null); // the reason being typed, or null
   const [copyKey, setCopyKey] = useState('');
-  const [viewState, setViewState] = useState(state.viewState ?? {});
   const [printer, setPrinter] = useState(printers?.value ?? '');
   const cancelled = state.recordStatus === 200;
   const saved = useRef(JSON.stringify(valuesOf(state)));
@@ -37,50 +37,7 @@ export default function RecordForm({ path, state, mode: initialMode, notice, but
   // a success notice from the step before (saved, deleted, ...) shows once as a toast
   useState(() => notice?.ok && notice.text && toast.success(notice.text === '✔' ? 'Done' : notice.text));
 
-  const report = (r) => {
-    if (r.alert) setError(r.alert);
-    else {
-      setError('');
-      if (r.success) toast.success(r.message && r.message !== '✔' ? r.message : 'Done');
-    }
-  };
-
-  // Postback: a control with a code-behind handler (AutoPostBack, a page button, a grid command) sends the form and
-  // the page's ViewState; the server returns { set: { id: patch }, alert?, viewState, ... }.
-  async function fire(control, next, arg, base = controls, index) {
-    setBusy(true);
-    try {
-      const r = await api('/forms/event', { method: 'POST', body: { path, control, values: next, viewState, arg, index, ui: uiOf(base) } });
-      const p = applyPatch(base, next, r.set);
-      setControls(p.controls);
-      setValues(p.values);
-      setViewState(r.viewState ?? viewState);
-      if (r.redirect) return void window.location.assign(r.redirect);
-      if (r.list) onListFilter?.(r.list);
-      if (r.buttons) setButtonPatch((b) => ({ ...b, ...r.buttons }));
-      // FooterControl's Save succeeded: the form starts again
-      if (r.reset) return void onDone(r.alert ? { ok: false, text: r.alert } : { ok: true, text: r.message || 'Saved' });
-      report(r);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  function change(id, v) {
-    const next = { ...values, [id]: v };
-    setValues(next);
-    if (events.includes(id)) fire(id, next);
-  }
   const set = (id) => (v) => change(id, v);
-  // ComboBox: the picked row becomes the list's only item, then its handler (if the page wired one) runs
-  const pick = (id) => (item) => {
-    const ctl = controls.map((c) => (c.id === id ? { ...c, options: [item] } : c));
-    const next = { ...values, [id]: item.value };
-    setControls(ctl);
-    setValues(next);
-    if (events.includes(id)) fire(id, next, undefined, ctl);
-  };
 
   async function printLabel() {
     setBusy(true);
@@ -131,7 +88,6 @@ export default function RecordForm({ path, state, mode: initialMode, notice, but
     onBack();
   }
 
-  const { shown, live } = panelState(controls);
   // the page's own editors (and engine controls with an empty Tag), in markup order
   const searchBoxes = new Set(Object.keys(page.checkSearch ?? {}));
   const editors = controls
@@ -147,6 +103,82 @@ export default function RecordForm({ path, state, mode: initialMode, notice, but
   }, [controls]);
   const label = (c) => page.labels?.[c.id] ?? c.caption ?? c.column;
   const searched = new Set(Object.values(page.checkSearch ?? {}));
+
+
+  /** a control that takes a whole row: list, tree, guide, picture, footer save, checklist, grid */
+  function block(c) {
+    if (c.type === 'CheckBoxList') return <CheckList key={c.id} c={c} label={label(c)} value={values[c.id]} onChange={set(c.id)} search={searched.has(c.id)} />;
+    if (c.type === 'TreeView' && c.nodes) return <RoleTree key={c.id} c={c} label={label(c)} value={values[c.id]} onChange={set(c.id)} />;
+    if (c.type === 'Panel' && c.guide) return <GuideView key={c.id} g={c.guide} />;
+    if (c.type === 'Picture') return values[c.id] ? <Panel key={c.id}><img src={String(values[c.id]).replace(/^~\//, '/')} alt="" className="max-h-[70vh] rounded-lg" /></Panel> : null;
+    if (c.type === 'Footer') {
+      return events.includes('Footer:save') ? (
+        <div key={c.id} className="flex justify-end">
+          <Button icon={Save} loading={busy} disabled={cancelled} onClick={() => fire('Footer:save', values)}>Save</Button>
+        </div>
+      ) : null;
+    }
+    if (c.type === 'QC') {
+      const qc = (next) => ({ ...values, [c.id]: next });
+      return <QCPanel key={c.id} s={values[c.id]} busy={busy} onChange={(next) => setValues(qc(next))} onEvent={(name, next = values[c.id], arg, i) => fire(name.replace(/^QC:/, `${c.id}:`), qc(next), arg, controls, i)} />;
+    }
+    if (c.type === 'GridView') {
+      const can = (k) => !cancelled && c.columns.some((x) => x.kind === 'commandfield' && x[k]) && events.includes(`${c.id}:${k}`);
+      return (
+        <Grid
+          key={c.id}
+          c={c}
+          rows={values[c.id]}
+          onSelect={can('select') ? (k, i) => fire(`${c.id}:select`, values, k, controls, i) : null}
+          onDelete={can('delete') ? (k, i) => fire(`${c.id}:delete`, values, k, controls, i) : null}
+          onCommand={(cmdName, k, i) => events.includes(`${c.id}:${cmdName}`) && fire(`${c.id}:${cmdName}`, values, k, controls, i)}
+          onEdit={(i, field, v) => setValues((x) => ({ ...x, [c.id]: x[c.id].map((r, j) => (j === i ? { ...r, [field]: v } : r)) }))}
+        />
+      );
+    }
+    return null;
+  }
+
+  const pairLabel = new Map(fields.map((x) => [x.c.id, x.label]));
+  /** one control of a layout section, under its caption */
+  function one(c, l = pairLabel.get(c.id) ?? c.caption ?? page.labels?.[c.id] ?? c.column ?? '') {
+    if (WIDE.includes(c.type)) return <div key={c.id} className="col-span-full min-w-0">{block(c)}</div>;
+    if (c.type === 'Button' || c.type === 'ImageButton') {
+      return events.includes(c.id) ? (
+        <div key={c.id} className="self-end">
+          <Button loading={busy} disabled={!c.enabled || cancelled} onClick={() => fire(c.id, values)}>{l || (c.text ?? '').trim() || 'Go'}</Button>
+        </div>
+      ) : null;
+    }
+    if (c.type === 'ComboBox') return <ComboField key={c.id} path={path} c={c} label={l} value={values[c.id]} onPick={pick(c.id)} />;
+    if (c.type === 'Image') return <ImageField key={c.id} c={c} label={l} value={values[c.id]} onChange={set(c.id)} />;
+    if (c.type === 'FileUpload') return <FileField key={c.id} c={c} label={l} value={values[c.id]} onChange={(v) => setValues({ ...values, [c.id]: v })} />;
+    if (c.type === 'Label') return (c.text ?? '') !== '' ? <span key={c.id} className="self-end pb-2.5 text-sm text-slate-600">{c.text}</span> : null;
+    return <EngineField key={c.id} c={live(c)} label={l} value={values[c.id]} onChange={set(c.id)} />;
+  }
+
+  /** a dedicated screen's sections (layouts.js); visible controls a layout does not list follow under "Other details" */
+  function sections() {
+    const listed = new Set(layout.sections.flatMap((x) => [...x.ids.map((i) => (typeof i === 'string' ? i : i.id)), ...(x.scan ? [x.scan.box, x.scan.go] : [])]));
+    const rest = controls.filter((c) => c.id && !listed.has(c.id) && !layout.hide?.includes(c.id) && INPUT_TYPES.includes(c.type) && vis(c.id) && (c.type !== 'Button' || events.includes(c.id)));
+    const sections = [...layout.sections, ...(rest.length ? [{ title: 'Other details', ids: rest.map((c) => c.id) }] : [])];
+    return sections.map((x) => {
+      const items = x.ids.map((i) => (typeof i === 'string' ? { id: i } : i)).filter((i) => vis(i.id));
+      const scan = x.scan && vis(x.scan.box);
+      if (!items.length && !scan) return null;
+      const Icon = x.icon;
+      return (
+        <Panel key={x.title} title={<span className="flex items-center gap-2">{Icon && <Icon className="w-4 h-4 text-blue-600" />} {x.title}</span>}>
+          <div className="space-y-4">
+            {scan && (
+              <ScanBox label={x.scan.label} placeholder={x.scan.placeholder} value={values[x.scan.box]} onChange={(v) => change(x.scan.box, v)} onScan={() => fire(x.scan.go, values)} locked={ctl(x.scan.go)?.text === 'Clr'} onClear={() => fire(x.scan.go, values)} busy={busy} disabled={cancelled} />
+            )}
+            {items.length > 0 && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{items.map((i) => one(ctl(i.id), i.label))}</div>}
+          </div>
+        </Panel>
+      );
+    });
+  }
 
   return (
     <form
@@ -193,7 +225,7 @@ export default function RecordForm({ path, state, mode: initialMode, notice, but
       <FormError message={error} />
 
       <fieldset disabled={cancelled} className="space-y-3">
-        {fields.length > 0 && (
+        {!layout && fields.length > 0 && (
           <Panel>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {fields.map(({ c, label: l }) =>
@@ -202,7 +234,7 @@ export default function RecordForm({ path, state, mode: initialMode, notice, but
             </div>
           </Panel>
         )}
-        {editors.length > 0 && (
+        {!layout && editors.length > 0 && (
           <Panel>
             <div className="flex flex-wrap items-end gap-4">
               {editors.map((c) => {
@@ -230,40 +262,7 @@ export default function RecordForm({ path, state, mode: initialMode, notice, but
             </div>
           </Panel>
         )}
-        {controls
-          .filter((c) => c.visible && c.id && shown(c))
-          .map((c) => {
-            if (c.type === 'CheckBoxList') return <CheckList key={c.id} c={c} label={label(c)} value={values[c.id]} onChange={set(c.id)} search={searched.has(c.id)} />;
-            if (c.type === 'TreeView' && c.nodes) return <RoleTree key={c.id} c={c} label={label(c)} value={values[c.id]} onChange={set(c.id)} />;
-            if (c.type === 'Panel' && c.guide) return <GuideView key={c.id} g={c.guide} />;
-            if (c.type === 'Picture') return values[c.id] ? <Panel key={c.id}><img src={String(values[c.id]).replace(/^~\//, '/')} alt="" className="max-h-[70vh] rounded-lg" /></Panel> : null;
-            if (c.type === 'Footer') {
-              return events.includes('Footer:save') ? (
-                <div key={c.id} className="flex justify-end">
-                  <Button icon={Save} loading={busy} disabled={cancelled} onClick={() => fire('Footer:save', values)}>Save</Button>
-                </div>
-              ) : null;
-            }
-            if (c.type === 'QC') {
-              const qc = (next) => ({ ...values, [c.id]: next });
-              return <QCPanel key={c.id} s={values[c.id]} busy={busy} onChange={(next) => setValues(qc(next))} onEvent={(name, next = values[c.id], arg, i) => fire(name.replace(/^QC:/, `${c.id}:`), qc(next), arg, controls, i)} />;
-            }
-            if (c.type === 'GridView') {
-              const can = (k) => !cancelled && c.columns.some((x) => x.kind === 'commandfield' && x[k]) && events.includes(`${c.id}:${k}`);
-              return (
-                <Grid
-                  key={c.id}
-                  c={c}
-                  rows={values[c.id]}
-                  onSelect={can('select') ? (k, i) => fire(`${c.id}:select`, values, k, controls, i) : null}
-                  onDelete={can('delete') ? (k, i) => fire(`${c.id}:delete`, values, k, controls, i) : null}
-                  onCommand={(cmdName, k, i) => events.includes(`${c.id}:${cmdName}`) && fire(`${c.id}:${cmdName}`, values, k, controls, i)}
-                  onEdit={(i, field, v) => setValues((x) => ({ ...x, [c.id]: x[c.id].map((r, j) => (j === i ? { ...r, [field]: v } : r)) }))}
-                />
-              );
-            }
-            return null;
-          })}
+        {layout ? sections() : controls.filter((c) => c.visible && c.id && shown(c)).map((c) => block(c))}
       </fieldset>
 
       {deleting !== null && (

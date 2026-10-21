@@ -11,6 +11,7 @@ import Loader from '../../ui/Loader.jsx';
 import PageHeader from '../../ui/PageHeader.jsx';
 import RecordForm from './RecordForm.jsx';
 import RecordList from './RecordList.jsx';
+import { LAYOUTS } from '../flow/layouts.js';
 
 const enc = encodeURIComponent;
 
@@ -45,10 +46,11 @@ export default function EngineForm({ path }) {
   const fresh = (notice) => run(api(`/forms/spec?path=${enc(path)}`).then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'new', state })));
 
+  const layout = LAYOUTS[path];
   const title = spec?.title || screen?.caption || 'Screen';
   return (
     <>
-      <PageHeader icon={screen?.group.icon} title={title} subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : undefined}>
+      <PageHeader icon={layout?.icon ?? screen?.group.icon} title={title} subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}>
         {spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
       </PageHeader>
       <div className="p-4 space-y-3 animate-page">
@@ -75,6 +77,7 @@ export default function EngineForm({ path }) {
             onBack={() => show({ kind: 'list' })}
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
+            layout={layout}
           />
         )}
       </div>

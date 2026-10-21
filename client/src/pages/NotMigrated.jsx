@@ -3,12 +3,19 @@ import { Home, SearchX } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useMe } from '../layouts/AppLayout.jsx';
 import EngineForm from './forms/EngineForm.jsx';
+import WIPCapture from './flow/WIPCapture.jsx';
+
+// shop-floor screens with their own layout (same server handlers as the generic form)
+const FLOWS = { '/production/wipcaptureform': WIPCapture };
 
 export default function NotMigrated() {
   const { pathname } = useLocation();
   const me = useMe();
   const path = pathname.toLowerCase();
-  if (me.migrated?.forms?.includes(path)) return <EngineForm key={path} path={path} />;
+  if (me.migrated?.forms?.includes(path)) {
+    const Flow = FLOWS[path];
+    return Flow ? <Flow key={path} /> : <EngineForm key={path} path={path} />;
+  }
   return (
     <div className="p-4">
       <div className="card mx-auto mt-10 flex max-w-lg flex-col items-center gap-2 px-6 py-14 text-center">
