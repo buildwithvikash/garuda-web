@@ -1,0 +1,667 @@
+{
+ "/assetmanagement/assetallocationreport": {
+  "file": "View/AssetManagement/AssetAllocationReport.aspx",
+  "title": "Asset Allocation Report",
+  "variant": "date",
+  "moduleId": 5004,
+  "tag": [
+   "Select a.RowID[SlNo],CONVERT(varchar,a.AllocatedOn,104)[AllocationDate],mb.Alias[AssetID], m.Name[Asset] , d.Name[FromDept],ad.Name[ToDept],ar.Name[Area],wc.Name[WorkCenter],emp.Name[Employee]        from AssetAllocation a left join MaterialBarcode mb on a.BarcodeNo =mb.BarcodeNo left join Material m on mb.Material =m.MatCode left join Department d on a.Department =d.DeptCode left join  Department ad on a.ADepartment=ad.DeptCode left join Area ar on a.Area =ar.AreaCode left join WorkCenter wc on a.WorkCenter =wc.StationCode left join Employee emp on emp.EmpCode =a.Employee ",
+   "Where a.BusinessUnit=<BU>",
+   "a.AllocatedOn",
+   "a.ADepartment"
+  ]
+ },
+ "/assetmanagement/assetmaintainancereport": {
+  "file": "View/AssetManagement/AssetMaintainanceReport.aspx",
+  "title": "Asset Maintainance Report",
+  "variant": "date",
+  "moduleId": 5005,
+  "tag": [
+   "Select ms.Alias[AssetID], m.Alias[AssetCode],m.Name[Asset],d.Name[Department],ms.LastMaintained,ms.NextMaintaince from MaterialBarcode ms left join Material m on ms.Material =m.MatCode  left join Department d on ms.Department =d.DeptCode ",
+   "Where ms.BusinessUnit=<BU>",
+   "ms.LastMaintained",
+   "",
+   "",
+   ""
+  ]
+ },
+ "/assetmanagement/assetmasterreport": {
+  "file": "View/AssetManagement/AssetMasterReport.aspx",
+  "title": "Asset Master Report",
+  "variant": "date",
+  "moduleId": 5006,
+  "tag": [
+   "Select mty.type, mb.Alias[AssetID], m.Name[Asset] ,d.Name[Department],ar.Name[Area],wc.Name[WorkCenter],emp.Name[Employee],CONVERT(varchar,mb.LastMaintained,104)[LastMaintained],CONVERT(varchar,mb.NextMaintaince,104)[Maintainance DueOn] from MaterialBarcode mb left join Material m on mb.Material =m.MatCode left join Department d on mb.ADepartment=d.DeptCode left join Area ar on mb.Area =ar.AreaCode left join WorkCenter wc on mb.WorkCenter =wc.StationCode left join Employee emp on emp.EmpCode =mb.Employee inner join MaterialCategoryType mty on mb.Type=mty.ID and mty.ID>=500 and mty.ID<600 ",
+   "Where mb.ABusinessUnit=<BU>",
+   "",
+   "mb.ADepartment"
+  ]
+ },
+ "/himile/inwardreport": {
+  "file": "View/Himile/InwardReport.aspx",
+  "title": "Goods Reciept Report",
+  "variant": "date",
+  "moduleId": 60005,
+  "tag": [
+   "Select gh.Alias[GRNCode],gh.GRNDate, l.Name[Vendor],m.Alias[ItemCode],m.Name[Description],gm.ReceivedQty,gm.PrintQty,ih.ApprovedQty,ih.RejectedQty,gm.PutawayQty,um.Alias[Unit]  from GRAPOHeader gh inner join GRAPOMaterial gm on gh.GRNCode=gm.GRNCode inner join Material m on gm.Material=m.MatCode inner join UnitOfMeasure um on gm.Uom=um.UomCode  left join InspectionHeader ih on gm.GRNCode=ih.DocNo and gm.LineCode=ih.DocLine inner join Ledger l on gh.Vendor=l.LedgerCode ",
+   "Where gh.BusinessUnit=<BU>",
+   "gh.GRNDate",
+   "gh.Department"
+  ]
+ },
+ "/materialgatemanagement/materialgatepassreport": {
+  "file": "View/MaterialGateManagement/MaterialGatePassReport.aspx",
+  "title": "Material Gate Pass Report",
+  "variant": "date",
+  "moduleId": 87,
+  "tag": [
+   "Select * from MaterialGatePass",
+   "Where BusinessUnit=<BU>",
+   "GatePassDate"
+  ]
+ },
+ "/reports/allcfadispatchreport": {
+  "file": "View/Reports/AllCFADispatchReport.aspx",
+  "title": "AllCFADispatchReport",
+  "variant": "time",
+  "moduleId": 55555,
+  "tag": [
+   "SELECT DISTINCT bu.Alias AS [Sending BU],sh.Alias AS [DO No],l.Alias AS [Customer],sh.SODate,PM.PickListCode,PB.Serial,M.Alias AS[Material],PH.PickDate,ph.Vehicle,PB.FIFOReason FROM PickListBarcode PB INNER JOIN PickListMaterial PM ON PB.PickListCode =PM.PickListCode AND PB.RowID = PM.RowID INNER JOIN PickListHeader PH ON PM.PickListCode = PH.PickListCode INNER JOIN SOHeader sh ON sh.SONo = PM.DocNo INNER JOIN Ledger l ON l.LedgerCode = sh.Customer INNER JOIN BusinessUnit bu ON bu.BuCode = sh.BusinessUnit INNER JOIN MATERIAL M ON M.Matcode = PM.Material INNER JOIN Users us ON PB.UserID = us.UserCode ",
+   " Where PH.BusinessUnit=PH.PickDate",
+   "PH.PickDate",
+   "",
+   "",
+   " ORDER BY bu.Alias, PH.PickDate;"
+  ]
+ },
+ "/reports/alldccfaserialstockreport": {
+  "file": "View/Reports/AllDCCFASerialStockReport.aspx",
+  "title": "All DC CFA Serial Stock Report",
+  "variant": "date",
+  "moduleId": 11111,
+  "tag": [
+   "select bu.Alias, m.Alias[Matcodel],m.ProcessID[Material Group],m.Name[Material],sum(mb.CurrentQty)[Qty],u.Alias[Unit] from MaterialBarcode mb left join StorageArea sa on sa.StorageCode = mb.StorageCode inner join Material m on m.MatCode = mb.Material inner join UnitOfMeasure u on u.UomCode = mb.Uom inner join BusinessUnit bu on bu.BuCode=mb.BusinessUnit Where mb.StorageCode !=-1 ",
+   "",
+   "",
+   "",
+   "Group By m.Alias,m.Name,u.Alias,bu.Alias,m.ProcessID"
+  ]
+ },
+ "/reports/audittrailreport": {
+  "file": "View/Reports/AuditTrailReport.aspx",
+  "title": "Audit Trail Report",
+  "variant": "date",
+  "moduleId": null,
+  "tag": [
+   "select EventID,CONVERT(varchar,EventDate,104)[EventDate],EventTime,u.UserName,DocRef,Module,er.Name[Response],el.Message from EventLog el inner join Users u on el.EventUser=u.UserCode inner join EventActions ac on el.Action=ac.ActionId inner join EventResponse er on el.AppResponse=er.ResponseId  left join BusinessUnit bu on el.BusinessUnit=bu.BuCode ",
+   "Where el.BusinessUnit=<BU>",
+   "el.EventDate",
+   ""
+  ]
+ },
+ "/reports/ceatdispatchpickserialdcreport": {
+  "file": "View/Reports/CEATDispatchPickSerialDCReport.aspx",
+  "title": "Pick-Direct Dispatch Serial Wise Report",
+  "variant": "time",
+  "moduleId": 8003,
+  "tag": [
+   "SELECT DISTINCT bu.Alias AS [SendingDC],sh.Alias AS [DONo],l.Alias AS [Customer],sh.SODate,PM.PickListCode,PB.Serial,M.Alias AS[Material],PH.PickDate,ph.Vehicle,PB.FIFOReason FROM PickListBarcode PB INNER JOIN PickListMaterial PM ON PB.PickListCode =PM.PickListCode AND PB.RowID = PM.RowID INNER JOIN PickListHeader PH ON PM.PickListCode = PH.PickListCode INNER JOIN SOHeader sh ON sh.SONo = PM.DocNo INNER JOIN Ledger l ON l.LedgerCode = sh.Customer INNER JOIN BusinessUnit bu ON bu.BuCode = sh.BusinessUnit INNER JOIN MATERIAL M ON M.Matcode = PM.Material INNER JOIN Users us ON PB.UserID = us.UserCode ",
+   " Where PH.BusinessUnit=<BU>",
+   "PH.PickDate",
+   "",
+   "",
+   " ORDER BY bu.Alias, PH.PickDate;"
+  ]
+ },
+ "/reports/ceatserialwiseproductionstockreport ": {
+  "file": "View/Reports/CEATSerialWiseProductionStockReport .aspx",
+  "title": "Serial Wise Production",
+  "variant": "time",
+  "moduleId": 6419,
+  "tag": [
+   "select ph.Alias[OrderNo],ph.OrderDate,w.Alias[Station],m.Alias[MatCode],m.Name[Description],b.BarcodeNo[TagCode],b.Serial[Serial],mb.VSerial[Curing SerialNo],bth.Batch,b.Qty,pib.Weight[Carcuss_Weight],b.Weight ,u.UserName[Operator],cast(b.CreatedOn as Date)[ScanDate],cast(b.CreatedOn as time(0))[ScanTime],b.Remark from ProcessOutputBOMBarcode b left join MaterialBarcode mb on b.BarcodeNo=mb.BarcodeNo and b.ProcessCode =mb.ProcessCode inner join ProcessOrder po on b.PSNo =po.PSNo inner join ProcessOutputBOM bom on b.psNo=bom.psno and b.ProcessCode=bom.ProcessCode and b.RowID=bom.RowID left join ProcessInputBOMScan pib on pib.PSNo = b.PSNo and pib.Serial = b.Serial and pib.ProcessCode = b.ProcessCode inner join  ProdHeader ph on po.ProdNo=ph.prodNo inner join WorkCenter w on w.StationCode=b.StationCode inner join Material m on bom.Material =m.MatCode left join MaterialBatch bth on bth.BatchNo = mb.Batch inner join Users u on b.Operator=u.UserCode  ",
+   " Where ph.BusinessUnit=<BU>",
+   "b.CreatedOn",
+   "ph.Department",
+   "",
+   ""
+  ]
+ },
+ "/reports/compliancesserialreport": {
+  "file": "View/Reports/CompliancesSerialReport.aspx",
+  "title": "Dispatch Report",
+  "variant": "time",
+  "moduleId": null,
+  "tag": [
+   "select distinct bu.Name[BusinessUnit],sum(pm.Qty)[DOQty],sum(pm.PickQty)[Scan Qty], CAST(CASE WHEN SUM(pm.Qty) = 0 THEN 0 ELSE (CAST(SUM(pm.PickQty) AS FLOAT) / SUM(pm.Qty)) * 100 END AS DECIMAL(5,2)) AS [Scan %] from PickListMaterial Pm inner join SOHeader sh on sh.SONo = pm.DocNo inner join Material m on m.MatCode = pm.Material inner join Ledger l on l.LedgerCode = sh.Customer inner join BusinessUnit bu on bu.BuCode = sh.BusinessUnit",
+   " Where pm.PickQty >0 and  ",
+   "sh.SODate",
+   "",
+   "",
+   " group by bu.Name"
+  ]
+ },
+ "/reports/dcdispatchreport": {
+  "file": "View/Reports/DCDispatchReport.aspx",
+  "title": "Dispatch Report",
+  "variant": "time",
+  "moduleId": 8004,
+  "tag": [
+   "select distinct bu.Name[DEALER_NAME] ,l.Name[SHIP_TO_ADDRESS] ,sh.Alias[DONO],pm.PickListCode,m.Alias[FGCODE],m.Name[Material_Name],pm.Qty[DOQty],pm.PickQty[QTY] ,(pm.Qty-pm.PickQty)[Difference] from PickListMaterial Pm inner join SOHeader sh on sh.SONo = pm.DocNo inner join Material m on m.MatCode = pm.Material inner join Ledger l on l.LedgerCode = sh.Customer inner join BusinessUnit bu on bu.BuCode = sh.BusinessUnit ",
+   " Where pm.PickQty >0 and sh.BusinessUnit=<BU>",
+   "sh.SODate",
+   "",
+   "",
+   ""
+  ]
+ },
+ "/reports/dcserialstockreport": {
+  "file": "View/Reports/DCSerialStockReport.aspx",
+  "title": "Dc Serial Stock Report",
+  "variant": "date",
+  "moduleId": 6109,
+  "tag": [
+   "select mb.Serial[Barcode],mb.VSerial[CuringSerialNo],m.Name[Material],m.Alias[MatCode],m.DrawingNo [NOE_Regular_CALM],mc.ParentCategory[Group_Name],m.ProcessID[Material_Group],sa.Alias[StorageCode],s.Status[QCStatus],gp.Alias[DONo],FORMAT(mb.CreatedOn,'dd-MM-yyyy HH:mm:ss')[MFG_Date],Concat(DateDiff(day,mb.CreatedOn,getdate()),' ','days')[MFG_Ageing],Concat(DateDiff(day,mb.LastMaintained,getdate()),' ','days')[WarehouseAging],Concat(DateDiff(day, mb.CreatedOn, getdate()) - DateDiff(day, mb.LastMaintained, getdate()), ' days') AS AgeingDifference ,RIGHT('0' + CAST(DATEPART(ISO_WEEK, mb.CreatedOn) AS VARCHAR), 2) + RIGHT(CAST(YEAR(mb.CreatedOn) AS VARCHAR), 2)AS [WeekCode],case WHEN DateDiff(day, mb.CreatedOn, getdate()) <= 30 THEN '0-30'  WHEN DateDiff(day, mb.CreatedOn, getdate()) > 30 AND DateDiff(day, mb.CreatedOn, getdate()) <= 90 THEN '31-90'  WHEN DateDiff(day, mb.CreatedOn, getdate()) > 90 AND DateDiff(day, mb.CreatedOn, getdate()) <= 180 THEN '91-180' else '180+' end [Ageing_Range] from MaterialBarcode mb left join DocumentType dt on mb.DocType = dt.ID left join Material m on mb.Material = m.MatCode left join MaterialBatch batc on batc.BatchNo= mb.Batch left join StorageArea sa on mb.StorageCode = sa.StorageCode and mb.BusinessUnit = sa.BusinessUnit left join GRAPOHeader gp on gp.GRNCode =mb.DocNo left join UnitOfMeasure u on mb.Uom = u.UomCode left join status s on mb.QCStatus = s.ID left join MaterialBarcode hm on hm.BarcodeNo = mb.HUID left join MaterialCategory mc on mc.Alias=m.ProcessID  ",
+   "Where mb.BusinessUnit=<BU> And mb.StorageCode !=-1 And m.ProcessID in('2015','2020','2090','2095','2100') ",
+   "",
+   ""
+  ]
+ },
+ "/reports/defectreport": {
+  "file": "View/Reports/DefectReport.aspx",
+  "title": "Defect Report",
+  "variant": "adv",
+  "moduleId": null,
+  "tag": [
+   "select qn.Type[Action],dm.Name[Defect],m.Alias[MatCode],m.name[Material],Concat(wc.Name,' ', mp.Name)[Press],sum(it.qty)[Qty] from InspectionTrans it inner join InspectionDefect id on it.ID=id.ID inner join DefectCodeMaster dm on id.Defect=dm.Code inner join QCNextAction qn on it.NextAction=qn.ID inner join InspectionHeader ih on ih.InspectionLotNo=it.InspectionLotNo inner join Material m on ih.Material =m.MatCode left join ProcessOutputBOMBarcode pb on pb.BarcodeNo=it.SampleBarcode left join Material mp on pb.ProcessingUnit=mp.MatCode left join WorkCenter wc on pb.StationCode=wc.StationCode ",
+   " Where ih.BusinessUnit=<BU>",
+   "it.InspectedOn",
+   "qn.ID~select ID,Type from QCNextAction",
+   " group by qn.Type,dm.Name,Concat(wc.Name,' ', mp.Name),m.Name,m.Alias",
+   "Qty"
+  ]
+ },
+ "/reports/dispatchpickserialreport": {
+  "file": "View/Reports/DispatchPickSerialReport.aspx",
+  "title": "Dispatch Picking Serial Wise Report",
+  "variant": "time",
+  "moduleId": 8002,
+  "tag": [
+   "select distinct PB.PickListCode, PB.Serial,M.Alias[Material],M.Alias ,cast(PH.PickDate as Date)[PickDate],cast(PH.PickDate as Time(0))[PickTime],PB.Status,OB.OBDCode,OH.Vehicle,OH.Container,PB.FIFOReason,us.UserName from PickListBarcode PB inner join PickListHeader PH on PB.PickListCode = PH.PickListCode INNER JOIN PickListMaterial PM ON PB.PickListCode = PM.PickListCode INNER JOIN MATERIAL M ON M.Matcode = PM.Material left JOIN OBASOBarcode OB ON PB.Serial = OB.Serial INNER JOIN OBASOHeader OH ON OB.OBDCode = OH.OBDCode INNER JOIN Users us ON PB.UserID = us.UserCode ",
+   " Where PH.BusinessUnit=<BU>",
+   "PB.ScanDate",
+   "",
+   "",
+   ""
+  ]
+ },
+ "/reports/dispatchreport": {
+  "file": "View/Reports/DispatchReport.aspx",
+  "title": "Dispatch Report",
+  "variant": "date",
+  "moduleId": 8001,
+  "tag": [
+   "Select sh.Alias[OBDNo],h.OBDDATE,l.Name[Customer] ,h.Container,h.Vehicle,mt.Alias[Mat Code],mt.Name[Material Description],mb.Serial,mb.VSerial[ID Plate]  from OBASOHEADER h inner Join OBASOMaterial m on h.OBDCode=m.OBDCode inner join OBASOBarcode b on h.OBDCode=b.OBDCode and m.OBDCode=b.obdCode and m.ROWID=b.RowID inner join MaterialBarcode mb on b.BarcodeNo=mb.BarcodeNo inner join Material mt on m.Material=mt.MatCode inner join Ledger l on l.LedgerCode=h.Customer inner join SOHeader sh on sh.SONo=m.SONo ",
+   "Where h.BusinessUnit=<BU>",
+   "h.OBDDATE",
+   "h.Department"
+  ]
+ },
+ "/reports/erpeventlogreport": {
+  "file": "View/Reports/ERPEventLogReport.aspx",
+  "title": "ERP Event LogReport",
+  "variant": "time",
+  "moduleId": null,
+  "tag": [
+   "Select RefNo,Module,DocNo,Action,Details,Status,Error,UpdatedOn from ERPInetgrationEventLog",
+   "",
+   "UpdatedOn",
+   "",
+   " ",
+   "order by UpdatedOn desc"
+  ]
+ },
+ "/reports/erpmixingproductionposting": {
+  "file": "View/Reports/ERPMixingProductionPosting.aspx",
+  "title": "Production Mixing Posting Report",
+  "variant": "time",
+  "moduleId": 6412,
+  "tag": [
+   "select distinct Order_ID,RECIPE_ID,Batch_ID_Unique[BATCH_NO],Total_weight[Batch_Weight],Machine_no[Station],[Shift],Status[ERPStatus],PostingDate  from MixingData",
+   "",
+   "PostingDate",
+   "",
+   "",
+   "order by PostingDate desc"
+  ]
+ },
+ "/reports/erpproductionposting": {
+  "file": "View/Reports/ERPProductionPosting.aspx",
+  "title": "Production Posting Report",
+  "variant": "time",
+  "moduleId": 6406,
+  "tag": [
+   "select po.AssignDate,h.Alias[PO],b.Serial,m.Alias[MatCode],m.Name[Material],w.Alias[Station],b.Shift,b.ERPStatus,b.ERPDate from ProcessOutputBOMBarcode b inner join WorkCenter w on b.StationCode=w.StationCode and b.ERPStatus>0 inner join ProcessOutputBOM bm on b.PSNo=bm.PSNo and b.ProcessCode=bm.ProcessCode inner join Material m on bm.Material =m.MatCode inner join ProcessOrder po on po.PSNo =b.PSNo inner join PRODHeader h on po.PRODNo=h.PRODNo  ",
+   "Where h.BusinessUnit=<BU>",
+   "b.ERPDate",
+   "h.Department",
+   " ",
+   "order by b.ERPDate desc"
+  ]
+ },
+ "/reports/existingstockprintsummaryreport": {
+  "file": "View/Reports/ExistingStockPrintSummaryReport.aspx",
+  "title": "Existing Stock Print Report",
+  "variant": "date",
+  "moduleId": 54007,
+  "tag": [
+   "Select format(mb.CreatedOn,'dd-MMM-yyyy')[PrintDate], m.Alias[ItemCode],m.Name[Description],Sum(mb.CurrentQty)[Qty],u.Alias[Unit],a.Alias[SubInv],sa.Alias[BIN]    from MaterialBarcode mb inner join Material m on mb.Material =m.MatCode inner join UnitOfMeasure u on mb.Uom=u.UomCode Left join Area a on mb.Area=a.AreaCode  left join StorageArea sa on mb.StorageCode=sa.StorageCode  ",
+   " Where mb.BusinessUnit=<BU> ",
+   "mb.CreatedOn",
+   "",
+   " group by m.Alias,m.Name,u.Alias,format(mb.CreatedOn,'dd-MMM-yyyy'),a.Alias,sa.Alias order by format(mb.CreatedOn,'dd-MMM-yyyy') ",
+   ""
+  ]
+ },
+ "/reports/grnreport": {
+  "file": "View/Reports/GRNReport.aspx",
+  "title": "Goods Reciept Report",
+  "variant": "date",
+  "moduleId": null,
+  "tag": [
+   "Select d.Name[Department],gh.Alias[GRNCode],CONVERT(varchar,gh.GRNDate,104)[Inward Date],CONVERT(varchar,gh.GRNDate,104)[GRNDate], l.Name[Vendor],gm.PONo,m.Name[Material],m.MatCode,gm.ReceivedQty,gm.PrintQty,gm.PutawayQty,u.Alias[Unit] from GRAPOMaterial gm inner join GRAPOHeader gh on gh.GRNCode=gm.GRNCode inner join Material m on gm.Material=m.MatCode inner join UnitOfMeasure u on gm.Uom=u.UomCode inner join Department d on d.DeptCode= gh.Department inner join Ledger l on gh.Vendor=l.LedgerCode  ",
+   "Where gh.BusinessUnit=<BU>",
+   "gh.GRNDate",
+   "gh.Department"
+  ]
+ },
+ "/reports/heldupncmrreport": {
+  "file": "View/Reports/HeldupNCMRReport.aspx",
+  "title": "NCMR Report",
+  "variant": "time",
+  "moduleId": 6309,
+  "tag": [
+   " SELECT distinct it.Serial,ib.VSerial[ID_Plate],wc.Alias[Station] ,d.Name[Department] ,m.Alias[Material],cast(it.InspectedOn as Date)[Heldup_On_Date],cast(it.InspectedOn as time(0))[Heldup_On_Time],us.UserName [Heldup_By],it.Remark,dct.Alias[DefectCategory],df.Name [Defects],qn.Type[Next_Action] ,us2.UserName[NCMR_Tech_By],cast(it.TNCMROn as date)[NCMR_Tech_On_Date],cast(it.TNCMROn as Time(0))[NCMR_Tech_On_Time],it.TNCMRRemark[NCMR_Tech_Remark],us1.UserName[NCMR_Quality_By]  ,cast(it.NCMROn as Date)[NCMR_Quality_On_Date],cast(it.NCMROn as Time(0))[NCMR_Quality_On_Time] ,it.NCMRRemark[NCMR_Quality_remark] FROM \r\n                                                        InspectionTrans it \r\n                                                        inner join  InspectionHeader ih on it.InspectionLotNo = ih.InspectionLotNo \r\n                                                        inner join Material m on ih.Material = m.MatCode \r\n                                                        inner join MaterialBarcode ib on ib.Serial = it.Serial \r\n                                                        inner join ProcessOutputBOMBarcode pb on it.Serial =pb.Serial and ih.DocNo = pb.PSNo \r\n                                                        inner join WorkCenter wc on pb.StationCode = wc.StationCode and wc.Alias != 'GTWS0001'\r\n                                                        left join Users us on it.UserCode = us.UserCode \r\n                                                       left join Users us2 on it.TNCMRBy  = us2.UserCode \r\n                                                        left join Users us1 on it.NCMRBy = us1.UserCode \r\n                                                        left join InspectionDefect id on it.ID = id.ID\r\n                                                        left join DefectCodeMaster df on df.Code = id.Defect\r\n                                                        left join DefectCategoryType dct on dct.ID = id.Category\r\n                                                        left join Department D  on ih.Department = d.DeptCode\r\n                                                        left join QCNextAction qn on it.NextAction  = qn.ID\r\n                                                        where  it.Status =15 ",
+   "",
+   " it.InspectedOn",
+   ""
+  ]
+ },
+ "/reports/inspectionreport": {
+  "file": "View/Reports/InspectionReport.aspx",
+  "title": "Quality Inspection Report",
+  "variant": "time",
+  "moduleId": 6301,
+  "tag": [
+   "select d.Name[Department], i.Alias[InspectionLot],dt.Type[DocumentType],i.DocNo,CONVERT(varchar,i.DocDate,104)[DocDate], it.Type[InspectionType], m.Name[material],i.Qty,i.ApprovedQty,i.RejectedQty,u.Alias[Unit],s.Status  from InspectionHeader i left join DocumentType dt on i.DocType=dt.ID left join Material m on i.Material=m.MatCode left join UnitOfMeasure u on i.Uom =u.UomCode left join department d on i.Department =d.DeptCode left join InspectionType it on i.InspectionType=it.ID   left join Status s on i.Status=s.ID  ",
+   "Where i.BusinessUnit=<BU>",
+   "i.DocDate",
+   "i.Department"
+  ]
+ },
+ "/reports/inspectionsummaryreport": {
+  "file": "View/Reports/InspectionSummaryReport.aspx",
+  "title": "Inspection Summary Report",
+  "variant": "date",
+  "moduleId": 6303,
+  "tag": [
+   "select ity.Type[Inspection Type], m.Alias[MaterialCode], m.Name[Material Description],sum(it.Qty)TotalQty,s.Status[Status],qn.Type[Action],u.UserName ,u1.UserName[NCMR_Tech_By],u2.UserName[NCMR_Quality_By] from InspectionTrans it inner join InspectionHeader ih on it.InspectionLotNo=ih.InspectionLotNo left join Status s on it.Status=s.ID left join QCNextAction qn on it.NextAction=qn.ID inner join Material m on ih.Material=m.MatCode  inner join Users u on it.UserCode=u.UserCode left join Users u1 on it.TNCMRBy=u1.UserCode left join Users u2 on it.NCMRBy =u2.UserCode left join InspectionType ity on ih.InspectionType=ity.ID ",
+   "Where ih.BusinessUnit=<BU>",
+   "it.InspectedOn",
+   "ih.Department",
+   " Group by ih.Material,s.Status,qn.Type,m.Alias,m.Name,u.UserName,u1.UserName,u2.UserName,ity.Type"
+  ]
+ },
+ "/reports/integrationlogreport": {
+  "file": "View/Reports/IntegrationLogReport.aspx",
+  "title": "Integration Log Report",
+  "variant": "time",
+  "moduleId": 6407,
+  "tag": [
+   "Select d.Type[Doctype],i.DocNo,i.UpdatedOn,s.Status[Result],i.Message from IntegrationLog i left join DocumentType d on i.DocType =d.ID left join Status s on s.ID =i.Result",
+   "",
+   "i.UpdatedOn",
+   ""
+  ]
+ },
+ "/reports/onlinerejectionreport": {
+  "file": "View/Reports/OnlineRejectionReport.aspx",
+  "title": "Online Rejection Report",
+  "variant": "date",
+  "moduleId": 6302,
+  "tag": [
+   "select mat.Name[Material],p.Qty,u.Alias[Unit],m.Serial,l.Name[Vandor],g.InvoiceNo,g.InvoiceDate,p.ScannedOn[RejectedOn],d.Name[Department],wc.Name[Station]   from ProcessOnlineRejection p left join MaterialBarcode m on p.BarcodeNo=m.BarcodeNo left join GRAPOHeader g on m.DocNo =g.GRNCode  left join Material mat on m.Material=mat.MatCode left join UnitOfMeasure u on m.Uom=u.UomCode left join Ledger l on g.Vendor =l.LedgerCode left join Department d on g.Department =d.DeptCode left join WorkCenter wc on wc.StationCode=p.Station ",
+   "Where g.BusinessUnit=<BU>",
+   "p.ScannedOn",
+   "g.Department"
+  ]
+ },
+ "/reports/planvsactualreport": {
+  "file": "View/Reports/PlanVsActualReport.aspx",
+  "title": "Production Plan Vs Actual",
+  "variant": "date",
+  "moduleId": 6401,
+  "tag": [
+   "select Format(pp.PDate,'dd-MMM-yyyy')[PDate],s.Name[Shift], d.Name[Department],pl.Name[Manf.Line],w.Name[Station],m.Alias[MatCode],m.Name[Material],pp.PlannedQty,pp.AchievedQty,u.Alias[unit],isnull(Cast(Round((100/nullif(pp.PlannedQty,0)*pp.AchievedQty),0) as numeric(18,0)),0)[Percentage]  from ProductionPlan pp inner join Department d on pp.Department=d.DeptCode left join  ProductionLine pl on pp.ManfLine=pl.LineCode left join WorkCenter w on pp.WorkCenter =w.StationCode left join [Shift] s on pp.Shift=s.ShiftCode inner join Material m on pp.Material =m.MatCode inner join UnitOfMeasure u on pp.Uom =u.UomCode ",
+   " Where d.BusinessUnit=<BU>",
+   "PDate",
+   "d.DeptCode"
+  ]
+ },
+ "/reports/prnreport": {
+  "file": "View/Reports/PRNReport.aspx",
+  "title": "Purchase Return Report",
+  "variant": "date",
+  "moduleId": 6103,
+  "tag": [
+   "Select d.name[Department], gh.Alias[PRNCode],CONVERT(varchar,gh.PRNDate,104)[PRNDate], l.Name[Vendor],gh.InvoiceNo,m.Name[Material],m.MatCode,gm.Qty[OrderQty],ReturnQty,u.Alias[Unit] from PRNMaterial  gm inner join PRNHeader gh on gh.PRNCode=gm.PRNCode left join Material m on gm.Material=m.MatCode left join UnitOfMeasure u on gm.Uom=u.UomCode left join Department d on d.DeptCode= gh.Department left join Ledger l on gh.Vendor=l.LedgerCode ",
+   "Where gh.BusinessUnit=<BU>",
+   "gh.PRNDate",
+   "gh.Department"
+  ]
+ },
+ "/reports/productionactivityreport": {
+  "file": "View/Reports/ProductionActivityReport.aspx",
+  "title": "Production Activity Report",
+  "variant": "date",
+  "moduleId": 6405,
+  "tag": [
+   "select m.Name[FG],pa.PSNo,wc.Name[Station],at.Type[Activity],pa.ActivityOn,u.UserName,pa.Remark,br.Type [Reason]  from ProcessActivity pa left join ProcessActivityType at on pa.ActivityType=at.ID left join WorkCenter wc on pa.StationCode =wc.StationCode left join Users u on u.UserCode =pa.Operator left join BreakDownReasons br on pa.Reason=br.ID  left join ProcessOrder po on pa.PSNo=po.PSNo left join Material m on po.Material=m.MatCode",
+   "Where po.BusinessUnit=<BU>",
+   "",
+   "po.Department"
+  ]
+ },
+ "/reports/rmissuesummery": {
+  "file": "View/Reports/RMIssueSummery.aspx",
+  "title": "RM Issue Summery Report",
+  "variant": "date",
+  "moduleId": 9102,
+  "tag": [
+   "select distinct TH.LTODATE[Date], TH.Alias [MaterialRequisition],M.Alias[MaterialCode],M.Name, TM.Qty[Plan(KG)],TM.DQty[IssuedQTY(KG)] from TOMaterial TM inner join Material M on TM.Material = M.Matcode INNER JOIN TOHeader TH on TM.LTOCODE = TM.LTOcode ",
+   "Where TH.BusinessUnit=<BU>",
+   "TH.LTODATE",
+   "",
+   ""
+  ]
+ },
+ "/reports/serialinoutscanhistoryreport": {
+  "file": "View/Reports/SerialInoutScanHistoryReport.aspx",
+  "title": "Serial In-Out Scan Report",
+  "variant": "date",
+  "moduleId": 6408,
+  "tag": [
+   "select ph.Alias[PO],w.Alias[Station],pp.Name [Process], pi.Serial,pi.ScannedOn[Inscan],ui.UserName[Operator],po.CreatedOn[OutScan] from ProcessInputBOMScan pi left join ProcessOutputBOMBarcode po on pi.PSNo=po.PSNo and pi.StationCode =po.StationCode and pi.Serial=po.Serial inner join ProcessOrder p on p.PSNo=pi.PSNo inner join PRODHeader ph on p.PRODNo=ph.PRODNo inner join WorkCenter w on pi.StationCode=w.StationCode  inner join ProductionProcess pp on pp.ProcessCode =pi.ProcessCode left join Users ui on pi.Operator =ui.UserCode ",
+   " Where ph.BusinessUnit=<BU>",
+   "pi.ScannedOn",
+   "ph.Department"
+  ]
+ },
+ "/reports/serialinspectionreport": {
+  "file": "View/Reports/SerialInspectionReport.aspx",
+  "title": "Serial Wise Inspection Report",
+  "variant": "time",
+  "moduleId": 6304,
+  "tag": [
+   "select CONVERT(varchar(10),CAST(it.InspectedOn as date),105) as Date,CONVERT(varchar,it.InspectedOn,108)AS Time, ity.Type[Inspection Type],it.Serial,qn.Type[NextAction],DCT.Alias[DefectCategory],DF.Alias[DefectCode],DF.Name[DefectName] ,m.Alias[MaterialCode], m.Name[Material Description],s.Status[Status],it.ERPMessage[Middle_RunOut],case when it.DistortionStatus=1 then 'Ok' when it.DistortionStatus=9 then 'Not Ok' end as DistortionStatus ,it.ODValue,qn.Type[Action],u.UserName,u1.UserName[NCMR_Tech_By],u2.UserName[NCMR_Quality_By],it.remark from InspectionTrans it inner join InspectionHeader ih on it.InspectionLotNo=ih.InspectionLotNo left join Status s on it.Status=s.ID left join QCNextAction qn on it.NextAction=qn.ID left join InspectionDefect ID on it.ID = id.ID left join DefectCodeMaster DF on ID.Defect=DF.Code left join DefectCategoryType DCT on ID.Category=DCT.ID inner join Material m on ih.Material=m.MatCode inner join Users u on it.UserCode=u.UserCode left join Users u1 on it.TNCMRBy=u1.UserCode left join Users u2 on it.NCMRBy =u2.UserCode left join InspectionType ity on ih.InspectionType=ity.ID ",
+   "Where ih.BusinessUnit=<BU>",
+   "it.InspectedOn",
+   "ih.Department",
+   " ",
+   "order by it.InspectedOn desc"
+  ]
+ },
+ "/reports/serialprodmixingreport": {
+  "file": "View/Reports/SerialProdMixingReport.aspx",
+  "title": "Serial Wise Stock",
+  "variant": "date",
+  "moduleId": 6417,
+  "tag": [
+   "select ph.Alias[OrderNo],ph.OrderDate,w.Alias[Station],m.Alias[MatCode],m.Name[Description] ,sum(bth.NoOfBatchs) as No_Of_Batchs,Sum(mb.CurrentQty) as Total_Qty from ProcessOutputBOMBarcode b inner join MaterialBarcode mb on b.BarcodeNo=mb.BarcodeNo inner join ProcessOrder po on b.PSNo =po.PSNo inner join ProcessOutputBOM bom on b.psNo=bom.psno and b.ProcessCode=bom.ProcessCode and b.RowID=bom.RowID inner join  ProdHeader ph on po.ProdNo=ph.prodNo inner join WorkCenter w on w.StationCode=b.StationCode inner join Material m on bom.Material =m.MatCode left join MaterialBatch bth on bth.BatchNo = mb.Batch inner join Users u on b.Operator=u.UserCode  ",
+   " Where ph.BusinessUnit=<BU>",
+   "b.CreatedOn",
+   "ph.Department",
+   "group by ph.Alias,ph.OrderDate,w.Alias,m.Alias,m.Name",
+   " "
+  ]
+ },
+ "/reports/serialprodmixingreport_old": {
+  "file": "View/Reports/SerialProdMixingReport_Old.aspx",
+  "title": "Serial Wise Production",
+  "variant": "time",
+  "moduleId": null,
+  "tag": [
+   "select ph.Alias[OrderNo],ph.OrderDate,w.Alias[Station],m.Alias[MatCode],m.Name[Description],mb.Serial[Barcode],mb.VSerial[IDPlate],bth.Batch,mb.CurrentQty,b.Weight ,u.UserName[Operator],Format(b.CreatedOn,'dd-MMM-yy HH:mm:ss')[ScanTime],b.Remark from ProcessOutputBOMBarcode b inner join MaterialBarcode mb on b.BarcodeNo=mb.BarcodeNo inner join ProcessOrder po on b.PSNo =po.PSNo inner join ProcessOutputBOM bom on b.psNo=bom.psno and b.ProcessCode=bom.ProcessCode and b.RowID=bom.RowID inner join  ProdHeader ph on po.ProdNo=ph.prodNo inner join WorkCenter w on w.StationCode=b.StationCode inner join Material m on bom.Material =m.MatCode left join MaterialBatch bth on bth.BatchNo = mb.Batch inner join Users u on b.Operator=u.UserCode ",
+   " Where ph.BusinessUnit=<BU>",
+   "b.CreatedOn",
+   "ph.Department",
+   "",
+   ""
+  ]
+ },
+ "/reports/serialstockreport": {
+  "file": "View/Reports/SerialStockReport.aspx",
+  "title": "Serial Wise Stock",
+  "variant": "date",
+  "moduleId": 6104,
+  "tag": [
+   "select mb.Serial[Barcode],mb.VSerial[IDPlate],m.Name[Material],m.Alias[MatCode],hm.Serial[MHE],sa.Alias[StorageCode],d.Name[Department],s.Status[QCStatus], batc.Batch,mb.CurrentQty,u.Alias[Unit],isnull(dt.Type,'')[Document],mb.CreatedOn,Concat(DateDiff(day,mb.CreatedOn,getdate()),' ','days')[Ageing]  from MaterialBarcode mb left join DocumentType dt on mb.DocType=dt.ID left join Material m on mb.Material=m.MatCode left join Department d on mb.Department=d.DeptCode left join StorageArea sa on mb.StorageCode=sa.StorageCode left join MaterialBatch batc on batc.BatchNo= mb.Batch left join UnitOfMeasure u on mb.Uom=u.UomCode left join status s on mb.QCStatus=s.ID left join MaterialBarcode hm on hm.BarcodeNo =mb.HUID ",
+   " Where mb.StorageCode !=-1  and  mb.BusinessUnit=<BU>",
+   "mb.CreatedOn",
+   "mb.Department",
+   ""
+  ]
+ },
+ "/reports/serialwiseproductionorderreport": {
+  "file": "View/Reports/SerialWiseProductionOrderReport.aspx",
+  "title": "Serial Wise Production",
+  "variant": "time",
+  "moduleId": 6404,
+  "tag": [
+   "select distinct ph.Alias[OrderNo],ph.OrderDate,w.Alias[Station],m.Alias[MatCode],m.Name[Description],b.BarcodeNo[TagCode],b.Serial[Serial],mb.VSerial[Curing SerialNo],po.Remark[Spec_Weight],b2.Weight[Carcuss_Weight] ,b1.Weight,bth.Batch,b.Qty ,u.UserName[Operator],cast(b.CreatedOn as Date)[ScanDate],cast(b.CreatedOn as time(0))[ScanTime],b.Remark,CASE WHEN b.WeightFlg = 1 THEN 'Manual' ELSE 'Auto' END AS WeightMode from ProcessOutputBOMBarcode b inner join MaterialBarcode mb on b.Serial  = mb.Serial inner join ProcessOrder po on b.PSNo = po.PSNo left join ProcessOutputBOMBarcode b1 on b.Serial = b1.Serial and b1.ProcessCode =12213 left join ProcessInputBOMScan  b2 on b.Serial = b2.Serial and b2.ProcessCode =12213 inner join ProcessOutputBOM bom on b.psNo = bom.psno and b.ProcessCode = bom.ProcessCode and b.RowID = bom.RowID left join ProcessInputBOMScan pib on pib.PSNo = b.PSNo and pib.Serial = b.Serial and pib.ProcessCode = b.ProcessCode inner join  ProdHeader ph on po.ProdNo = ph.prodNo inner join WorkCenter w on w.StationCode = b.StationCode inner join Material m on bom.Material = m.MatCode left join MaterialBatch bth on bth.BatchNo = mb.Batch inner join Users u on b.Operator = u.UserCode  ",
+   " Where ph.BusinessUnit=<BU>",
+   "b.CreatedOn",
+   "ph.Department",
+   "",
+   ""
+  ]
+ },
+ "/reports/stockmhereport": {
+  "file": "View/Reports/StockMHEReport.aspx",
+  "title": "Material Stock Report",
+  "variant": "date",
+  "moduleId": 6105,
+  "tag": [
+   "select mb1.Serial[MHE],sa.Name[Location],m.Name[Material],sum(mb.CurrentQty)[Qty],u.Alias[Unit],d.Name[Department]  from MaterialBarcode mb inner join  Material m on m.MatCode=mb.Material and mb.StorageCode>0  inner join UnitOfMeasure u on mb.Uom =u.UomCode left join MaterialBarcode mb1 on mb.HUID=mb1.BarcodeNo  inner join StorageArea sa on mb.StorageCode=sa.StorageCode  inner join Department d on mb.Department =d.DeptCode ",
+   "Where mb.BusinessUnit=<BU>",
+   "",
+   "mb.Department",
+   "group by mb1.Serial,sa.Name,m.Name,u.Alias,d.Name"
+  ]
+ },
+ "/reports/stockreport": {
+  "file": "View/Reports/StockReport.aspx",
+  "title": "Material Stock Report",
+  "variant": "date",
+  "moduleId": 6101,
+  "tag": [
+   "select sa.Alias[Storage_Location],m.Alias[Matcodel],m.Name[Material],sum(mb.CurrentQty)[Qty],u.Alias[Unit] ,mb.BusinessUnit from MaterialBarcode mb left join StorageArea sa on sa.StorageCode = mb.StorageCode inner join Material m on m.MatCode = mb.Material inner join UnitOfMeasure u on u.UomCode = mb.Uom  ",
+   "Where mb.BusinessUnit=<BU> and mb.StorageCode <> -1  ",
+   "",
+   "mb.Department",
+   "Group By sa.Alias,m.Alias,m.Name,u.Alias,mb.BusinessUnit,mb.Department"
+  ]
+ },
+ "/reports/tmeicreports/tmginreport": {
+  "file": "View/Reports/TMEICReports/TMGINReport.aspx",
+  "title": "Goods Reciept Report",
+  "variant": "date",
+  "moduleId": 51001,
+  "tag": [
+   "Select gh.GENCode,gh.GENDate,gh.InvoiceNo, l.Name[Vendor],po.Alias[PoNo],pm.RowID[PoLine],m.Alias[ItemCode],m.Name[Description],gm.ReceivedQty,um.Alias[Unit],s.Status  from GEAPOHeader  gh inner join GEAPOMaterial  gm on gh.GENCode =gm.GENCode inner join POMaterial pm on gm.PoNo=pm.PONo and gm.PoLineCode=pm.RowID inner join Material m on gm.Material=m.MatCode inner join UnitOfMeasure um on gm.Uom=um.UomCode   inner join POHeader po on pm.PONo=po.PONo inner join Ledger l on gh.Vendor=l.LedgerCode  left join Status s on gh.Status=s.ID ",
+   "Where gh.BusinessUnit=<BU>",
+   "gh.GENDate",
+   "gh.Department"
+  ]
+ },
+ "/reports/tmeicreports/tmgrnreport": {
+  "file": "View/Reports/TMEICReports/TMGRNReport.aspx",
+  "title": "Goods Reciept Report",
+  "variant": "date",
+  "moduleId": 51002,
+  "tag": [
+   "Select gh.GRNCode,gh.ERPGRNCode,gh.GENCode,gh.GRNDate,gh.InvoiceNo, l.Name[Vendor],po.Alias[PoNo],pm.RowID[PoLine],m.Alias[ItemCode],m.Name[Description],gm.ReceivedQty,gm.PrintQty,ih.ApprovedQty,ih.RejectedQty,gm.PutawayQty,um.Alias[Unit],s.Status  from GRAPOHeader gh inner join GRAPOMaterial gm on gh.GRNCode=gm.GRNCode inner join POMaterial pm on gm.PoNo=pm.PONo and gm.PoLineCode=pm.RowID inner join Material m on gm.Material=m.MatCode inner join UnitOfMeasure um on gm.Uom=um.UomCode   inner join POHeader po on pm.PONo=po.PONo left join InspectionHeader ih on gm.GRNCode=ih.DocNo and gm.LineCode=ih.DocLine inner join Ledger l on gh.Vendor=l.LedgerCode  left join Status s on gh.Status=s.ID ",
+   "Where gh.BusinessUnit=<BU>",
+   "gh.GRNDate",
+   "gh.Department"
+  ]
+ },
+ "/reports/tmeicreports/tminspectionreport": {
+  "file": "View/Reports/TMEICReports/TMInspectionReport.aspx",
+  "title": "Inspection Report",
+  "variant": "date",
+  "moduleId": 51004,
+  "tag": [
+   "Select ih.DocNo[GRNNo],ih.DocLine[Line], ph.Alias[PoNo],gm.PoLineCode[PoLine],m.Alias[ItemCode],m.Name[Description],gm.ReceivedQty[GRNQty],ih.ApprovedQty,ih.RejectedQty,um.Alias[Unit], ih.DocDate[GRNDate], it.InspectedOn,it.Qty, qn.Type[NextAction] from InspectionHeader ih inner join InspectionTrans it on ih.InspectionLotNo=it.InspectionLotNo inner join GRAPOMaterial gm on ih.DocNo=gm.GRNCode and ih.DocLine=gm.LineCode inner join POHeader ph on gm.PoNo=ph.PONo inner join Material m on gm.Material=m.MatCode inner join UnitOfMeasure um on gm.Uom=um.UomCode left join QCNextAction qn on qn.ID=it.NextAction  ",
+   "Where ih.BusinessUnit=<BU>",
+   "ih.DocDate",
+   "ih.Department"
+  ]
+ },
+ "/reports/tmeicreports/tmjoborderissuereport": {
+  "file": "View/Reports/TMEICReports/TMJobOrderIssueReport.aspx",
+  "title": "Job Order Report",
+  "variant": "date",
+  "moduleId": 53001,
+  "tag": [
+   "Select lh.Alias[JobOrder],lh.LTODate[Date],m.Alias[ItemCode],m.Name[Description],lm.Qty[OrderQty],lm.TQty[PickedQty],lm.DQty[DropQty],lm.RQty[ReceiveQty],lm.IQty[PostQty],um.Alias[Unit],a.Alias[From SubInv],CONCAT(a.alias, '.', p.Alias, '.', t.Alias)[Locator],a1.Alias[To SubInv] from LTOHeader lh inner join LTOMaterial lm on lh.LTOCode=lm.LTOCode inner join Material m on lm.Material=m.MatCode inner join UnitOfMeasure um on lm.Uom=um.UomCode left join Project p on p.ProjectCode=lm.Project left join Task t on t.TaskCode=lm.Task left join Area a on a.AreaCode=lm.FromArea left join Area a1 on a1.AreaCode=lm.ToArea",
+   "Where lh.BusinessUnit=<BU>",
+   "lh.LTODate",
+   "lh.FromDept"
+  ]
+ },
+ "/reports/toserialreport": {
+  "file": "View/Reports/TOSerialReport.aspx",
+  "title": "RM Issue Serial Wise Report",
+  "variant": "time",
+  "moduleId": 9101,
+  "tag": [
+   "select distinct th.Alias[MR],ma.Alias[Material],ma.Name[Description],tm.Qty[Reservation_Qty],tb.Qty[Picked_Qty],th.LTODate[MR_Date],tb.Serial[Barcode_No] ,gm.ManufBatch[Batch_No]  ,gh.Alias[GRN_No],tb.ScanDate,us.UserName ,tb.Status ,tb.ERPMessage from TOBarcode tb inner join TOHeader th on tb.LTOCode = th.LTOCode inner join TOMaterial tm on tb.LTOCode = tm.LTOCode and tb.RowID = tm.RowID inner join MaterialBarcode mb on tb.BarcodeNo = mb.BarcodeNo inner join Material ma on mb.Material = ma.MatCode left join GRAPOMaterial gm on mb.DocNo = gm.GRNCode and mb.DocLine = gm.LineCode left join GRAPOHeader gh on gm.GRNCode = gh.GRNCode left join Users us on tb.UserId = us.UserCode ",
+   " Where th.BusinessUnit=<BU>",
+   "tb.ScanOn",
+   "",
+   "",
+   ""
+  ]
+ },
+ "/reports/workstationreport": {
+  "file": "View/Reports/WorkstationReport.aspx",
+  "title": "Work Station Report",
+  "variant": "date",
+  "moduleId": null,
+  "tag": [
+   "Select sa.Name[Storage],mty.Type [Type], m.Alias[MatCode],m.Name[Material],ms.Qty,ms.ReleasedQty,ms.HoldQty,ms.RejectedQty,ms.ReserveQty,u.Alias[Unit],d.Name[Department],mb.Batch,mb.ExpiryDate from MaterialStock ms left join Material m on ms.Material =m.MatCode left join UnitOfMeasure u  on ms.Uom =u.UomCode left join Department d on ms.Department =d.DeptCode left join StorageArea sa on ms.StorageCode =sa.StorageCode left join MaterialBatch mb on ms.Batch=mb.BatchNo  left join MaterialCategoryType mty on mty.ID =m.Type ",
+   "Where ms.BusinessUnit=<BU>",
+   "",
+   "ms.Department"
+  ]
+ },
+ "/reports/workstationyieldreport": {
+  "file": "View/Reports/WorkStationYieldReport.aspx",
+  "title": "Production Output Report",
+  "variant": "adv",
+  "moduleId": 6402,
+  "tag": [
+   "select w.Alias[Station],m.Alias[Material],m.Name[Description],sum(b.qty) Qty,u.Alias[Unit],us.UserName[Operator] from ProcessOutputBOMBarcode b inner join ProcessOutputBOM  p on b.PSNo=p.PSNo and b.ProcessCode=p.ProcessCode inner join Material m on p.Material =m.MatCode inner join UnitOfMeasure u on m.BaseUom=u.UomCode LEFT join WorkCenter w on b.StationCode= w.StationCode left join ProductionProcess prs on prs.ProcessCode= b.ProcessCode left join Users us on b.Operator=us.UserCode ",
+   " Where w.BusinessUnit=<BU>",
+   "b.CreatedOn",
+   "prs.Processcode~select Processcode,Name from ProductionProcess",
+   " group by w.Department,w.Alias,prs.Name,m.Alias,m.Name,u.Alias,us.UserName",
+   "Qty"
+  ]
+ },
+ "/reports/wrlreports/dailytrendprod": {
+  "file": "View/Reports/WRLReports/DailyTrendProd.aspx",
+  "title": "Daily Trend Production Report",
+  "variant": "adv",
+  "moduleId": null,
+  "tag": [
+   ""
+  ]
+ },
+ "/reports/wrlreports/estreport": {
+  "file": "View/Reports/WRLReports/ESTReport.aspx",
+  "title": "EST Staging Report",
+  "variant": "time",
+  "moduleId": null,
+  "tag": [
+   "Select *  From ESTStaging",
+   "",
+   "date_time",
+   " Order By date_time desc"
+  ]
+ },
+ "/reports/wrlreports/fomingrework": {
+  "file": "View/Reports/WRLReports/FomingRework.aspx",
+  "title": "Foaming Rework Report",
+  "variant": "adv",
+  "moduleId": null,
+  "tag": [
+   ""
+  ]
+ },
+ "/reports/wrlreports/productiontracebilityreport": {
+  "file": "View/Reports/WRLReports/ProductionTracebilityReport.aspx",
+  "title": "Production Tracebility Report",
+  "variant": "time",
+  "moduleId": 6506,
+  "tag": [
+   "Select po.PRODNo[Prodution Order],m.Name[Model name],poAs.Serial[Ref SRNo], poAs.CreatedOn[Ref Creation Date],mb.Serial[FG Serial No],mb.CreatedOn[FG Creation Date],mb.VSerial[Asset Tag],typ.Type[Component Type],mai.Name [Component Name],mai.MatCode[Component Code],poIn.Serial[Component Barcode],poin.ScannedOn,l.Name[Supplier Name] from (ProcessOrder po inner join Material m on po.Material=m.MatCode inner join ProcessOutputBOMBarcode poAs on po.PSNo=poAs.PSNo and poAs.ProcessCode=12203 left join MaterialBarcode mb on mb.DocNo=po.PSNo and mb.Material=po.Material and Po.Status=10 and mb.Status != 99 ) left join ProcessInputBOMScan poIn on po.PSNo=poIn.PSNo and poin.ProcessCode=12203 left join Material mai on poin.Material=mai.MatCode left join MaterialCategoryType typ on typ.ID=mai.Type left join  Ledger l on mai.ledger =l.LedgerCode ",
+   "",
+   "mb.CreatedOn",
+   "",
+   "",
+   " Order By mb.CreatedOn"
+  ]
+ },
+ "/reports/wrlreports/reworkdata": {
+  "file": "View/Reports/WRLReports/ReworkData.aspx",
+  "title": "Production Tracebility Report",
+  "variant": "time",
+  "moduleId": null,
+  "tag": [
+   "select m.Alias[Model_Name],mc.Name[Category],w.Name[Station],it.Serial[Assembly Sr.No.],pr.StartedOn[Rework IN], pr.CompletedOn[Rework Out] ,s.Status[Rework Status],\r\n                                                  CONCAT(DATEDIFF(day, pr.StartedOn, pr.CompletedOn),   ':',FORMAT((DATEDIFF(minute, pr.StartedOn, pr.CompletedOn)/60)%24,'D2'),    ':',FORMAT(DATEDIFF(minute,pr.StartedOn, pr.CompletedOn) % 60,'D2'))[Duration (DD,HH:MM)] ,\r\n                                                  dct.Type[Defect Category] ,dc.Name[Defect],rc.Type[Root Cause], rr.Type[Counter Action] \r\n                                                  from InspectionTrans it inner join InspectionHeader ih on it.InspectionLotNo = ih.InspectionLotNo and it.NextAction =1\r\n                                                  inner join Material m on ih.Material = m.MatCode \r\n                                                  left join MaterialCategory mc on m.Category = mc.CategoryCode\r\n                                                  inner join ProcessRouting pr on ih.DocNo = pr.PSNo\r\n                                                  left join WorkCenter w on pr.StationCode = w.StationCode \r\n                                                  left join Status s on ih.Status = s.id \r\n                                                  left join InspectionDefect id on it.ID = id.ID \r\n                                                  left join DefectCodeMaster dc on id.Defect = dc.Code \r\n                                                  left join DefectCategoryType dct on dc.DefectCategory = dct.ID\r\n                                                  left join RootCause rc on it.RootCause = rc.ID \r\n                                                  left join ReworkResolution rr on it.ReworkResolution = rr.ID ",
+   "",
+   "it.InspectedOn",
+   "",
+   "",
+   ""
+  ]
+ },
+ "/reports/wrlreports/topdefects": {
+  "file": "View/Reports/WRLReports/TopDefects.aspx",
+  "title": "Top Defect Report",
+  "variant": "adv",
+  "moduleId": null,
+  "tag": [
+   "select format(it.inspectedOn,'dd-MMM-yyyy')[InspectedOn],dm.Name[Defect],m.Alias[MatCode],CAST(sum(it.qty) as bigint)[Qty],rc.Type[RootCause] from InspectionTrans it inner join InspectionDefect id on it.ID=id.ID inner join DefectCodeMaster dm on id.Defect=dm.Code inner join InspectionHeader ih on ih.InspectionLotNo=it.InspectionLotNo inner join Material m on ih.Material =m.MatCode left join RootCause  rc on it.RootCause = rc.ID ",
+   " Where ih.BusinessUnit=<BU>",
+   "it.InspectedOn",
+   "",
+   "group by dm.Name,m.Alias,rc.Type, format(it.inspectedOn,'dd-MMM-yyyy') order by sum(it.qty) desc ",
+   "Qty"
+  ]
+ },
+ "/visitor/visitorpassreport": {
+  "file": "View/Visitor/VisitorPassReport.aspx",
+  "title": "Material Gate Pass Report",
+  "variant": "date",
+  "moduleId": 75,
+  "tag": [
+   "Select * from VisitorPass",
+   "Where BusinessUnit=<BU>",
+   "PassDate",
+   ""
+  ]
+ }
+}

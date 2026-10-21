@@ -1,0 +1,98 @@
+import { Router } from 'express';
+import { authRepo } from './repo.js';
+import { login, changePassword, LOGIN_MESSAGES } from './service.js';
+import { loadSettings } from '../settings/service.js';
+import { loadUserMenu, userMenu } from '../menu/service.js';
+import { writeSession, clearSession } from '../../lib/session.js';
+import { requireAuth } from '../../middleware/auth.js';
+import { netString, alertText } from '../../lib/net.js';
+import { config } from '../../config.js';
+import { REPORTS } from '../reports/routes.js';
+import { WRL_REPORTS } from '../reports/wrlPages.js';
+import { FORMS } from '../forms/routes.js';
+
+export const authRoutes = Router();
+
+const text = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : '');
+
+// LoginForm Page_Load: dropdowns, company name/logo, defaults from config.
+authRoutes.get('/login-page', async (_req, res) => {
+  const [bus, lines, company] = await Promise.all([authRepo.businessUnits(), authRepo.productionLines(), authRepo.company()]);
+  const logo = company[0]?.Logo;
+  res.json({
+    erp: config.erp,
+    companyName: netString(company[0]?.Companyname ?? company[0]?.CompanyName),
+    logo: Buffer.isBuffer(logo) && logo.length ? `data:image/png;base64,${logo.toString('base64')}` : null,
+    businessUnits: bus.map((b) => ({ value: netString(b.BUCode), text: netString(b.Name) })),
+    lines: lines.map((l) => ({ value: netString(l.LineCode), text: netString(l.Name) })),
+    // Original selects the first unit, then DBU from config if it exists in the list.
+    defaultBusinessUnit: bus.some((b) => netString(b.BUCode) === config.defaultBusinessUnit)
+      ? config.defaultBusinessUnit
+      : netString(bus[0]?.BUCode),
+    lineRequired: config.erp === 'WRL',
+    server: `${config.db.server} ${config.db.database}`, // original lblServer
+  });
+});
+
+// LoginForm.AssignBusinessUnit: a user with exactly one unit gets it preselected and locked.
+authRoutes.get('/business-units', async (req, res) => {
+  const rows = await authRepo.businessUnitsForUserId(text(req.query.userId).trim());
+  res.json({ locked: rows.length === 1, businessUnit: rows.length === 1 ? netString(rows[0].BusinessUnit) : null });
+});
+
+authRoutes.post('/login', async (req, res) => {
+  const b = req.body ?? {};
+  try {
+    const { msg, session } = await login({
+      userId: text(b.userId),
+      password: text(b.password),
+      businessUnit: text(b.businessUnit, 20),
+      qr: b.qr === true,
+      scanned: text(b.scanned),
+      line: text(b.line, 50),
+    });
+    if (msg === 1) {
+      await loadSettings(); // Settings.SetSettings() after a successful login
+      const menu = await loadUserMenu(session.userCode);
+      writeSession(res, { ...session, line: text(b.line, 50), lineName: text(b.lineName) });
+      return res.json({ ok: true, redirect: menu.defaultRoute ?? '/start' });
+    }
+    if (msg === 7 || msg === 4) return res.json({ ok: false, changePassword: true, userId: text(b.userId) });
+    res.json({ ok: false, message: LOGIN_MESSAGES[msg] ?? 'Login failed' });
+  } catch (e) {
+    console.error('login failed', e);
+    res.json({ ok: false, message: alertText(e.message) });
+  }
+});
+
+// LoginChangePasswordForm.BtnChangePassword_Click
+authRoutes.post('/change-password', async (req, res) => {
+  const b = req.body ?? {};
+  const [userId, current, next, retype] = [text(b.userId), text(b.current), text(b.next), text(b.retype)];
+  if (current === '' || next !== retype) {
+    return res.json({ ok: false, message: 'Make sure that current password is not blank and retype password is correct' });
+  }
+  const r = await changePassword({ userId, current, next });
+  if (r === 0) return res.json({ ok: false, field: 'next', message: 'Pasword must be 8 character long, Includes  number and special character' });
+  if (r === 6) return res.json({ ok: false, field: 'current', message: 'Current Password is wrong!!' });
+  res.json({ ok: true, message: 'Password Changed!!' });
+});
+
+authRoutes.post('/logout', (_req, res) => {
+  clearSession(res);
+  res.json({ ok: true });
+});
+
+// Data Layout.Master needs: who is logged in, their menu, default page.
+authRoutes.get('/me', requireAuth, async (req, res) => {
+  const m = await userMenu(req.session.userCode);
+  const { userId, userCode, businessUnit, department, line, lineName, systemUser } = req.session;
+  res.json({
+    user: { userId, userCode, businessUnit, department, line, lineName, systemUser, ...m.user },
+    menu: m.menu,
+    search: m.search,
+    defaultRoute: m.defaultRoute,
+    // Screens already rebuilt in this app; everything else links to the existing application.
+    migrated: { genericReports: Object.keys(REPORTS), wrlReports: Object.keys(WRL_REPORTS), hmi: ['wrlchem', 'wrlchem2'], forms: Object.keys(FORMS) },
+  });
+});

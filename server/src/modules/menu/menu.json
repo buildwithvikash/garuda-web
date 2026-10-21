@@ -1,0 +1,2868 @@
+[
+ {
+  "moduleId": 1,
+  "caption": "Business Setup",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/BusinessSetup.svg",
+  "children": [
+   {
+    "moduleId": 19,
+    "caption": "Company Configuration",
+    "url": "View/BusinessSetup/CompanyForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 10,
+    "caption": "Business Unit",
+    "url": "View/BusinessSetup/BusinessUnitForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 11,
+    "caption": "Department",
+    "url": "View/BusinessSetup/DepartmentForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 12,
+    "caption": "Area",
+    "url": "View/BusinessSetup/AreaForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 13,
+    "caption": "Gate",
+    "url": "View/BusinessSetup/GateForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 14,
+    "caption": "Storage Area",
+    "url": "View/BusinessSetup/StorageAreaForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 15,
+    "caption": "Ledger Master",
+    "url": "View/BusinessSetup/LedgerForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 16,
+    "caption": "Ledger SIte Master",
+    "url": "View/BusinessSetup/LedgerSiteForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 17,
+    "caption": "Tax Master",
+    "url": "View/BusinessSetup/TaxRateMasterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 18,
+    "caption": "Tax Category",
+    "url": "View/BusinessSetup/TaxCategoryForm.aspx",
+    "icon": null,
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 2,
+  "caption": "Material Setup",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialSetup.svg",
+  "children": [
+   {
+    "moduleId": 20,
+    "caption": "Unit Of Measure",
+    "url": "View/MaterialSetup/UnitOfMeasureForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 21,
+    "caption": "Unit Conversion",
+    "url": "View/MaterialSetup/UnitConversionForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 22,
+    "caption": "Variant Master",
+    "url": "View/MaterialSetup/VariantForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 23,
+    "caption": "Variant Field",
+    "url": "View/MaterialSetup/VariantFieldForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 285,
+    "caption": "Variant Field Group",
+    "url": "View/MaterialSetup/VariantFieldGroupForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 24,
+    "caption": "Variant Value",
+    "url": "View/MaterialSetup/VariantFieldValueForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 25,
+    "caption": "Material Category",
+    "url": "View/MaterialSetup/MaterialCategoryForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 26,
+    "caption": "Model",
+    "url": "View/MaterialSetup/ModelForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 27,
+    "caption": "Material Master",
+    "url": "View/MaterialSetup/MaterialForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 282,
+    "caption": "Material Barcode",
+    "url": "View/MaterialSetup/MaterialBarcode.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 28,
+    "caption": "Bill Of Material",
+    "url": "View/MaterialSetup/BillOfMaterial.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 283,
+    "caption": "Material Ledger Map",
+    "url": "View/MaterialSetup/MaterialLedgerMappingForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 284,
+    "caption": "Serial Generation Logic",
+    "url": "View/MaterialSetup/SerialGenerationLogicForm.aspx",
+    "icon": null,
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 3,
+  "caption": "Production",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/FactorySetup.svg",
+  "children": [
+   {
+    "moduleId": 30,
+    "caption": "Production Line",
+    "url": "View/ProductionSetup/ProductionLineForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 31,
+    "caption": "Production Process",
+    "url": "View/ProductionSetup/ProductionProcess.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 35,
+    "caption": "Work Center Group",
+    "url": "View/ProductionSetup/WorkCenterGroupForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 32,
+    "caption": "Work Center",
+    "url": "View/ProductionSetup/WorkCenterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 33,
+    "caption": "Routing",
+    "url": "View/ProductionSetup/RoutingForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 34,
+    "caption": "Routing Guide",
+    "url": "View/ProductionSetup/RoutingGuideForm.aspx",
+    "icon": null,
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 4,
+  "caption": "Settings",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/settings.png",
+  "children": [
+   {
+    "moduleId": 40,
+    "caption": "CheckList Master",
+    "url": "View/Settings/ParameterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 41,
+    "caption": "Value List",
+    "url": "View/Settings/ParameterValueListForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 42,
+    "caption": "Defect Code Master",
+    "url": "View/Settings/DefectCodeMasterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49001,
+    "caption": "COD Master",
+    "url": "View/Settings/CODMasterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 43,
+    "caption": "Return Reasons",
+    "url": "View/Settings/ReturnReasonsForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 491,
+    "caption": "Scrap Reasons",
+    "url": "View/Settings/ScrapReasonForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 494,
+    "caption": "Pause Reasons",
+    "url": "View/Settings/PauseReasonForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 495,
+    "caption": "BreakDown Reasons",
+    "url": "View/Settings/BreakDownReasonForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49007,
+    "caption": "NonUtilize Reasons",
+    "url": "View/Settings/NonUtilizeReasonsForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 44,
+    "caption": "Concession Codes",
+    "url": "View/Settings/ConcessionCodesForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49003,
+    "caption": "Root Cause",
+    "url": "View/Settings/RootCauseForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49004,
+    "caption": "Rework Resolution",
+    "url": "View/Settings/ReworkResolutionForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 45,
+    "caption": "Employee",
+    "url": "View/Settings/EmployeeForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 48,
+    "caption": "Shift",
+    "url": "View/Settings/ShiftMasterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49,
+    "caption": "WorkCenter Availability",
+    "url": "View/Settings/WorkCenterAvailabilityForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 47,
+    "caption": "Identification Tag Design",
+    "url": "View/Settings/MaterialTagForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 46,
+    "caption": "Barcode Printer",
+    "url": "View/Settings/PrinterForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 492,
+    "caption": "Existing Stock Entry",
+    "url": "View/Settings/ExistingStockEntryForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49006,
+    "caption": "Existing Stock Print",
+    "url": "View/Settings/ExistingStockPrintForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 49005,
+    "caption": "Update JobCard Routing",
+    "url": "View/Settings/RoutingUpdateForm.aspx",
+    "icon": null,
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 5,
+  "caption": "Authorization",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Authorization.svg",
+  "children": [
+   {
+    "moduleId": 50,
+    "caption": "Users",
+    "url": "View/Authorization/UsersForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 51,
+    "caption": "User Role",
+    "url": "View/Authorization/UserRoleForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 53,
+    "caption": "Change Password",
+    "url": "View/Authorization/ChangePasswordForm.aspx",
+    "icon": null,
+    "children": []
+   },
+   {
+    "moduleId": 54,
+    "caption": "Reset Password",
+    "url": "View/Authorization/ResetPasswordForm.aspx",
+    "icon": null,
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 6,
+  "caption": "Dashboard",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Dashboard.svg",
+  "children": [
+   {
+    "moduleId": 68,
+    "caption": "SO Processing",
+    "url": "View/Reports/SOProcessingReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 67,
+    "caption": "Production Status",
+    "url": "View/Reports/ModelProgressDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 69,
+    "caption": "WorkStation",
+    "url": "View/Reports/WorkStationDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 65,
+    "caption": "Production Status",
+    "url": "View/Dashboards/ProductionStatusDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70,
+    "caption": "Production Summary",
+    "url": "View/Dashboards/ProductionSummaryDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 63,
+    "caption": "Plan Vs Production",
+    "url": "View/Dashboards/PlanVsProductionDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 64,
+    "caption": "Final Quality",
+    "url": "View/CEAT/QualityDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 10002,
+    "caption": "Production Dashboard",
+    "url": "View/CEAT/NEWQualityDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 555,
+    "caption": "HourWise Dashboard",
+    "url": "View/Reports/HourWisedashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 66,
+    "caption": "Self Inspection",
+    "url": "View/CEAT/SelfInspectionDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 76,
+    "caption": "Production (TBM)",
+    "url": "View/CEAT/CEATWorkCenterDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 79,
+    "caption": "Dispatch Dashboard",
+    "url": "View/CEAT/DispatchDashBoard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 78,
+    "caption": "Production (Curing)",
+    "url": "View/CEAT/CEATWorkCenterDashboard1.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 77,
+    "caption": "Lab Inspection",
+    "url": "View/CEAT/MixingQualityDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 9000,
+  "caption": "Graphic Dashboard",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/GraphicDashboard.png",
+  "children": [
+   {
+    "moduleId": 9001,
+    "caption": "Office Dashboard 1",
+    "url": "View/Dashboards/WRL/FoamDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9002,
+    "caption": "Pre-Assembly Performance",
+    "url": "View/Dashboards/WRL/FoamingDashboard1.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9003,
+    "caption": "Post Foaming Performance",
+    "url": "View/Dashboards/WRL/FoamingDashboard2.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9004,
+    "caption": "Office Dashboard 2",
+    "url": "View/Dashboards/WRL/CabinetPackingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9005,
+    "caption": "FOW and LID Performance",
+    "url": "View/Dashboards/WRL/CabinetPackingDashboard1.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9006,
+    "caption": "FG Performance",
+    "url": "View/Dashboards/WRL/CabinetPackingDashboard2.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9021,
+    "caption": "Assembly Loading Performance",
+    "url": "View/Dashboards/WRL/CabinetPackingDashboard3.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9007,
+    "caption": "Brazing Performance",
+    "url": "View/Dashboards/WRL/BrazingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9008,
+    "caption": "Cabinet Performance",
+    "url": "View/Dashboards/WRL/ActualPerformanceCabintDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9009,
+    "caption": "Cabinet Performance Defect",
+    "url": "View/Dashboards/WRL/CabinetPerformanceDefectDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9010,
+    "caption": "Hourly Production Performance",
+    "url": "View/Dashboards/WRL/HourlyProductionPerformanceDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9011,
+    "caption": "Hourly Assembly Loading",
+    "url": "View/Dashboards/WRL/HourlAssemblyLoadingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9012,
+    "caption": "Hourly Pre-Assembly -A Loading",
+    "url": "View/Dashboards/WRL/HourlPreAssemblyADashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9013,
+    "caption": "Hourly Pre-Assembly -B Loading",
+    "url": "View/Dashboards/WRL/HourlPreAssemblyBDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9014,
+    "caption": "Hourly Foaming Performance",
+    "url": "View/Dashboards/WRL/HourlyFoamingPerformanceDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9015,
+    "caption": "Foaming Quality Performance",
+    "url": "View/Dashboards/WRL/FoamingQualityPerformanceDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9016,
+    "caption": "Production Quality Performance",
+    "url": "View/Dashboards/WRL/ProductionQualityPerformanceDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9017,
+    "caption": "Buffer Storage Emergency Status",
+    "url": "View/Dashboards/WRL/WRLStationStatusDashboard1.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9018,
+    "caption": "Final Assembly Emergency Status",
+    "url": "View/Dashboards/WRL/WRLStationStatusDashboard2.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9019,
+    "caption": "Post-Foaming Emergency Status",
+    "url": "View/Dashboards/WRL/WRLStationStatusDashboard3.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9020,
+    "caption": "Pre-Foaming Emergency Status",
+    "url": "View/Dashboards/WRL/WRLStationStatusDashboard4.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9022,
+    "caption": "ISO HMI Display",
+    "url": "View/Reports/WRLCHEM.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9023,
+    "caption": "POLY HMI Display",
+    "url": "View/Reports/WRLCHEM2.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9024,
+    "caption": "SWC PRE - ASSEMBLY",
+    "url": "View/Dashboards/WRL/SWCPreAssemblyDashboard1.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9025,
+    "caption": "SUS PRE - ASSEMBLY",
+    "url": "View/Dashboards/WRL/SUSPreAssemblyDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9026,
+    "caption": "SUS POST - ASSEMBLY",
+    "url": "View/Dashboards/WRL/SUSPostAssemblyDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9027,
+    "caption": "SUS Loading",
+    "url": "View/Dashboards/WRL/SUSLoadingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9028,
+    "caption": "SUS Brazing",
+    "url": "View/Dashboards/WRL/SUSBrazingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9029,
+    "caption": "SUS Unloading",
+    "url": "View/Dashboards/WRL/SUSUnloadingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9030,
+    "caption": "VISI POST - ASSEMBLY",
+    "url": "View/Dashboards/WRL/VISIPostAssemblyDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9031,
+    "caption": "VISI Loading",
+    "url": "View/Dashboards/WRL/VISILoadingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9032,
+    "caption": "VISI Brazing",
+    "url": "View/Dashboards/WRL/VISIBrazingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 9033,
+    "caption": "VISI Unloading",
+    "url": "View/Dashboards/WRL/VISIUnloadingDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 7,
+  "caption": "Visitor Pass",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 71,
+    "caption": "Visitor Pass",
+    "url": "View/Visitor/VisitorPass.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72,
+    "caption": "Visitor IN",
+    "url": "View/Visitor/VisitorPassIn.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 73,
+    "caption": "Visitor Out",
+    "url": "View/Visitor/VisitorPassOut.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 74,
+    "caption": "Visitor Dashboard",
+    "url": "View/Visitor/VisitorDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 75,
+    "caption": "Visitor Report",
+    "url": "View/Visitor/VisitorPassReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 8,
+  "caption": "Material Pass",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialPass.svg",
+  "children": [
+   {
+    "moduleId": 81,
+    "caption": "Vehicle Pass",
+    "url": "View/MaterialGateManagement/MaterialGatePassForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   },
+   {
+    "moduleId": 82,
+    "caption": "Vehicle In",
+    "url": "View/MaterialGateManagement/MaterialGatePassInForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Green.svg",
+    "children": []
+   },
+   {
+    "moduleId": 83,
+    "caption": "Vehicle Weight Capture",
+    "url": "View/MaterialGateManagement/MaterialGatePassWeightCaptureForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Green.svg",
+    "children": []
+   },
+   {
+    "moduleId": 84,
+    "caption": "Vehicle Out",
+    "url": "View/MaterialGateManagement/MaterialGatePassOutForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 85,
+    "caption": "Vehicle Inspection",
+    "url": "View/MaterialGateManagement/VehicleInspectionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 86,
+    "caption": "Dashboard",
+    "url": "View/MaterialGateManagement/MaterialGatePassDashboard.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 87,
+    "caption": "Report",
+    "url": "View/MaterialGateManagement/MaterialGatePassReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 5000,
+  "caption": "Asset",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/AssetManagement.svg",
+  "children": [
+   {
+    "moduleId": 5001,
+    "caption": "Asset Allocation",
+    "url": "View/AssetManagement/AssetAllocation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 5002,
+    "caption": "Asset Maintenance Schedule",
+    "url": "View/AssetManagement/AssetMaintenance.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 5003,
+    "caption": "Asset Maintenance",
+    "url": "View/AssetManagement/AssetMaintainanceCheckList.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 5004,
+    "caption": "Asset Allocation Report",
+    "url": "View/AssetManagement/AssetAllocationReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 5005,
+    "caption": "Asset Maintainance Report",
+    "url": "View/AssetManagement/AssetMaintainanceReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 5006,
+    "caption": "Asset Master Report",
+    "url": "View/AssetManagement/AssetMasterReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 7000,
+  "caption": "Kaizen",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Kaizen.png",
+  "children": [
+   {
+    "moduleId": 7001,
+    "caption": "Kaizen Entry",
+    "url": "View/Kaizen/KaizenForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 7002,
+    "caption": "Benifit Type",
+    "url": "View/Kaizen/BenefitTypeForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 70000,
+  "caption": "Item Inward",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 70001,
+    "caption": "GRN",
+    "url": "View/CEAT/CEATSAPGRN.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70002,
+    "caption": "Label Printing",
+    "url": "View/CEAT/CEATItemBarcodePrint.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70005,
+    "caption": "Label Re-Printing",
+    "url": "View/CEAT/CEATItemBarcodeRePrint.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70003,
+    "caption": "Putaway",
+    "url": "View/CEAT/CEATGRNPutaway.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70004,
+    "caption": "DC GRN",
+    "url": "View/CEAT/CEATDCGRN.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70007,
+    "caption": "DC GRN NEW",
+    "url": "View/CEAT/CEATDCGRNNew.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 70006,
+    "caption": "DC GRN PutIn",
+    "url": "View/CEAT/CEATDCGRNPutAwayForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 71000,
+  "caption": "Production Issuance",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/FactorySetup.svg",
+  "children": [
+   {
+    "moduleId": 71001,
+    "caption": "Transfer Order",
+    "url": "View/CEAT/CEATTO.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 71002,
+    "caption": "Picking",
+    "url": "View/CEAT/CEATTOPickFIFO.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 71003,
+    "caption": "Handover",
+    "url": "View/CEAT/CEATTOHandOver.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 72000,
+  "caption": "Item Outward",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 72001,
+    "caption": "SO",
+    "url": "View/CEAT/CEATSalesOrder.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72002,
+    "caption": "Pick list",
+    "url": "View/CEAT/CEATPickList.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72003,
+    "caption": "Picking",
+    "url": "View/CEAT/CEATPickingFIFO.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72009,
+    "caption": "Picking-Direct",
+    "url": "View/CEAT/CEATPickingLoad.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 720010,
+    "caption": "Kitting",
+    "url": "View/CEAT/CEATKittingForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72011,
+    "caption": "Picking Navigation",
+    "url": "View/CEAT/CEATPickingFIFONavigation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72010,
+    "caption": "Pick Print",
+    "url": "View/CEAT/CEATPIckPrint.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72004,
+    "caption": "OBASO",
+    "url": "View/CEAT/CEATOBASO.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72008,
+    "caption": "Picklist-OBASO",
+    "url": "View/CEAT/CEATPickListwithOBASO.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72012,
+    "caption": "DC DO POSTING",
+    "url": "View/CEAT/CEATDCDOPosting.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 8010,
+    "caption": "Find Picklist No",
+    "url": "View/Reports/FindPicklistNo.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 33333,
+    "caption": "Picklist Status",
+    "url": "View/Reports/PicklistStatus.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 33334,
+    "caption": "Open FIFO Lock",
+    "url": "View/Reports/OpenFifoLock.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72013,
+    "caption": "Loading PDI",
+    "url": "View/CEAT/CEATPDI.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72005,
+    "caption": "Loading",
+    "url": "View/CEAT/CEATLoading.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72006,
+    "caption": "Loading For DC",
+    "url": "View/CEAT/CEATLoadingDC.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 72007,
+    "caption": "Exisiting Stock Entry",
+    "url": "View/CEAT/CEATExistingStockEntryForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 73000,
+  "caption": "Production",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/FactorySetup.svg",
+  "children": [
+   {
+    "moduleId": 73001,
+    "caption": "Production Plan",
+    "url": "View/CEAT/CEATProductionPlan.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 73002,
+    "caption": "Production Order",
+    "url": "View/CEAT/CEATProductionOrder.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 73003,
+    "caption": "Process Order",
+    "url": "View/CEAT/CEATProcessOrder.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 73004,
+    "caption": "Production Capture",
+    "url": "View/CEAT/CEATProductionCapture.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 73005,
+    "caption": "Scrap Posting",
+    "url": "View/CEAT/CEATScrapPosting.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 73006,
+    "caption": "Code To Code Transfer",
+    "url": "View/CEAT/CEATCodeToCodeTransfer.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 50000,
+  "caption": "Item Inward",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 500094,
+    "caption": "PO Report",
+    "url": "View/Reports/TMEICReports/TMPOReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50001,
+    "caption": "GIN",
+    "url": "View/TMEIC/GEAPOForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50002,
+    "caption": "GRN",
+    "url": "View/TMEIC/GRNForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50003,
+    "caption": "Label Printing",
+    "url": "View/TMEIC/ItemLabelPrintingForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50004,
+    "caption": "Full Inspection",
+    "url": "View/TMEIC/GRNInspectionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50005,
+    "caption": "Inspection Checksheet",
+    "url": "View/TMEIC/GRNInspectionCheckListForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50006,
+    "caption": "Inspection Approval",
+    "url": "View/TMEIC/GRNInspectionApprovalForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50007,
+    "caption": "Rework",
+    "url": "View/TMEIC/Rework.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50094,
+    "caption": "Rework Delivery",
+    "url": "View/TMEIC/ReworkDeliveryForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50008,
+    "caption": "Delivery",
+    "url": "View/TMEIC/DocumentPutawayForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 50009,
+    "caption": "Putaway",
+    "url": "View/TMEIC/FreePutawayForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 500095,
+    "caption": "BIN TO BIN Transfer",
+    "url": "View/TMEIC/BINTOBINForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 500091,
+    "caption": "RTV",
+    "url": "View/TMEIC/RTVForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 500092,
+    "caption": "RTV Picking",
+    "url": "View/TMEIC/RTVPicking.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 500093,
+    "caption": "GRN Cancellation",
+    "url": "View/TMEIC/CorrectionGRForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 51000,
+  "caption": "Inward Reports",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Report.svg",
+  "children": [
+   {
+    "moduleId": 51001,
+    "caption": "GIN",
+    "url": "View/Reports/TMEICReports/TMGINReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51002,
+    "caption": "GRN",
+    "url": "View/Reports/TMEICReports/TMGRNReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51003,
+    "caption": "GRN Processing",
+    "url": "View/Reports/TMEICReports/TMGRNProcessingReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51004,
+    "caption": "Inspection",
+    "url": "View/Reports/TMEICReports/TMInspectionReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51005,
+    "caption": "Inspection Processing",
+    "url": "View/Reports/TMEICReports/TMInspectionProcessingReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51006,
+    "caption": "Inspection Documents",
+    "url": "View/Reports/TMEICReports/TMInspectionDocumentReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51008,
+    "caption": "Inspection Checksheet",
+    "url": "View/Reports/TMEICReports/TMInspectionCheckSheetReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 51007,
+    "caption": "Delivery Processing",
+    "url": "View/Reports/TMEICReports/TMDeliveryProcessingReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 52000,
+  "caption": "Job Order",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/itemIssuance.png",
+  "children": [
+   {
+    "moduleId": 52001,
+    "caption": "Job Order",
+    "url": "View/TMEIC/JobOrderForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52002,
+    "caption": "Job Order Pick",
+    "url": "View/TMEIC/JobOrderPick.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52008,
+    "caption": "Pallet Transfer",
+    "url": "View/TMEIC/JobOrderPalletTransfer.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52006,
+    "caption": "Job Order Drop",
+    "url": "View/TMEIC/JobOrderDrop.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52007,
+    "caption": "Job Order Receive",
+    "url": "View/TMEIC/JobOrderReceive.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52004,
+    "caption": "Job Order Merge",
+    "url": "View/TMEIC/LTOParentForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52005,
+    "caption": "Merger Job Order Pick",
+    "url": "View/TMEIC/JobOrderMassPick.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 52003,
+    "caption": "OSP Challan",
+    "url": "View/TMEIC/OSPChallanForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 53000,
+  "caption": "Job Order Reports",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Report.svg",
+  "children": [
+   {
+    "moduleId": 53001,
+    "caption": "Job Order Pick",
+    "url": "View/Reports/TMEICReports/TMJobOrderIssueReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 53002,
+    "caption": "Job Order Processing",
+    "url": "View/Reports/TMEICReports/TMJobOrderPostingReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 54000,
+  "caption": "Inventory Trans",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/InventoryTrans.png",
+  "children": [
+   {
+    "moduleId": 54001,
+    "caption": "Miscellaneous",
+    "url": "View/TMEIC/MiscInvReceiptForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54008,
+    "caption": "Sub Inv Transfer",
+    "url": "View/TMEIC/SubInvTransferForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54002,
+    "caption": "Break BarCode",
+    "url": "View/MaterialMovement/Warhousing/BreakBarCodeForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54003,
+    "caption": "WIP Return",
+    "url": "View/TMEIC/WIPStockForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54004,
+    "caption": "Existing Stock Print",
+    "url": "View/TMEIC/ExistingStockPrintFormNew.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54005,
+    "caption": "Issue Stock",
+    "url": "View/MaterialMovement/Warhousing/RemoveStockForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54006,
+    "caption": "Stock Report",
+    "url": "View/Reports/StockReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54007,
+    "caption": "Existing Stock Report",
+    "url": "View/Reports/ExistingStockPrintSummaryReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 54009,
+    "caption": "Barcode Status",
+    "url": "View/TMEIC/BarcodeStatusForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 55000,
+  "caption": "Work In Progress",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Report.svg",
+  "children": [
+   {
+    "moduleId": 55001,
+    "caption": "WIP Capture",
+    "url": "View/TMEIC/WIPTracking.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 55002,
+    "caption": "WIP Quality",
+    "url": "View/TMEIC/WIPQualityInspectionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 55004,
+    "caption": "WIP Rework",
+    "url": "View/TMEIC/ReworkTracking.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 55003,
+    "caption": "Rework Inspection",
+    "url": "View/TMEIC/ReworkWIP.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 55005,
+    "caption": "WIP Return",
+    "url": "View/TMEIC/WIPReturn.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 55006,
+    "caption": "Map VendorSerial",
+    "url": "View/TMEIC/JobOrderVendorSerialMap.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 55007,
+    "caption": "WIP Putaway",
+    "url": "View/TMEIC/WIPPutawayForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 60000,
+  "caption": "Item Inward",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 60001,
+    "caption": "GRN",
+    "url": "View/Himile/SAPGRN.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 60002,
+    "caption": "Label Printing",
+    "url": "View/Himile/ItemBarcodePrint.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 60003,
+    "caption": "Inspection",
+    "url": "View/Himile/GRNInspection.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 60004,
+    "caption": "GRN Putaway",
+    "url": "View/Himile/GRNPutaway.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 60006,
+    "caption": "Existing Stock Print",
+    "url": "View/Himile/ExistingStockPrintFormHimile.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 60005,
+    "caption": "Inward Report",
+    "url": "View/Himile/InwardReport.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 61000,
+  "caption": "Item Outward",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 61001,
+    "caption": "SO",
+    "url": "View/Himile/SO.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 63000,
+  "caption": "Item Issuance",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/FactorySetup.svg",
+  "children": [
+   {
+    "moduleId": 63001,
+    "caption": "Transfer Order",
+    "url": "View/Himile/TOForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 63002,
+    "caption": "Picking",
+    "url": "View/Himile/TOPick.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 63003,
+    "caption": "Handover",
+    "url": "View/Himile/TOHandOver.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 63004,
+    "caption": "Kanban Issue",
+    "url": "View/Himile/KanbanIssue.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 62000,
+  "caption": "Production",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/FactorySetup.svg",
+  "children": [
+   {
+    "moduleId": 62001,
+    "caption": "Process Order",
+    "url": "View/Himile/ProcessOrder.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 62002,
+    "caption": "Production Tracking",
+    "url": "View/Himile/ProductionTracking.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 62003,
+    "caption": "Production Posting",
+    "url": "View/Himile/ProductionPosting.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 62004,
+    "caption": "Rework Order",
+    "url": "View/Himile/ReWorkOrderHimile.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 62005,
+    "caption": "Process Time Update",
+    "url": "View/Himile/ProcessTimeUpdate.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 9,
+  "caption": "Material Movements",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/MaterialMovement.svg",
+  "children": [
+   {
+    "moduleId": 100,
+    "caption": "GRAPO",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": [
+     {
+      "moduleId": 101,
+      "caption": "PO",
+      "url": "View/MaterialMovement/GRAPO/POForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Green.svg",
+      "children": []
+     },
+     {
+      "moduleId": 102,
+      "caption": "GRN-PO",
+      "url": "View/MaterialMovement/GRAPO/GRAPOForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     },
+     {
+      "moduleId": 107,
+      "caption": "GRN Label Printing",
+      "url": "View/ItemLabelPrintingNewForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 200,
+    "caption": "Stock Transport",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Green.svg",
+    "children": [
+     {
+      "moduleId": 201,
+      "caption": "STO",
+      "url": "View/MaterialMovement/StockTransport/STOForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     },
+     {
+      "moduleId": 202,
+      "caption": "STO Pick",
+      "url": "View/MaterialMovement/StockTransport/STOPick.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     },
+     {
+      "moduleId": 203,
+      "caption": "STO Dispatch",
+      "url": "View/MaterialMovement/StockTransport/STODispatch.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     },
+     {
+      "moduleId": 204,
+      "caption": "STO Receipt",
+      "url": "View/MaterialMovement/StockTransport/STOReceipt.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 300,
+    "caption": "Inventory Movement",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 301,
+      "caption": "Transfer Order",
+      "url": "View/MaterialMovement/StockTransfer/LTOForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     },
+     {
+      "moduleId": 302,
+      "caption": "Pick",
+      "url": "View/MaterialMovement/StockTransfer/LTOPicking.aspx",
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     },
+     {
+      "moduleId": 303,
+      "caption": "Handover",
+      "url": "View/MaterialMovement/StockTransfer/LTOIssuedHandOver.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 400,
+    "caption": "OBASO",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 401,
+      "caption": "Sales Order",
+      "url": "View/MaterialMovement/OBASO/SalesOrderForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     },
+     {
+      "moduleId": 402,
+      "caption": "Out-bound Delivery",
+      "url": "View/MaterialMovement/OBASO/OBASOForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 500,
+    "caption": "Returns",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 501,
+      "caption": "Sales Return Order",
+      "url": "View/MaterialMovement/Returns/SRNForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     },
+     {
+      "moduleId": 502,
+      "caption": "SRN Receipts",
+      "url": null,
+      "icon": "Assets/Images/Icons/Circles/Purple.svg",
+      "children": []
+     },
+     {
+      "moduleId": 503,
+      "caption": "Return To Vendor",
+      "url": "View/MaterialMovement/Returns/PRNForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 504,
+      "caption": "RTV Scanning",
+      "url": "View/MaterialMovement/Returns/PRNPicking.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 600,
+    "caption": "Code To Code Transfer",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 601,
+      "caption": "Code To Code Order",
+      "url": "View/MaterialMovement/CTCTO/CodeToCodeOrder.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     },
+     {
+      "moduleId": 602,
+      "caption": "Transfer Scanning",
+      "url": "View/MaterialMovement/CTCTO/CTCTansfer.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 700,
+    "caption": "Scrap Material",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 701,
+      "caption": "Scrap Order",
+      "url": "View/MaterialMovement/SCRAP/ScrapOrderForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     },
+     {
+      "moduleId": 702,
+      "caption": "Scrap Scanning",
+      "url": "View/MaterialMovement/SCRAP/ScrappingForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Orange.svg",
+      "children": []
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "moduleId": 1000,
+  "caption": "Warehousing",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/WarehouseSetup.svg",
+  "children": [
+   {
+    "moduleId": 1001,
+    "caption": "Palletization",
+    "url": "View/MaterialMovement/Warhousing/PallatizationForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Purple.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1002,
+    "caption": "De-Palletization",
+    "url": "View/MaterialMovement/Warhousing/DepallatizationForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Purple.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1003,
+    "caption": "Pallet Putaway",
+    "url": "View/MaterialMovement/Warhousing/PutawayPalletForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1004,
+    "caption": "Item Putaway",
+    "url": "View/CEAT/CEATPutAwayForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1005,
+    "caption": "Item Putaway Navigation",
+    "url": "View/CEAT/CEATPutawayNavigation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1015,
+    "caption": "Document Putaway",
+    "url": "View/DocumentPutAwayNewForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1016,
+    "caption": "Add Stock",
+    "url": "View/MaterialMovement/Warhousing/AddStockForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1014,
+    "caption": "Issue To Production",
+    "url": "View/MaterialMovement/StockTransfer/IssueToProduction.aspx",
+    "icon": "Assets/Images/Icons/Circles/Purple.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1006,
+    "caption": "PickList",
+    "url": "View/MaterialMovement/Warhousing/PickListForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1007,
+    "caption": "Picking",
+    "url": "View/MaterialMovement/Warhousing/PickingForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1009,
+    "caption": "Loading",
+    "url": "View/MaterialMovement/OBASO/LoadingForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1008,
+    "caption": "Serial No. Replace",
+    "url": "View/MaterialMovement/Warhousing/SerialNoReplaceForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1010,
+    "caption": "ID Plate No. Replace",
+    "url": "View/MaterialMovement/Warhousing/IDPlateReplaceForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1011,
+    "caption": "Physical Audit Order",
+    "url": "View/MaterialMovement/Warhousing/PAOForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1012,
+    "caption": "Physical Scan",
+    "url": "View/MaterialMovement/Warhousing/PAOScanForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 1013,
+    "caption": "Physical Stock Update",
+    "url": "View/MaterialMovement/Warhousing/PAOStockUpdateForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 2000,
+  "caption": "Quality",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Quality.svg",
+  "children": [
+   {
+    "moduleId": 2001,
+    "caption": "Self Inspection",
+    "url": "View/CEAT/CEATINSelfInspectionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2020,
+    "caption": "Mixing Disposition",
+    "url": "View/CEAT/CEATMIXDispositionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2016,
+    "caption": "RRO Inspection",
+    "url": "View/CEAT/CEATRROInspectionNew.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2002,
+    "caption": "Final Inspection",
+    "url": "View/Quality/QualityInspectionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2017,
+    "caption": "Tyre Testing",
+    "url": "View/CEAT/CEATTechnicalTesting.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2014,
+    "caption": "NCMR Technical",
+    "url": "View/CEAT/CEATNCMRConfirmationTechnical.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2018,
+    "caption": "Scrap Reverse",
+    "url": "View/CEAT/scrapReverse.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2015,
+    "caption": "NCMR QC",
+    "url": "View/CEAT/CEATNCMRConfirmation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2003,
+    "caption": "NCMR Confirmation",
+    "url": "View/Quality/NCMRConfirmation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2004,
+    "caption": "Repair Confirmation",
+    "url": "View/Quality/RepairConfirmation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2005,
+    "caption": "Finishing Confirmation",
+    "url": "View/Quality/FinishingConfirmation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2013,
+    "caption": "Rework Confirmation New",
+    "url": "View/Quality/ReworkConfirmationNew.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2006,
+    "caption": "Rework Confirmation",
+    "url": "View/Quality/ReworkConfirmation.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2012,
+    "caption": "Barcode Held-Up",
+    "url": "View/Quality/NewInspectionForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   },
+   {
+    "moduleId": 2007,
+    "caption": "Area Cleaning",
+    "url": "View/Quality/AreaCleaningForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 3000,
+  "caption": "Production",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/FactorySetup.svg",
+  "children": [
+   {
+    "moduleId": 3001,
+    "caption": "Production Order",
+    "url": "View/Production/ProductionOrderForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3002,
+    "caption": "Process Order",
+    "url": "View/Production/ProcessOrderForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3003,
+    "caption": "Rework Order",
+    "url": "View/Production/ReWorkOrderForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3004,
+    "caption": "OSP Challan",
+    "url": "View/Production/OutsideProcessingOrderForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3016,
+    "caption": "OSP Receipt",
+    "url": "View/Production/OSPReceiptNoteForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3011,
+    "caption": "Process Guide",
+    "url": "View/Production/ProcessGuideForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3005,
+    "caption": "Production Process Capture",
+    "url": "View/Production/ProductionCaptureForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3008,
+    "caption": "Production Assignment",
+    "url": "View/Production/ProductionAssignmentForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3007,
+    "caption": "WIP Capture",
+    "url": "View/Production/WIPCaptureForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3006,
+    "caption": "WorkStation Utilization",
+    "url": "View/Production/WorkStationUtilizationForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3009,
+    "caption": "Scrap Posting",
+    "url": "View/Production/ScrapPostingForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3012,
+    "caption": "RM Replacement",
+    "url": "View/Production/RMReplacementForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3013,
+    "caption": "Model To Model Transfer",
+    "url": "View/Production/ModelToModelTransferForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3014,
+    "caption": "Asset Tag ID Replacement",
+    "url": "View/Production/AssetTagIDReplacementForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3019,
+    "caption": "Production Plan Upload",
+    "url": "View/Production/ProdPlanUpload.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3015,
+    "caption": "MRP Update",
+    "url": "View/Production/MRPUpdateForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3017,
+    "caption": "FG Scrap",
+    "url": "View/Production/FGScrapForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 3018,
+    "caption": "Material Image Display",
+    "url": "View/Production/WRLImageDisply.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 4000,
+  "caption": "Planning",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/planning.png",
+  "children": [
+   {
+    "moduleId": 4001,
+    "caption": "Process Order Plan",
+    "url": "View/Production/ProcessOrderPlanForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 4002,
+    "caption": "Machine Availibility",
+    "url": "View/Production/MachineAvailibilityForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 4003,
+    "caption": "Planning Order",
+    "url": "View/Production/PlanningOrderForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 4004,
+    "caption": "Production Plan",
+    "url": "View/Production/ProductionPlanForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 4005,
+    "caption": "Monthly Plan",
+    "url": "View/Production/MonthlyPlanningForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   },
+   {
+    "moduleId": 4006,
+    "caption": "Daily Plan",
+    "url": "View/Production/DailyPlanForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+    "children": []
+   }
+  ]
+ },
+ {
+  "moduleId": 6000,
+  "caption": "Reports",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/Report.svg",
+  "children": [
+   {
+    "moduleId": 6100,
+    "caption": "Stock",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 6101,
+      "caption": "Stock Report",
+      "url": "View/Reports/StockReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6109,
+      "caption": "DC Serial Stock Report",
+      "url": "View/Reports/DCSerialStockReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 786369,
+      "caption": "All DC CFA Serial Report",
+      "url": "View/Reports/AllDCCFAserialReport2.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 11111,
+      "caption": "All DC CFA Serial Stock Report",
+      "url": "View/Reports/AllDCCFASerialStockReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6105,
+      "caption": "Stock-MHE Wise",
+      "url": "View/Reports/StockMHEReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6104,
+      "caption": "Serial Stock Report",
+      "url": "View/Reports/SerialStockReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6102,
+      "caption": "GRN Report",
+      "url": "View/Reports/CEATDCGRNReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 22222,
+      "caption": "All DC CFA GRN Report",
+      "url": "View/Reports/AllDCCFAGRNReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6103,
+      "caption": "Purchase Returns",
+      "url": "View/Reports/PRNReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6106,
+      "caption": "Physical Audit",
+      "url": "View/Reports/PAOReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6107,
+      "caption": "InProcess Stock",
+      "url": "View/Reports/InProcessStock.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 61010,
+      "caption": "GT Inventory Report",
+      "url": "View/Reports/CEATGTInvRport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6108,
+      "caption": "InProcess Serial Wise Stock",
+      "url": "View/Reports/InProcessStockSerialWise.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 610922,
+      "caption": "Kanban Report",
+      "url": "View/Reports/ProcessStockSerialWiseNewReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 212121,
+      "caption": "Location Status",
+      "url": "View/Reports/LocationStatus.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 6300,
+    "caption": "Quality",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 6301,
+      "caption": "Quality Inspection",
+      "url": "View/Reports/InspectionReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6302,
+      "caption": "Online Rejection",
+      "url": "View/Reports/OnlineRejectionReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6303,
+      "caption": "Inspection Summary",
+      "url": "View/Reports/InspectionSummaryReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6304,
+      "caption": "Serial Wise Inspection",
+      "url": "View/Reports/SerialInspectionReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6305,
+      "caption": "Defect Serial",
+      "url": "View/Reports/DefectDetailSelfReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6306,
+      "caption": "Defect Final Serial",
+      "url": "View/Reports/DefectDetailReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6307,
+      "caption": "Defect Action",
+      "url": "View/Reports/ReworkActionReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6308,
+      "caption": "Defect Summary",
+      "url": "View/Reports/DefectSummaryReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6309,
+      "caption": "NCMR Report",
+      "url": "View/Reports/HeldupNCMRReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 6400,
+    "caption": "Production",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 6401,
+      "caption": "Plan Vs Actual",
+      "url": "View/Reports/PlanVsActualReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6402,
+      "caption": "Production Output",
+      "url": "View/Reports/WorkStationYieldReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6403,
+      "caption": "History Report",
+      "url": "View/Reports/CEATHistoryReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6416,
+      "caption": "RM History Report",
+      "url": "View/Reports/GRNHistoryReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6404,
+      "caption": "Serial Wise Production",
+      "url": "View/Reports/SerialWiseProductionOrderReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6419,
+      "caption": "Serial Wise Production Stock",
+      "url": "View/Reports/CEATSerialWiseProductionStockReport .aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6417,
+      "caption": "Serial Wise Production(Mixing)",
+      "url": "View/Reports/SerialProdMixingReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6405,
+      "caption": "Production Activity",
+      "url": "View/Reports/ProductionActivityReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6406,
+      "caption": "ERP Posting",
+      "url": "View/Reports/ERPProductionPosting.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6412,
+      "caption": "ERP Mixing Posting",
+      "url": "View/Reports/ERPMixingProductionPosting.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6407,
+      "caption": "ERP Integration Log",
+      "url": "View/Reports/IntegrationLogReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6408,
+      "caption": "Serial In-Out",
+      "url": "View/Reports/SerialInoutScanHistoryReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6409,
+      "caption": "JobCard Report",
+      "url": "View/Reports/JobCardReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6410,
+      "caption": "Job Progress Report",
+      "url": "View/Reports/JobProgressReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6418,
+      "caption": "Station Progress Report",
+      "url": "View/Reports/StationProgressReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6411,
+      "caption": "User Activity Report",
+      "url": "View/Reports/UserActivityReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6415,
+      "caption": "Deviation Document",
+      "url": "View/DeviationDocForm.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 6500,
+    "caption": "Traceability Reports",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 6501,
+      "caption": "Production Report",
+      "url": "View/Reports/WRLReports/ProductionReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6502,
+      "caption": "Rework Report",
+      "url": "View/Reports/WRLReports/ReworkReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6503,
+      "caption": "Brazing Report",
+      "url": "View/Reports/WRLReports/BrazingNewReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6504,
+      "caption": "Process History Card",
+      "url": "View/Reports/WRLReports/ProcessHistoryDefectReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6505,
+      "caption": "Scrap Report",
+      "url": "View/Reports/WRLReports/ScrapReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6506,
+      "caption": "Component Tracebility Report",
+      "url": "View/Reports/WRLReports/ProductionTracebilityReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6507,
+      "caption": "FG Report",
+      "url": "View/Reports/WRLReports/FGReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6508,
+      "caption": "Production Count Report",
+      "url": "View/Reports/WRLReports/FGProductionReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6509,
+      "caption": "Hourly Report",
+      "url": "View/Reports/WRLReports/ProductionHourlyCount.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6510,
+      "caption": "Gas Staging Report",
+      "url": "View/Reports/WRLReports/GasChargingReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6511,
+      "caption": "EST Staging Report",
+      "url": "View/Reports/WRLReports/ESTReportNew.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6512,
+      "caption": "MFT Staging Report",
+      "url": "View/Reports/WRLReports/MFTStaging.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6513,
+      "caption": "Consolidated Report",
+      "url": "View/ConsolidatedReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 6514,
+      "caption": "Stop Loss Report",
+      "url": "View/Reports/WRLReports/StopLossReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 9100,
+    "caption": "RM Issue Reports",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 9101,
+      "caption": "RM Issue Serial Wise Report",
+      "url": "View/Reports/TOSerialReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 9102,
+      "caption": "RM Issue Summery Report",
+      "url": "View/Reports/RMIssueSummery.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   },
+   {
+    "moduleId": 8000,
+    "caption": "Dispatch",
+    "url": null,
+    "icon": "Assets/Images/Icons/Circles/Orange.svg",
+    "children": [
+     {
+      "moduleId": 55555,
+      "caption": "ALL CFA Dispatch Report",
+      "url": "View/Reports/AllCFADispatchReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 8001,
+      "caption": "Dispatch Report",
+      "url": "View/Reports/DispatchReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 8002,
+      "caption": "Dispatch Pick Serial Report",
+      "url": "View/Reports/DispatchPickSerialReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 8003,
+      "caption": "Pick-Direct Dispatch Serial Report",
+      "url": "View/Reports/CEATDispatchPickSerialDCReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 8004,
+      "caption": "DC Dispatch Report",
+      "url": "View/Reports/DCDispatchReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 8005,
+      "caption": "Loading Image Report",
+      "url": "View/Reports/CEATLoadingImage.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     },
+     {
+      "moduleId": 8006,
+      "caption": "DC Serial History Report",
+      "url": "View/Reports/CEATDCHistoryReport.aspx",
+      "icon": "Assets/Images/Icons/Circles/Yellow.svg",
+      "children": []
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "moduleId": 10000,
+  "caption": "Logout",
+  "url": null,
+  "icon": "Assets/Images/Icons/SideMenuIcons/logout.png",
+  "children": [
+   {
+    "moduleId": 10001,
+    "caption": "Logout",
+    "url": "View/LoginForm.aspx",
+    "icon": "Assets/Images/Icons/Circles/Blue.svg",
+    "children": []
+   }
+  ]
+ }
+]
