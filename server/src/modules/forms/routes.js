@@ -10,6 +10,7 @@ import { newFormState, displayState, copyState, copyOptions, engineControls } fr
 import { comboRows } from './children.js';
 import { PAGE_EVENTS, PAGE_POSTBACK, PAGE_LIST_TAG, PAGE_SAVE, PAGE_UPDATE, PAGE_CANCEL, PAGE_LOAD, PAGE_PRINT, CUSTOM_DISPLAY, eventHelpers } from './pages.js';
 import { printerOptions } from './labels.js';
+import { cabinetByLabel, routeByLabel } from './wip.js';
 import { listPage, searchColumns, distinctValues, operatorsFor, OPERATOR_TEXT } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
 
@@ -183,6 +184,19 @@ formRoutes.post('/save', async (req, res) => {
   } catch (e) {
     fail(res, e);
   }
+});
+
+// WIP Capture's unit view: the scanned label's route and cabinet details (read only; the WIP events are unchanged).
+// Each part fails on its own, so a missing table or column never hides the other.
+formRoutes.get('/unit', async (req, res) => {
+  if (netString(req.query.path).toLowerCase() !== '/production/wipcaptureform') return void res.status(404).json({ message: 'Form not found' });
+  const spec = await load(req, res);
+  if (!spec) return;
+  const label = netString(req.query.label).trim();
+  if (label === '' || label.length > 100) return void res.status(400).json({ message: 'Scan a unit serial' });
+  const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
+  for (const r of [route, cabinet]) if (r.status === 'rejected') console.error('forms/unit:', r.reason?.message);
+  res.json({ route: route.value ?? null, cabinet: cabinet.value ?? null });
 });
 
 formRoutes.post('/update', async (req, res) => {

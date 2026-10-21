@@ -70,11 +70,12 @@ export function ComboField({ path, c, label, value, onPick }) {
       </div>
       {open && (
         <div className="animate-fadeIn relative z-10 mt-2 card shadow-lift p-3">
-          <form className="mb-2 flex gap-2" onSubmit={(e) => (e.preventDefault(), load(search))}>
-            <input className="field" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} autoFocus />
-            <Button type="submit" variant="secondary" icon={Search} aria-label="Search" />
+          {/* No <form>: this renders inside RecordForm's form, and a nested form would submit the record instead. */}
+          <div className="mb-2 flex gap-2">
+            <input className="field" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), load(search))} autoFocus />
+            <Button variant="secondary" icon={Search} aria-label="Search" onClick={() => load(search)} />
             <Button variant="ghost" icon={X} aria-label="Close" onClick={() => setOpen(false)} />
-          </form>
+          </div>
           {err && <p role="alert" className="text-xs text-rose-600">{err}</p>}
           {loading ? (
             <div className="flex items-center gap-2 p-3 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin text-blue-600" /> Loading…</div>

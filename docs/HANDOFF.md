@@ -65,6 +65,10 @@ control patches.
 | `e34a1a7` | Reports & dashboards removed from codebase; `reports/format.js` -> `lib/format.js` |
 | `182dce1` | Phase 1: specs/page code trimmed to the keep-list (now 56 screens), `lib/sql.js`, parity scripts pruned. Regression equal to baseline |
 | `551ef5f` | Phases 2-3: client on the **QMAS design system** (owner asked to use QMAS's design) |
+| `78d25b9` | Phase 4 (in progress): `useEngine.js` (shared event plumbing for RecordForm and flow screens), `pages/flow/` kit (ScanBox, result banner, beep, step track), dedicated WIP Capture (scan-first, results 11/21/30/40), sectioned layouts for Production Order, Production Assignment, Rework Confirmation New (`flow/layouts.js`); ScanBox no longer a nested `<form>` |
+| `a6508f5` | ComboField search no longer a nested `<form>` (Enter/search button submitted the record form instead) |
+| `e545591` | WIP Capture: route progress and the stage's components as a checklist (fitted when consumed >= required) |
+| next | WIP Capture redesigned to the owner's mockup: Scan & Identify, Cabinet Details, Process History (whole route with Completed / In Process / Pending), Component Details, Inspection & Defect Recording. Read-only `GET /api/forms/unit?path=/production/wipcaptureform&label=` (replaces `/route`) returns `route` (`routeByLabel`) and `cabinet` (`cabinetByLabel`: FG material name/category/model/image, MaterialVariant values such as colour/dimension, customer via PRODHeader.SalesOrder -> SOHeader -> Ledger); each part fails alone (logged) |
 
 E2E test (21 Oct, browser, test DB): freezer F390GL24 (22600118), route 12502 (17 stations) from order PO82603053 to
 FG label; rework, hold/cancel, ~47 scenarios. Report: https://claude.ai/artifact/A3Ddeh4NKpLysYmtfPUaQS (private to
@@ -116,8 +120,14 @@ Recovery of anything removed: `git checkout backup-before-redesign -- <path>` or
 
 ## 7. Remaining plan (see AUDIT-AND-PLAN.md §3)
 
-- **Phase 4 (next), on the QMAS ui/ kit:** dedicated flow screens + APIs (scan-first WIP Capture: station -> serial, big status banner, sound/
-  colour feedback, route progress, component checklist, QC panel with checklist/defects, FG serial/asset/printer).
+- **Phase 4 (in progress):** checked in the browser on the test DB: WIP Capture start/complete scans (FOAMING A), Production
+  Assignment order postback, Rework Confirmation New renders. **Still to check in the browser:** rework scan with the
+  fixed ScanBox (Enter must fire `Go`, not submit the record), ComboField search, Production Order layout, the redesigned WIP Capture on a real unit (cabinet
+  fields: colour/dimension come from Material variants and the customer from the sales order; `cabinetByLabel` is
+  untested against the DB, check the server log for `forms/unit:` errors), the component checklist. Then server
+  regression suites (client + useEngine change). WIP Capture now has every planned part (station -> serial, banner, sound, route progress, component checklist, QC
+  with checklist/defects, FG serial/asset/printer). Left for Phase 4: rowset/label parity runs proving the flow screens
+  write the same as the original (decision §6.1).
 - **Phase 5:** messages + rule fixes (§6). **Phase 6:** parameterise remaining spliced SQL, login rate limit,
   security headers, secure cookie by config, request IDs + log file, Serial index. **Phase 7:** cleanup, README
   (run/deploy/maintain), final report (old vs new structure, fixes, tests, remaining issues).
