@@ -7,8 +7,6 @@ import { writeSession, clearSession } from '../../lib/session.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { netString, alertText } from '../../lib/net.js';
 import { config } from '../../config.js';
-import { REPORTS } from '../reports/routes.js';
-import { WRL_REPORTS } from '../reports/wrlPages.js';
 import { FORMS } from '../forms/routes.js';
 
 export const authRoutes = Router();
@@ -93,6 +91,6 @@ authRoutes.get('/me', requireAuth, async (req, res) => {
     search: m.search,
     defaultRoute: m.defaultRoute,
     // Screens already rebuilt in this app; everything else links to the existing application.
-    migrated: { genericReports: Object.keys(REPORTS), wrlReports: Object.keys(WRL_REPORTS), hmi: ['wrlchem', 'wrlchem2'], forms: Object.keys(FORMS) },
+    migrated: { forms: Object.keys(FORMS) },
   });
 });

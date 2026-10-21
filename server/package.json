@@ -6,7 +6,6 @@
     "dev": "node --env-file=.env --watch src/index.js",
     "start": "node --env-file=.env src/index.js",
     "test": "node --env-file-if-exists=.env --test",
-    "extract-reports": "node scripts/extract-reports.mjs ../../source/Garuda src/modules/menu/menu.json src/modules/reports/reports.json",
     "extract-menu": "node scripts/extract-menu.mjs ../../source/Garuda/View/Layout.Master src/modules/menu/menu.json"
   },
   "dependencies": {

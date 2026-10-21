@@ -1,6 +1,6 @@
 // Value.ToString() as the original printed database values (server culture en-IN).
 import { netNum } from '../../lib/net.js';
-import { enInDateTime } from '../reports/format.js';
+import { enInDateTime } from '../../lib/format.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 

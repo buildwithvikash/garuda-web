@@ -63,13 +63,11 @@ export default function AppLayout() {
   const [me, setMe] = useState(null);
   const [search, setSearch] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const { pathname, search: query } = useLocation();
-  // Shop-floor TVs open dashboards with ?UCode=...: no menu or header, the dashboard fills the screen.
-  const kiosk = pathname.startsWith('/dashboards/') && new URLSearchParams(query).has('UCode');
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    if (!kiosk) api('/auth/me').then(setMe);
-  }, [kiosk]);
+    api('/auth/me').then(setMe);
+  }, []);
   useEffect(() => setMenuOpen(false), [pathname]);
 
   const items = me?.search ?? [];
@@ -80,12 +78,6 @@ export default function AppLayout() {
     navigate('/login', { replace: true });
   }
 
-  if (kiosk)
-    return (
-      <main className="min-h-screen bg-slate-950 p-4 sm:p-6">
-        <Outlet />
-      </main>
-    );
   if (!me) return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Loading…</div>;
 
   return (

@@ -13,7 +13,6 @@ app.use('/api/forms', express.json({ limit: '100mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRoutes);
-// shop-floor scope: reports and dashboards are switched off (modules/reports, modules/dashboards stay on disk)
 app.use('/api/forms', formRoutes);
 // Migrated modules register here, each guarded with requireAuth + authorize(<ModuleID>).
 

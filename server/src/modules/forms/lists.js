@@ -5,7 +5,7 @@
 import { query, scalar, queryTable } from '../../db/index.js';
 import { netString, netInt } from '../../lib/net.js';
 import { tableSchema, engineType } from './schema.js';
-import { toGrid } from '../reports/format.js';
+import { toGrid } from '../../lib/format.js';
 
 export const PAGE_SIZE = 10; // GridView default (ViewControl.ascx sets none)
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

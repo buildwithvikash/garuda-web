@@ -7,7 +7,6 @@ import ChangePassword from './pages/ChangePassword.jsx';
 import AppLayout from './layouts/AppLayout.jsx';
 import Start from './pages/Start.jsx';
 import NotMigrated from './pages/NotMigrated.jsx';
-import WrlDashboard from './pages/dashboards/WrlDashboard.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -18,7 +17,6 @@ createRoot(document.getElementById('root')).render(
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/start" replace />} />
           <Route path="/start" element={<Start />} />
-          <Route path="/dashboards/wrl/:slug" element={<WrlDashboard />} />
           {/* Further migrated module routes go here. */}
           <Route path="*" element={<NotMigrated />} />
         </Route>

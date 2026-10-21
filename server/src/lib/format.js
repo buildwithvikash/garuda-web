@@ -1,6 +1,6 @@
 // Cell text as the original GridView (AutoGenerateColumns) showed it: .NET ToString() in the server culture
 // (en-IN: "23-04-2024 03:04:05 PM"), decimals keep their scale, bits are checkboxes, binary columns are not shown.
-import { netNum } from '../../lib/net.js';
+import { netNum } from './net.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
