@@ -500,6 +500,13 @@ export async function historyByLabel(label) {
   return { rows, name: name === '0' ? '' : name };
 }
 
+/** The label's whole route for the flow screen's progress view (read only, not in the original): every stage in
+ *  sequence with its status (0 waiting, 1 started, 2 completed). Same job-card lookup as historyByLabel. */
+export async function routeByLabel(label) {
+  const rows = await query(`Select pr.SeqNo,pp.Name[Process],wc.Name[Station],pr.Status,pr.StartedOn,pr.CompletedOn from ProcessRouting pr inner join ProductionProcess pp on pr.ProcessCode=pp.ProcessCode inner join WorkCenter wc on pr.StationCode=wc.StationCode where pr.PSNo=(select top 1 PSNo from ProcessStageLabel where BarcodeNo=@label) order by pr.SeqNo asc`, { label: netString(label) });
+  return rows.map((r) => ({ seq: netInt(r.SeqNo), process: str(r.Process), station: str(r.Station), status: netInt(r.Status), startedOn: r.StartedOn ? str(r.StartedOn) : '', completedOn: r.CompletedOn ? str(r.CompletedOn) : '' }));
+}
+
 // ---- QC at a station (result 30: stage types 2 / 8) ------------------------------------------------------------------
 
 /** AVQuality.ValidateProductionBarcodeforQC (WRL): the job card's barcode with that serial, PendingQCQty 1 when it is on

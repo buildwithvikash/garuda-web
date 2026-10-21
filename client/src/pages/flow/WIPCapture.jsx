@@ -1,8 +1,9 @@
 // WIP Capture, scan-first: department and station once, then serial after serial. The scan's result decides what
 // follows: a stage recorded (done), components to scan, a quality check or the FG label. Every button runs the same
 // WIPCaptureForm handler on the server as before (/forms/event), so database writes and labels are unchanged.
-import { BookOpen, Boxes, ClipboardCheck, Factory, History, ListChecks, Plus, RefreshCcw, Save, Tag, X } from 'lucide-react';
+import { BookOpen, Boxes, ClipboardCheck, Factory, History, ListChecks, Plus, RefreshCcw, Route, Save, Tag, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { api } from '../../api.js';
 import Badge from '../../ui/Badge.jsx';
 import Button from '../../ui/Button.jsx';
 import { FormError } from '../../ui/fields.jsx';
@@ -12,7 +13,7 @@ import { GuideView, Panel } from '../forms/FormControls.jsx';
 import Grid from '../forms/Grid.jsx';
 import QCPanel from '../forms/QCPanel.jsx';
 import useEngine from '../forms/useEngine.js';
-import { beep, Ctl, MuteButton, ResultBanner, ScanBox, StepTrack, useSpec } from './kit.jsx';
+import { beep, ComponentChecklist, Ctl, MuteButton, ResultBanner, RouteProgress, ScanBox, StepTrack, useSpec } from './kit.jsx';
 
 const PATH = '/production/wipcaptureform';
 
@@ -35,11 +36,13 @@ function Station({ spec }) {
   const [banner, setBanner] = useState(spec.statusMessage ? { tone: 'error', title: 'Could not open the station', text: spec.statusMessage } : { tone: 'info', title: 'Scan the work station to begin' });
   const stationRef = useRef(null);
   const serialRef = useRef(null);
+  const [routeTick, setRouteTick] = useState(0);
   const e = useEngine({
     path: PATH,
     state: spec,
     events: spec.events ?? [],
     onResult: (r, control) => {
+      setRouteTick((t) => t + 1); // a scan, a QC save or a consume can move the unit along its route
       if (r.alert) {
         beep(false);
         setBanner({ tone: 'error', title: 'Not accepted', text: r.alert });
@@ -57,6 +60,7 @@ function Station({ spec }) {
   const stationLocked = text('BtnWorkStationScan') === 'Clr';
   const serialLocked = text('BtnWorderScan') === 'Clr' || vis('QCPanel');
   const result = Number(vs.I ?? 0);
+  const route = useRoute(serialLocked ? String(values.TBJobCoard ?? '').trim() : '', routeTick);
   const stage = vis('InputMaterialPanel') ? 'components' : vis('QCPanel') ? (result === 40 ? 'fg' : 'qc') : null;
 
   // the scanner always types into the box the operator needs next
@@ -156,6 +160,11 @@ function Station({ spec }) {
               </dl>
             </Panel>
           )}
+          {route?.length > 0 && (
+            <Panel title={<span className="flex items-center gap-2"><Route className="w-4 h-4 text-blue-600" /> Route progress</span>}>
+              <RouteProgress steps={route} />
+            </Panel>
+          )}
           {vis('PnlHistory') && <Grid c={ctl('GVHistory')} rows={values.GVHistory} title={<span className="flex items-center gap-2"><History className="w-4 h-4 text-blue-600" /> Route history</span>} />}
           {vis('PnlComponents') && <Grid c={ctl('GVComponents')} rows={values.GVComponents} title={<span className="flex items-center gap-2"><Boxes className="w-4 h-4 text-blue-600" /> Components fitted</span>} />}
           {vis('DefectHistoryPanel') && <Grid c={ctl('GVDefectHistory')} rows={values.GVDefectHistory} title="Defect history" />}
@@ -163,6 +172,23 @@ function Station({ spec }) {
       </div>
     </div>
   );
+}
+
+/** the scanned unit's route (read only); refetched after every event while the serial stays scanned */
+function useRoute(label, tick) {
+  const [steps, setSteps] = useState(null);
+  useEffect(() => {
+    if (!label) return void setSteps(null);
+    let live = true;
+    api(`/forms/route?path=${encodeURIComponent(PATH)}&label=${encodeURIComponent(label)}`).then(
+      (d) => live && setSteps(d.steps),
+      () => live && setSteps(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [label, tick]);
+  return steps;
 }
 
 /** result 10: the stage's components, scanned one by one (BtnINBarcode, then Consume when a quantity is asked) */
@@ -178,7 +204,7 @@ function Components({ e }) {
       actions={<Button variant="ghost" size="sm" icon={X} onClick={() => fire('BTNCloseInputMaterialPanel')}>Close</Button>}
     >
       <div className="space-y-4">
-        <Grid c={e.ctl('GVINMaterial')} rows={values.GVINMaterial} />
+        <ComponentChecklist rows={values.GVINMaterial} />
         {vis('ScanINbarcodePanel') && (
           <ScanBox ref={ref} label="Component barcode" placeholder="Scan a component barcode" value={values.TBINItemCode} onChange={(v) => e.change('TBINItemCode', v)} onScan={() => fire('BtnINBarcode')} busy={busy} />
         )}
