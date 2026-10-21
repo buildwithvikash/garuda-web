@@ -1,6 +1,6 @@
 // Shared parts of the dedicated shop-floor screens: the spec loader, the big scan box, the result banner (with a beep),
-// the step track, route progress, the component checklist and a labelled engine control.
-import { AlertTriangle, Check, CheckCircle2, Circle, CircleDot, Info, Loader2, ScanLine, Volume2, VolumeX } from 'lucide-react';
+// section cards and status pills, the component checklist and a labelled engine control.
+import { AlertTriangle, CheckCircle2, Circle, Info, Loader2, ScanLine, Volume2, VolumeX } from 'lucide-react';
 import { forwardRef, useEffect, useState } from 'react';
 import { api } from '../../api.js';
 import Button from '../../ui/Button.jsx';
@@ -44,7 +44,8 @@ export function MuteButton() {
 
 /** One big scanner input: Enter (what a barcode scanner sends) runs the scan. No <form> of its own, so it also works
  *  inside a record form (nested forms are dropped by the browser; Enter would submit the record). */
-export const ScanBox = forwardRef(function ScanBox({ label, value, onChange, onScan, locked, onClear, busy, placeholder, disabled }, ref) {
+export const ScanBox = forwardRef(function ScanBox({ label, value, onChange, onScan, locked, onClear, busy, placeholder, disabled, size = 'lg' }, ref) {
+  const lg = size === 'lg';
   const go = () => {
     if (locked) onClear?.();
     else if (String(value ?? '').trim() !== '') onScan();
@@ -53,10 +54,10 @@ export const ScanBox = forwardRef(function ScanBox({ label, value, onChange, onS
     <div className="flex gap-2">
       <label className="relative flex-1 min-w-0">
         <span className="sr-only">{label}</span>
-        <ScanLine className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400" />
+        <ScanLine className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-slate-400 ${lg ? 'left-4 w-6 h-6' : 'left-3 w-5 h-5'}`} />
         <input
           ref={ref}
-          className={`w-full h-16 pl-13 pr-4 text-2xl font-semibold tracking-wide tabular rounded-xl border-2 outline-none transition-colors ${locked ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15'}`}
+          className={`w-full ${lg ? 'h-16 pl-13 pr-4 text-2xl border-2' : 'h-11 pl-10 pr-3 text-base border'} font-semibold tracking-wide tabular rounded-xl outline-none transition-colors ${locked ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-300 bg-white text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/15'}`}
           value={value ?? ''}
           placeholder={placeholder}
           readOnly={locked}
@@ -71,8 +72,8 @@ export const ScanBox = forwardRef(function ScanBox({ label, value, onChange, onS
           }}
         />
       </label>
-      <Button size="lg" onClick={go} variant={locked ? 'secondary' : 'primary'} className="h-16! px-6! text-base!" loading={busy} disabled={disabled}>
-        {locked ? 'Change' : 'Scan'}
+      <Button size={lg ? 'lg' : 'md'} onClick={go} variant={locked ? 'secondary' : 'primary'} className={lg ? 'h-16! px-6! text-base!' : 'h-11! min-w-24'} loading={busy} disabled={disabled}>
+        {locked ? 'Change' : lg ? 'Scan' : 'Go'}
       </Button>
     </div>
   );
@@ -99,23 +100,6 @@ export function ResultBanner({ tone, title, text }) {
   );
 }
 
-/** Steps with done / current / waiting states. */
-export function StepTrack({ steps }) {
-  return (
-    <ol className="flex flex-wrap items-center gap-2">
-      {steps.map((s, i) => (
-        <li key={s.label} className="flex items-center gap-2">
-          {i > 0 && <span className={`h-px w-6 ${s.state === 'wait' ? 'bg-slate-200' : 'bg-blue-300'}`} />}
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${s.state === 'done' ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : s.state === 'now' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
-            {s.state === 'done' ? <Check className="w-3.5 h-3.5" /> : <span className="tabular">{i + 1}</span>}
-            {s.label}
-          </span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
 /** An engine control by id, under a caption, when the page shows it. */
 export function Ctl({ e, id, label, className = '' }) {
   if (!e.vis(id)) return null;
@@ -126,42 +110,45 @@ export function Ctl({ e, id, label, className = '' }) {
   );
 }
 
-const STAGE = {
-  2: { icon: CheckCircle2, cls: 'text-emerald-600', row: 'text-slate-600' },
-  1: { icon: CircleDot, cls: 'text-blue-600', row: 'bg-blue-50 font-semibold text-blue-900' },
-  0: { icon: Circle, cls: 'text-slate-300', row: 'text-slate-500' },
+const TILES = {
+  blue: 'bg-blue-600 text-white',
+  green: 'bg-emerald-600 text-white',
+  violet: 'bg-violet-600 text-white',
 };
-/** The unit's whole route: stages done, the one in progress, the ones still to come (/forms/route steps). */
-export function RouteProgress({ steps }) {
-  const done = steps.filter((s) => s.status === 2).length;
-  const now = steps.find((s) => s.status === 1) ?? steps.find((s) => s.status === 0);
-  const pct = steps.length ? Math.round((done / steps.length) * 100) : 0;
+/** A titled card with a coloured icon tile (the WIP screen's sections); tone 'violet' also tints the header bar. */
+export function SectionCard({ icon: Icon, title, tone = 'blue', actions, children, className = '' }) {
   return (
-    <div className="space-y-3">
-      <div>
-        <div className="flex items-baseline justify-between gap-2 text-sm">
-          <span className="font-semibold text-slate-900">{done === steps.length ? 'Route complete' : now ? `Stage ${steps.indexOf(now) + 1} of ${steps.length}` : '—'}</span>
-          <span className="tabular text-slate-500">{done} / {steps.length} done</span>
-        </div>
-        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={done} aria-label="Route progress">
-          <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${pct}%` }} />
-        </div>
+    <section className={`card overflow-hidden ${className}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${tone === 'violet' ? 'bg-violet-50 border-b border-violet-100' : 'border-b border-slate-100'}`}>
+        <h2 className={`flex items-center gap-3 text-lg font-bold ${tone === 'green' ? 'text-emerald-700' : tone === 'violet' ? 'text-violet-700' : 'text-slate-900'}`}>
+          <span className={`grid h-9 w-9 place-items-center rounded-lg ${TILES[tone]}`}><Icon className="w-5 h-5" /></span>
+          {title}
+        </h2>
+        {actions}
       </div>
-      <ol className="max-h-80 space-y-0.5 overflow-auto text-sm">
-        {steps.map((s, i) => {
-          const t = STAGE[s.status] ?? STAGE[0];
-          const Icon = t.icon;
-          return (
-            <li key={`${s.seq}-${i}`} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${t.row}`} aria-current={s === now ? 'step' : undefined}>
-              <Icon className={`w-4 h-4 shrink-0 ${t.cls}`} />
-              <span className="min-w-0 flex-1 truncate" title={s.process}>{s.process}</span>
-              <span className="shrink-0 truncate text-xs opacity-75" title={s.station}>{s.station}</span>
-            </li>
-          );
-        })}
-      </ol>
-    </div>
+      <div className="p-4">{children}</div>
+    </section>
   );
+}
+
+const PILLS = {
+  2: ['Completed', 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
+  1: ['In Process', 'bg-blue-50 text-blue-700 ring-blue-200'],
+  0: ['Pending', 'bg-slate-100 text-slate-600 ring-slate-200'],
+};
+/** A route stage's status (0 waiting, 1 started, 2 completed) as a pill. */
+export function StatusPill({ status }) {
+  const [text, cls] = PILLS[status] ?? PILLS[0];
+  return <span className={`inline-flex min-w-24 justify-center rounded-full px-3 py-0.5 text-xs font-semibold ring-1 ${cls}`}>{text}</span>;
+}
+
+/** A database date as the plant reads it (M/D/YYYY h:mm:ss AM). ISO strings are the server's wall-clock time, so they
+ *  are formatted from their digits, not shifted to the browser's zone; anything else shows as sent. */
+export function when(v) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(String(v ?? ''));
+  if (!m) return v ? String(v) : '-';
+  const h = Number(m[4]);
+  return `${Number(m[2])}/${Number(m[3])}/${m[1]} ${h % 12 || 12}:${m[5]}:${m[6]} ${h < 12 ? 'AM' : 'PM'}`;
 }
 
 /** The stage's components (GVINMaterial rows) as a checklist: fitted when the consumed quantity reaches the required. */
