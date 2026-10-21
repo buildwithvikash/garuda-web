@@ -4,9 +4,6 @@ import { config } from './config.js';
 import { dbReady } from './db/index.js';
 import { loadSettings } from './modules/settings/service.js';
 import { authRoutes } from './modules/auth/routes.js';
-import { dashboardRoutes } from './modules/dashboards/routes.js';
-import { reportRoutes } from './modules/reports/routes.js';
-import { wrlReportRoutes } from './modules/reports/wrlRoutes.js';
 import { formRoutes } from './modules/forms/routes.js';
 
 const app = express();
@@ -16,9 +13,7 @@ app.use('/api/forms', express.json({ limit: '100mb' }));
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api/auth', authRoutes);
-app.use('/api/dashboards', dashboardRoutes);
-app.use('/api/reports/generic', reportRoutes);
-app.use('/api/reports/wrl', wrlReportRoutes);
+// shop-floor scope: reports and dashboards are switched off (modules/reports, modules/dashboards stay on disk)
 app.use('/api/forms', formRoutes);
 // Migrated modules register here, each guarded with requireAuth + authorize(<ModuleID>).
 

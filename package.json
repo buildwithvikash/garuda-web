@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["server", "client"],
   "scripts": {
-    "dev": "npm run dev -w server & npm run dev -w client",
+    "dev": "node scripts/dev.mjs",
     "build": "npm run build -w client",
     "start": "npm start -w server",
     "test": "npm test -w server"

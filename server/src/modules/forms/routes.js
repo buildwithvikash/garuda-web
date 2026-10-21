@@ -4,6 +4,7 @@ import { writeSession } from '../../lib/session.js';
 import { readFileSync } from 'node:fs';
 import { requireAuth } from '../../middleware/auth.js';
 import { canOpen, userMenu } from '../menu/service.js';
+import { KEEP } from '../menu/keep.js';
 import { netString } from '../../lib/net.js';
 import { newFormState, displayState, copyState, copyOptions, engineControls } from './state.js';
 import { comboRows } from './children.js';
@@ -83,6 +84,7 @@ const PORTED = new Set([
 export const FORMS = Object.fromEntries(
   Object.entries(ALL).filter(
     ([r, s]) =>
+      KEEP.has(r) && // shop-floor scope (menu/keep.js)
       !NOT_USED.has(r) &&
       (PORTED.has(r) ||
       (ENABLED.test(r) && !s.custom.handlers && !s.custom.events && !s.controls.some((c) => ['GridView', 'TreeView', 'CheckBoxList'].includes(c.type) && c.tag?.length >= 4))),

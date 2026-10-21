@@ -3,9 +3,16 @@
 import { readFileSync } from 'node:fs';
 import { authRepo } from '../auth/repo.js';
 import { netString, netBool } from '../../lib/net.js';
+import { KEEP } from './keep.js';
 
-const MENU = JSON.parse(readFileSync(new URL('./menu.json', import.meta.url), 'utf8'));
 const ALWAYS = new Set([10000, 10001]); // Logout group + link
+// shop-floor scope: entries for kept screens, the folders that hold them, and Logout
+const prune = (nodes) =>
+  nodes.flatMap((n) => {
+    const children = prune(n.children);
+    return ALWAYS.has(n.moduleId) || KEEP.has(routeFor(n.url)) || children.length ? [{ ...n, children }] : [];
+  });
+const MENU = prune(JSON.parse(readFileSync(new URL('./menu.json', import.meta.url), 'utf8')));
 
 /** Original page path ("View/X/Y.aspx") -> React route ("/x/y"). */
 export function routeFor(url) {
