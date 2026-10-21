@@ -2,6 +2,7 @@
 // from the database are checked and spliced the same way (same text, same errors); typed-in barcodes are parameters.
 import { query, scalar, execute, transaction } from '../../db/index.js';
 import { netString, netInt, netDouble, netNum, netBool } from '../../lib/net.js';
+import { num } from '../../lib/sql.js';
 import { dataTable, cell } from './qc.js';
 import { collect, insert, generateKey } from './write.js';
 import { tableSchema } from './schema.js';
@@ -9,12 +10,6 @@ import { tableSchema } from './schema.js';
 export const STATUS = { Active: 1, Closed: 10, Hold: 11, Approved: 12, Rejected: 13 };
 const SELF_INSPECTION = 300; // InspectionType.SelfInspection
 
-/** a value from the database spliced into SQL (".ToString()" of a number / DBNull) */
-export const num = (x) => {
-  const s = netString(x);
-  if (!/^-?\d*(\.\d+)?$/.test(s)) throw new Error(`Incorrect syntax near '${s}'.`);
-  return s;
-};
 const str = (v) => (v === null || v === undefined ? '' : String(v)); // WrapperAvatar.ParseString
 const strZero = (v) => (str(v) === '' || str(v) === '0' ? '' : str(v)); // ParseStringZero
 const blank = (rows) => rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v ?? '']))); // grid cells

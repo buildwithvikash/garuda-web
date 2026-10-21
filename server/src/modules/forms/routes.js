@@ -13,83 +13,8 @@ import { printerOptions } from './labels.js';
 import { listPage, searchColumns, distinctValues, operatorsFor, OPERATOR_TEXT } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
 
-const ALL = JSON.parse(readFileSync(new URL('./forms.json', import.meta.url), 'utf8'));
-// Switched on: master-data modules, pages that are fully declarative (no custom code-behind, no child grids/trees),
-// plus custom-code pages once their page logic is ported (server: pages.js, client: forms/pages.js).
-const ENABLED = /^\/(businesssetup|materialsetup|productionsetup|settings|authorization)\//;
-// not in use at WRL (left out at the user's request)
-const NOT_USED = new Set(['/settings/existingstockentryform', '/settings/existingstockprintform']);
-const PORTED = new Set([
-  '/settings/shiftmasterform',
-  '/authorization/userroleform',
-  '/productionsetup/workcenterform',
-  '/businesssetup/departmentform', // its only handler (StatusMessage_TextChanged) is wired to no control
-  '/materialsetup/materialcategoryform',
-  '/materialsetup/materialledgermappingform',
-  '/materialsetup/unitconversionform',
-  '/materialsetup/assetmaster',
-  '/materialsetup/variantfieldgroupform',
-  '/settings/parametervaluelistform',
-  '/businesssetup/taxmasterform',
-  '/materialsetup/variantform',
-  '/materialsetup/modelform',
-  '/settings/parameterform',
-  '/authorization/changepasswordform',
-  '/authorization/resetpasswordform',
-  '/authorization/usersform',
-  '/businesssetup/businessunitform',
-  '/settings/routingupdateform',
-  '/settings/employeeform',
-  '/businesssetup/storageareaform',
-  '/materialsetup/materialbarcode',
-  '/settings/workcenteravailabilityform',
-  '/businesssetup/taxcategoryform',
-  '/materialsetup/materialform',
-  '/materialsetup/billofmaterial',
-  '/productionsetup/routingform',
-  '/productionsetup/routingguideform',
-  '/materialsetup/serialgenerationlogicform',
-  // Planning
-  '/production/monthlyplanningform',
-  '/production/dailyplanform',
-  '/production/planningorderform',
-  '/production/machineavailibilityform',
-  '/production/processorderplanform',
-  '/production/wrlimagedisply',
-  '/production/assettagidreplacementform',
-  '/production/prodplanupload',
-  '/production/mrpupdateform',
-  '/production/fgscrapform',
-  '/production/workstationutilizationform',
-  '/production/rmreplacementform',
-  '/production/scrappostingform',
-  '/production/productionorderform',
-  '/production/modeltomodeltransferform',
-  '/production/processguideform',
-  '/production/productionassignmentform',
-  '/production/processorderform',
-  '/production/reworkorderform',
-  '/ceat/ceatinselfinspectionform',
-  '/production/productioncaptureform',
-  '/production/wipcaptureform',
-  // Quality
-  '/quality/areacleaningform',
-  '/quality/qualityinspectionform',
-  '/quality/ncmrconfirmation',
-  '/quality/repairconfirmation',
-  '/quality/finishingconfirmation',
-  '/quality/reworkconfirmation',
-  '/quality/reworkconfirmationnew',
-]);
-export const FORMS = Object.fromEntries(
-  Object.entries(ALL).filter(
-    ([r, s]) =>
-      KEEP.has(r) && // shop-floor scope (menu/keep.js)
-      !NOT_USED.has(r) &&
-      (PORTED.has(r) ||
-      (ENABLED.test(r) && !s.custom.handlers && !s.custom.events && !s.controls.some((c) => ['GridView', 'TreeView', 'CheckBoxList'].includes(c.type) && c.tag?.length >= 4))),
-  ),
-);
+// the screens this app offers: specs extracted for the keep-list only (scripts/extract-forms.mjs, menu/keep.js)
+export const FORMS = Object.fromEntries(Object.entries(JSON.parse(readFileSync(new URL('./forms.json', import.meta.url), 'utf8'))).filter(([r]) => KEEP.has(r)));
 
 export const formRoutes = Router();
 formRoutes.use(requireAuth);

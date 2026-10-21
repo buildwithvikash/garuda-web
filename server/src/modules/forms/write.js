@@ -375,32 +375,5 @@ export async function cancel(spec, ds, ctx, remark = '', { module } = {}) {
   }
 }
 
-/** DataWrapper.DeleteData (hard delete): child tables with a prefix (last to first), then the record itself. */
-export async function remove(spec, ds, ctx, { module } = {}) {
-  const ev = event(ctx, spec, ds, 3);
-  if (module) ev.module = module;
-  try {
-    return await transaction(async (tx) => {
-      const t0 = ds.tables[0];
-      const key = t0.schema.pk;
-      if (!key) throw new Error('Index was outside the bounds of the array.');
-      const keyVal = dataText(t0.rows[0]?.get(key));
-      ev.refId = String(longParse(keyVal));
-      for (let i = ds.tables.length - 1; i > 0; i--) {
-        const p = ds.tables[i].prefix.split('.')[0];
-        if (p === '') continue;
-        ev.data += `${ds.tables[i].schema.name}:${p}:${keyVal}`;
-        await execute(`delete from ${ds.tables[i].schema.name} where ${p} = @kv`, { kv: keyVal }, tx);
-      }
-      ev.data += `${t0.schema.name}:${key}:${keyVal}`;
-      await execute(`delete from ${t0.schema.name} where ${key} = @kv`, { kv: keyVal }, tx);
-      await logEvent({ ...ev, ok: true, message: 'Successfull' }, tx);
-      return key;
-    });
-  } catch (e) {
-    await logEvent({ ...ev, ok: false, message: e.message }).catch(() => {});
-    throw e;
-  }
-}
 
 export { enInDateTime };

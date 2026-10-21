@@ -2,19 +2,12 @@
 // numbers read from the database are checked and spliced the same way (same text, same errors); typed-in codes are
 // parameters, except where the original spliced them unquoted (then only digits pass, as numbers).
 import { query, scalar, execute, transaction } from '../../db/index.js';
-import { netString, netInt, netLong, netDouble, netNum } from '../../lib/net.js';
+import { netInt, netLong, netDouble, netNum } from '../../lib/net.js';
 import { dataTable } from './qc.js';
+import { num, lit } from '../../lib/sql.js';
 import { printerDetail, printLabel } from './labels.js';
 
 const str = (v) => (v === null || v === undefined ? '' : String(v)); // WrapperAvatar.ParseString
-/** a value from the database spliced into SQL (".ToString()" of a number / DBNull) */
-export const num = (x) => {
-  const s = netString(x);
-  if (!/^-?\d*(\.\d+)?$/.test(s)) throw new Error(`Incorrect syntax near '${s}'.`);
-  return s;
-};
-/** a quoted (varchar) SQL literal as the original wrote it, its quotes escaped */
-export const lit = (s) => `'${netString(s).replaceAll("'", "''")}'`;
 const allDigits = (s) => /^\d*$/.test(s); // s.All(char.IsDigit): "" too
 /** String.Substring(start, length): out of range throws (the callers turn that into "not valid") */
 const sub = (s, start, length) => {
@@ -121,28 +114,7 @@ export async function validateWorkStation(ws, bu) {
   return { ok: true, rtn, process };
 }
 
-/** AVProductionCapture.ValidateJobcard(jobcard, workStation, out rtn, out dt): an active job card by number or alias,
- *  with its last activity at the station. { ok, rtn: "psno~alias", activity: rows } */
-export async function validateJobcard(jobcard, station) {
-  let card;
-  let rtn;
-  if (allDigits(jobcard)) {
-    card = await scalar(`select Alias from ProcessOrder where Status=1 and PSNo=${jobcard}`);
-    rtn = `${jobcard}~${str(card)}`;
-  } else {
-    card = await scalar('select PSNo from ProcessOrder where Status=1 and Alias=@a', { a: jobcard });
-    rtn = `${str(card)}~${jobcard}`;
-  }
-  if (str(card) === '') return { ok: false, rtn, activity: [] };
-  const activity = await query(`select top 1 ActivityType  from ProcessActivity  where StationCode = ${num(station)} and PSNo=${num(rtn.split('~')[0])} order by ROWID desc `);
-  return { ok: true, rtn, activity };
-}
 
-/** AVProductionCapture.ProcessStart / CompleteWithoutRouting: the station's activity for the job card */
-export async function processActivityWithoutRouting(psNo, station, process, type, ctx) {
-  const st = type === 1 ? String(netInt(station)) : num(station); // the complete splices the station as it is
-  await execute(`Insert Into ProcessActivity (PSNo,StationCode,ProcessCode,Operator,ActivityType,ActivityOn) values(${num(psNo)},${st},${netInt(process)},${netInt(ctx.userCode)},${type},getdate())`);
-}
 
 /** AVProcess.RMComponetStatus */
 export const componentStatus = async (serial) => netInt(await scalar('Select Status from MaterialBarcode where Serial=@s', { s: serial }));

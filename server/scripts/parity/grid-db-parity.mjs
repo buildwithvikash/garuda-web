@@ -78,8 +78,6 @@ const results = [];
 try {
   // ---- grid Delete on saved rows -------------------------------------------------------------------------------
   for (const [route, child, fk, rowKey, nameCol] of [
-    ['/materialsetup/variantfieldgroupform', 'VariantFGroupTrans', 'GroupCode', 'FieldCode', 'Name'],
-    ['/materialsetup/variantform', 'VariantTran', 'VariantCode', 'RowID', 'Name'],
     ['/materialsetup/modelform', 'ModelVariant', 'ModelCode', 'RowID', 'Name'],
   ]) {
     const spec = SPECS[route];
@@ -132,7 +130,7 @@ try {
   }
 
   // ---- "Add" with a new value typed: VariantFieldValue inserted ----------------------------------------------------
-  for (const route of ['/materialsetup/variantform', '/materialsetup/modelform']) {
+  for (const route of ['/materialsetup/modelform']) {
     const spec = SPECS[route];
     const state = await newFormState(spec, ctx);
     const field = state.controls.find((c) => c.id === 'DdlName').options.find((o) => o.value !== '')?.value;

@@ -53,34 +53,18 @@ for (const [name, build] of Object.entries(books)) {
   build(wb.addWorksheet('Sheet1'));
   const path = join(dir, `${name.replaceAll(' ', '_')}.xlsx`);
   await wb.xlsx.writeFile(path);
-  const [o] = original([{ id: 0, mode: 'excel', path, ctx, spec: specOf(SPECS['/production/mrpupdateform']) }]);
+  const [o] = original([{ id: 0, mode: 'excel', path, ctx, spec: specOf(SPECS['/production/prodplanupload']) }]);
   const n = await importExcel({ name: 'x.xlsx', data: readFileSync(path).toString('base64') }).catch((e) => ({ error: e.message }));
   const same = o.ok ? !n.error && JSON.stringify(o.result) === JSON.stringify(n) : n.error === o.error;
   results.push([`ImportExcel ${name}`, same ? `IDENTICAL${o.ok ? ` (${o.result.rows.length} rows)` : ` (both fail: ${o.error})`}` : `${o.ok ? JSON.stringify(o.result) : o.error} vs ${n.error ?? JSON.stringify(n)}`]);
 }
 
 // ---- BtnUpdate -------------------------------------------------------------------------------------------------------
-const one = async (sql) => (await query(sql))[0] ?? {};
-const mat = await query("select top 2 MatCode, Name, SRetailRate from Material where Status=1 and Name not like '%''%' order by MatCode desc");
-const tagged = await one("select top 1 mb.BarcodeNo, mb.Serial, m.Name, mb.VSerial from MaterialBarcode mb join Material m on m.MatCode=mb.Material where mb.Serial not like '%[^0-9]%' and mb.VSerial is not null order by mb.BarcodeNo desc");
-const lettered = await one("select top 1 mb.BarcodeNo, mb.Serial, m.Name, mb.VSerial from MaterialBarcode mb join Material m on m.MatCode=mb.Material where mb.Serial like 'F%' and mb.VSerial is not null order by mb.BarcodeNo desc");
 const aliases = (await query('select top 2 Alias from Material where Status=1 and Type=100 order by MatCode desc')).map((r) => r.Alias);
 const p2 = (n) => String(n).padStart(2, '0');
 const now = new Date();
 const thisMonth = `${p2(now.getMonth() + 1)}${now.getFullYear()}`;
 const PAGES = [
-  ['/production/mrpupdateform', ['Name', 'Old', 'MRP'], [[mat[0].Name, '', '1999.5'], ['ZZP no such material', '', '10'], [mat[1].Name, '', 'abc']],
-    async () => ({ mrp: (await query(`select MatCode, SRetailRate from Material where MatCode in (${mat.map((m) => m.MatCode).join(',')})`)).map((r) => toText(r.SRetailRate)), log: (await query("select Material, MRP, UserCode from MRPUpdate where UserCode=123003 and RefDate > dateadd(hour, -1, getdate())")).map((r) => JSON.stringify(r)).sort() }),
-    async () => {
-      for (const m of mat) await execute('update Material set SRetailRate=@r where MatCode=@m', { r: m.SRetailRate, m: m.MatCode });
-      await execute('delete from MRPUpdate where UserCode=123003 and RefDate > dateadd(hour, -1, getdate())');
-    }],
-  ['/production/assettagidreplacementform', ['Sr', 'Material', 'Serial', 'AssetTag'], [['1', tagged.Name, tagged.Serial, 'ZZP-TAG'], ['2', 'ZZP none', '1', 'X'], ['3', lettered.Name, lettered.Serial, 'ZZP-TAG2']],
-    async () => ({ tags: (await query(`select BarcodeNo, VSerial from MaterialBarcode where BarcodeNo in (${tagged.BarcodeNo},${lettered.BarcodeNo ?? 0})`)).map((r) => JSON.stringify(r)).sort(), log: (await query("select Material, FGSerial, OldAssetTagID, NewAssetTagID from AssetTagIDReplace where NewAssetTagID like 'ZZP%'")).map((r) => JSON.stringify(r)).sort() }),
-    async () => {
-      for (const b of [tagged, lettered]) if (b.BarcodeNo) await execute('update MaterialBarcode set VSerial=@v where BarcodeNo=@b', { v: b.VSerial, b: b.BarcodeNo });
-      await execute("delete from AssetTagIDReplace where NewAssetTagID like 'ZZP%'");
-    }],
   ['/production/prodplanupload', ['MonthYear', 'Material', 'Qty', 'Type', 'Remark'], [[thisMonth, aliases[0], '25', 'ZZP', 'r1'], [thisMonth, aliases[0], '30', 'ZZP', 'r2'], ['011999', aliases[1], '5', 'ZZP', 'old'], [thisMonth, 'ZZP-NONE', '5', 'ZZP', 'x'], [thisMonth, aliases[1], 'ten', 'ZZP', 'bad qty']],
     async () => ({ plans: (await query("select PlanMonthYear, PlanMaterial, PlanQty, PlanType, Remark, CreatedBy, Status from PlanOrderPrint where PlanType='ZZP'")).map((r) => JSON.stringify(r)).sort() }),
     async () => execute("delete from PlanOrderPrint where PlanType='ZZP'")],

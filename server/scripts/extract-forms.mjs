@@ -5,6 +5,7 @@
 // Usage: node scripts/extract-forms.mjs <Garuda web root> <menu.json> <out.json>
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { KEEP } from '../src/modules/menu/keep.js';
 
 const [root, menuFile, out] = process.argv.slice(2);
 const decode = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
@@ -153,7 +154,7 @@ for (const file of files) {
   const route = '/' + rel.replace(/^View\//i, '').replace(/\.aspx$/i, '').toLowerCase();
   // Page_Load assignments ("TitleControl.CopyButton = true;") run after the markup attributes
   for (const [, k, v] of cs.matchAll(/TitleControl\.(\w+)\s*=\s*(true|false)\s*;/g)) spec.titleBar[k.toLowerCase()] = v === 'true';
-  specs[route] = spec;
+  if (KEEP.has(route)) specs[route] = spec; // shop-floor scope (menu/keep.js)
 }
 writeFileSync(out, JSON.stringify(specs, null, 1));
 const n = Object.keys(specs).length;

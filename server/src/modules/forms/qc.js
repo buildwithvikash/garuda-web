@@ -2,7 +2,7 @@
 // scan; a grid of all with Pass/Fail buttons for yes/no items). Its state travels as the "QC" control's value:
 // { rows (its ViewState DataTable: cell text, null = DBNull), index, f (the child controls) }.
 import { queryTable, query } from '../../db/index.js';
-import { netString, netInt, netDouble, netBool, exceptionAlert } from '../../lib/net.js';
+import { netInt, netDouble, exceptionAlert } from '../../lib/net.js';
 import { toText } from './values.js';
 // state.js imports pages.js, which imports this module: fill is loaded when first used
 const fill = async (...a) => (await import('./state.js')).fill(...a);
@@ -288,5 +288,3 @@ async function rowCommand(s, index, value) {
   }
 }
 
-/** A bit row's checkbox as MakeUpCheckBox shows it (checked unless its value says otherwise) */
-export const qcChecked = (row) => (str(cell(row, 'qcvalue')) === '' ? true : netBool(cell(row, 'qcvalue')));

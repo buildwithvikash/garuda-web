@@ -55,44 +55,6 @@ section('fg scrap', async () => {
   }
 });
 
-// ---- WorkStationUtilization start / complete ---------------------------------------------------------------------------
-// station and job card validated, then Start (or Complete); the new ProcessActivity rows compared and deleted.
-section('workstation utilization', async () => {
-  const spec = SPECS['/production/workstationutilizationform'];
-  const st = (await query("select top 1 StationCode, Alias from WorkCenter where BusinessUnit=12201 and exists (select 1 from WorkCenterProcesses p where p.StationCode=WorkCenter.StationCode) order by StationCode"))[0];
-  const card = (await query('select top 1 PSNo, Alias from ProcessOrder where Status=1 order by PSNo desc'))[0];
-  const floor = Number((await query('select max(ROWID) m from ProcessActivity'))[0].m);
-  const fresh = async () => (await query('select PSNo, StationCode, ProcessCode, Operator, ActivityType from ProcessActivity where ROWID > @f', { f: floor })).map((r) => JSON.stringify(r)).sort();
-  const restore = () => execute('delete from ProcessActivity where ROWID > @f', { f: floor });
-  const started = () => execute(`insert into ProcessActivity (PSNo,StationCode,ProcessCode,Operator,ActivityType,ActivityOn) values(${card.PSNo},${st.StationCode},0,123003,1,getdate())`);
-  for (const [name, handler, control, prior] of [['start', 'btnStart_Click', 'btnStart', false], ['complete', 'btnComplete_Click', 'btnComplete', true]]) {
-    try {
-      await restore();
-      if (prior) await started();
-      const steps = [{ handler: 'btnStationGo_Click', control: 'btnStationGo', values: { TbStation: st.Alias } }, { handler: 'btnCardGo_Click', control: 'btnCardGo', values: { TbJobCard: card.Alias } }, { handler, control, values: {} }];
-      const [o] = original([{ id: 0, mode: 'event', key: null, viewState: {}, steps, ctx, spec: specOf(spec) }]);
-      const afterO = await fresh();
-      await restore();
-      if (prior) await started();
-      let vs = { __StationGo: 'Go', __CardGo: 'Go' };
-      let v = {};
-      for (const [id, patch] of [['btnStationGo', { TbStation: st.Alias }], ['btnCardGo', { TbJobCard: card.Alias }], [control, {}]]) {
-        v = { ...v, ...patch };
-        const r = await PAGE_EVENTS[spec.file][id](v, eventHelpers(spec, ctx, v, { viewState: vs }));
-        for (const [k, p] of Object.entries(r.set ?? {})) if ('value' in p) v = { ...v, [k]: p.value };
-        vs = r.viewState ?? vs;
-      }
-      const afterN = await fresh();
-      const problems = [];
-      if (!o.ok) problems.push(`original ERROR ${o.error}`);
-      if (JSON.stringify(afterO) !== JSON.stringify(afterN)) problems.push(`activity ${JSON.stringify(afterO)} vs ${JSON.stringify(afterN)}`);
-      results.push([`WorkStation utilization ${name} (${st.Alias}, ${card.Alias})`, problems.length ? problems.join(' | ') : `IDENTICAL (${afterN.length} activity rows)`]);
-    } finally {
-      await restore();
-    }
-  }
-});
-
 // ---- RM replacement ------------------------------------------------------------------------------------------------------
 // a serial's component replaced by an unused serial of the same form (its number + k); scans, barcodes and the replace
 // log restored after each run.

@@ -61,7 +61,6 @@ const otherDoc = await pick('select top 1 BarcodeNo from MaterialBarcode where D
 const CASES = [
   ['/settings/employeeform', 'BTNPrint_Click', { PrimaryKey: emp }, PRINTER],
   ['/settings/employeeform', 'BTNPrint_Click', { PrimaryKey: emp }, ''],
-  ['/businesssetup/storageareaform', 'BTNPrint_Click', { PrimaryKey: '1' }, PRINTER],
   ['/materialsetup/materialbarcode', 'print', { PrimaryKey: inProcess, TbRemark: 'ZZP reprint test' }, PRINTER],
   ...(otherDoc ? [['/materialsetup/materialbarcode', 'print', { PrimaryKey: otherDoc, TbRemark: 'ZZP reprint test' }, PRINTER]] : []),
   ['/materialsetup/materialbarcode', 'print', { PrimaryKey: inProcess, TbRemark: '' }, PRINTER],

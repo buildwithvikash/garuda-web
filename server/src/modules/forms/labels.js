@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { query, queryTable, scalar, execute } from '../../db/index.js';
 import { netString, netInt } from '../../lib/net.js';
+import { requireDigits } from '../../lib/sql.js';
 import { toText } from './values.js';
 
 const run = promisify(execFile);
@@ -41,10 +42,6 @@ function replaceNewLine(fields, field, str, prn) {
   }
   return replaceAll(prn, `[${field}]`, str);
 }
-const requireDigits = (s) => {
-  if (!/^\d+$/.test(netString(s))) throw new Error(`Incorrect syntax near '='.`);
-  return netString(s);
-};
 
 // ---- printers ----------------------------------------------------------------------------------------------------
 

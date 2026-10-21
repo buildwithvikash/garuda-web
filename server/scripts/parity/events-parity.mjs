@@ -24,7 +24,7 @@ const ev = (handler, control, values = {}) => ({ handler, control, values });
 const cmd = (handler, command, arg, values = {}, grid = 'GVTransData', index) => ({ handler, command, arg: String(arg), values, grid, ...(index == null ? {} : { index }) });
 
 // ViewState keys of grids other than GVTransData ("TransData")
-const GRID_VS = { '/production/processorderform': { GVRoute: 'RouteData', GVBOMInput: 'TransData', GVOutput: 'OutputGrid' }, '/production/reworkorderform': { GVRoute: 'RouteData', GVBOMInput: 'TransData', GVOutput: 'OutputGrid' }, '/productionsetup/routingguideform': { GVInstruction: 'InstructionGrid', GVGuide: 'GuideGrid' }, '/productionsetup/routingform': { GVInstruction: 'InstructionGrid', GVGuide: 'GuideGrid' }, '/materialsetup/materialform': { GVLedgerCode: 'LedgerData' }, '/materialsetup/billofmaterial': { GVBOMInput: 'TransData', GVOutput: 'OutputGrid', GVAltMaterial: 'ALTMAT', GVCurrentAltMaterial: 'CALTMAT' } };
+const GRID_VS = { '/productionsetup/routingguideform': { GVInstruction: 'InstructionGrid', GVGuide: 'GuideGrid' }, '/productionsetup/routingform': { GVInstruction: 'InstructionGrid', GVGuide: 'GuideGrid' }, '/materialsetup/materialform': { GVLedgerCode: 'LedgerData' }, '/materialsetup/billofmaterial': { GVBOMInput: 'TransData', GVOutput: 'OutputGrid', GVAltMaterial: 'ALTMAT', GVCurrentAltMaterial: 'CALTMAT' } };
 // DataTables a page's first-load Page_Load keeps in ViewState (the harness does not run that load)
 const DATA_TABLES = { '/production/rmreplacementform': [{ key: 'Data', columns: ['Category', 'Material', 'Process', 'Serial', 'PsNo', 'RowID', 'ProcessCode', 'matCode', 'NewSerialNo'], rows: [] }] };
 // counters a case takes (e.g. a serial number) put back between the new app's run and the original's, and after
@@ -43,37 +43,9 @@ async function keepSerialCounter(bu) {
 const MAXLEN = new Set(['/production/modeltomodeltransferform']);
 // the BU 999 serial counter (ProductionOrderForm's TrackID) as it is before any case runs
 await keepSerialCounter(999);
-// area 1240001's checklist (12205) with one temporary item of each input type for the QC control cases, removed at the end
-const QC_ITEMS = [
-  [1, 'Operator', 'text', { rd: 'User' }], [2, 'Pressure', 'numeric', { min: 1.5, max: 3.25, uom: 15 }], [3, 'Floor clean', 'bit'],
-  [4, 'Grade', 'list', { list: 990001, rd: 'User' }], [5, 'Photo', 'image', { rd: 'User' }], [6, 'Torque', 'numeric', { min: 5, max: 9, instr: 12200069 }],
-  [7, 'Bins empty', 'bit', { guide: '~/GuideFiles/bins.png' }],
-];
-async function dropQcItems() {
-  await execute("delete from ParameterTran where ParameterCode=12205 and Description like '% check' and Name in ('Operator','Pressure','Floor clean','Grade','Photo','Torque','Bins empty')");
-  await execute('delete from ParameterListTran where Code=990001');
-  await execute('delete from ParameterListHeader where Code=990001');
-}
-const QC_SETUP = !only.length || only.includes('/quality/areacleaningform');
-if (QC_SETUP) {
-  await dropQcItems();
-  for (const [l, n, t, x = {}] of QC_ITEMS) await execute('insert into ParameterTran(ParameterCode,LineCode,Name,Description,InputType,MinValue,MaxValue,Uom,ResultDefined,List,GuideImage,Instrument) values(12205,@l,@n,@d,@t,@mn,@mx,@u,@r,@li,@g,@i)', { l, n, d: `${n} check`, t, mn: x.min ?? 0, mx: x.max ?? 0, u: x.uom ?? 0, r: x.rd ?? 'System', li: x.list ?? 0, g: x.guide ?? null, i: x.instr ?? 0 });
-  await execute("insert into ParameterListHeader(Code,Name,Status) values(990001,'ZZP grades',1)");
-  for (const v of ['1', '2', '3']) await execute('insert into ParameterListTran(Code,Value) values(990001,@v)', { v });
-}
 // [route, key|null, viewState, steps(state) -> step lists]
 const PLAN = [
   ['/materialsetup/materialcategoryform', null, {}, (s) => ['False', 'True'].map((x) => [ev('DDLInspectionRequired_SelectedIndexChanged', 'DDLInspectionRequired', { DDLInspectionRequired: x, DDLInspectionType: real(s, 'DDLInspectionType')[1] })])],
-  ['/materialsetup/materialledgermappingform', null, {}, (s) => [...real(s, 'DDLModel').slice(0, 2), ''].map((x) => [ev('DDLModel_SelectedIndexChanged', 'DDLModel', { DDLModel: x })])],
-  ['/materialsetup/unitconversionform', null, {}, (s) => {
-    const to = real(s, 'DDLTo');
-    const u = real(s, 'DDLfrom').filter((x) => to.includes(x));
-    return [
-      [ev('DDLTo_SelectedIndexChanged', 'DDLTo', { DDLfrom: u[0], DDLTo: u[0] })],
-      [ev('DDLTo_SelectedIndexChanged', 'DDLTo', { DDLfrom: u[0], DDLTo: u[1] })],
-      ...[...real(s, 'DDLMaterial').slice(0, 4), ''].map((x) => [ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', { DDLMaterial: x })]),
-    ];
-  }],
   ['/settings/shiftmasterform', null, {}, () => {
     const add = (n, a, b) => ev('BtnAdd_Click', 'BtnAdd', { TBBreakName: n, TBStart: a, TBEnd: b });
     return [
@@ -85,40 +57,9 @@ const PLAN = [
     ];
   }],
   ['/settings/shiftmasterform', '1223', {}, () => [[ev('BtnAdd_Click', 'BtnAdd', { TBBreakName: 'Tea', TBStart: '10:30', TBEnd: '10:45' })]]],
-  ['/materialsetup/assetmaster', null, {}, () => {
-    const add = (d, st) => ev('BtnAdd_Click', 'BtnAdd', { TBScheduleDate: d, DDLAssetStatus: st });
-    return [[add('2026-10-20', '1'), add('2026-10-20', '0'), cmd('GVTransData_RowDeleting1', 'delete', 1)], [add('', '1')]];
-  }],
-  ['/materialsetup/variantfieldgroupform', null, {}, (s) => {
-    const f = real(s, 'DdlName');
-    const add = (x) => ev('BtnAdd_Click', 'BtnAdd', { DdlName: x });
-    return [[add(f[0]), add(f[1]), add(f[0])], [add('')], [add(f[2]), cmd('GVTransData_RowDeleting1', 'delete', f[2])]];
-  }],
   ['/settings/parametervaluelistform', null, {}, () => {
     const add = (x, p) => ev('BtnAdd_Click', 'BtnAdd', { TbValue: x, DDLPass: p });
     return [[add('OK', '1'), add('NG', '0'), add('OK', '1'), cmd('GVTransData_RowDeleting1', 'delete', 'OK')]];
-  }],
-  ['/businesssetup/taxmasterform', null, { TACT: 'A', LINE: '0' }, (s) => {
-    const b = real(s, 'DDLTaxBoundry');
-    const add = (x, cap, p) => ev('BtnAdd_Click', 'BtnAdd', { DDLTaxBoundry: x, TBCaption: cap, TBTaxp: p });
-    return [
-      [add(b[0], ' CGST ', '9'), add(b[1] ?? b[0], 'SGST', '9.50'), cmd('GVTransData_SelectedIndexChanged', 'select', 1), add(b[1] ?? b[0], 'CGST2', 'abc'), cmd('GVTransData_RowDeleting1', 'delete', 2)],
-      [add('', 'X', '1')],
-    ];
-  }],
-  ['/businesssetup/taxmasterform', await first('select top 1 t.TaxCode from Tax t where exists (select 1 from TaxTrans x where x.TaxCode = t.TaxCode) order by t.TaxCode'), { TACT: 'A', LINE: '0' }, (s) => [[cmd('GVTransData_SelectedIndexChanged', 'select', s.controls.find((c) => c.id === 'GVTransData').rows[0]?.RowID ?? '1')]]],
-  ['/materialsetup/variantform', null, {}, async (s) => {
-    const group = real(s, 'DDLGroup')[0] ?? '';
-    const f = real(s, 'DdlName');
-    const val = await first(`select top 1 Name from VariantFieldValue where Field=${Number(f[0]) || 0} order by Code`);
-    const pick = ev('DdlName_SelectedIndexChanged', 'DdlName', { DdlName: f[0] });
-    return [
-      [ev('DDLGroup_SelectedIndexChanged', 'DDLGroup', { DDLGroup: group }), ev('DDLGroup_SelectedIndexChanged', 'DDLGroup', { DDLGroup: '' })],
-      [pick, ev('BtnAdd_Click', 'BtnAdd', { TbNewValue: val })],
-      [pick, ev('BtnAdd_Click', 'BtnAdd', { TbNewValue: val }), pick, ev('BtnAdd_Click', 'BtnAdd', { TbNewValue: val })],
-      [ev('BtnAdd_Click', 'BtnAdd', { DdlName: '', TbNewValue: '' })],
-      [pick, ev('BtnAdd_Click', 'BtnAdd', { TbNewValue: val }), cmd('GVTransData_RowDeleting1', 'delete', 1)],
-    ];
   }],
   ['/materialsetup/modelform', null, {}, async (s) => {
     const f = real(s, 'DdlName');
@@ -140,10 +81,6 @@ const PLAN = [
       [add(base), add({ ...base, TbName: 'P2', TbDescription: 'Temp', DdlInputType: 'bit' }), add(base), cmd('GVTransData_SelectedIndexChanged', 'select', 1), add({ ...base, TbName: 'P1b', TbMinValue: 'x' }), cmd('GVTransData_RowDeleting', 'delete', 2)],
     ];
   }],
-  ['/businesssetup/storageareaform', null, {}, (s) => [
-    ...[...real(s, 'DdlDept').slice(0, 2), ''].map((x) => [ev('DdlDept_SelectedIndexChanged', 'DdlDept', { DdlDept: x })]),
-    ...['100', real(s, 'DDLType').find((x) => x !== '100') ?? '1'].map((x) => [ev('DDLType_SelectedIndexChanged', 'DDLType', { DDLType: x })]),
-  ]],
   ['/materialsetup/materialbarcode', null, {}, async (s) => {
     const dept = real(s, 'DDLFromDepartment');
     const area = await first(`select top 1 a.AreaCode from Area a where exists (select 1 from StorageArea x where x.Area = a.AreaCode) or 1=1 order by a.AreaCode`);
@@ -154,15 +91,6 @@ const PLAN = [
       ...[...mats, ''].map((x) => [ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', { DDLMaterial: x })]),
     ];
   }],
-  ['/businesssetup/taxcategoryform', null, {}, (s) => {
-    const add = (x) => ev('BtnAdd_Click', 'BtnAdd', { DdlTaxRate: x });
-    const r0 = real(s, 'DdlTaxRate')[0] ?? '';
-    return [[add(r0), add(r0), cmd('GVTransData_RowDeleting1', 'delete', 1)], [add('')]];
-  }],
-  ['/settings/workcenteravailabilityform', null, {}, (s) => [
-    ...[...real(s, 'DDLDepartment').slice(0, 2), ''].map((x) => [ev('DDLDepartment_SelectedIndexChanged', 'DDLDepartment', { DDLDepartment: x })]),
-    ...[...real(s, 'DDLWorkCenterGroup').slice(0, 1), ''].map((x) => [ev('DDLWorkCenterGroup_SelectedIndexChanged', 'DDLWorkCenterGroup', { DDLWorkCenterGroup: x })]),
-  ]],
   ['/materialsetup/materialform', null, {}, async (s) => {
     const uom = real(s, 'DdlBaseUom');
     const types = real(s, 'DdlType');
@@ -256,55 +184,7 @@ const PLAN = [
       [add('', '1'), add(of(1), '1', { tbFormat: ' ' }), add(of(2), '1', { tbLenth: '' }), add(of(3), '1', { tbValue: '' })],
     ];
   }],
-  ['/production/dailyplanform', null, {}, (s) => [...real(s, 'DDLDepartment').slice(0, 3), ''].map((x) => [ev('DDLDepartment_SelectedIndexChanged', 'DDLDepartment', { DDLDepartment: x })])],
-  ['/production/planningorderform', null, {}, (s) => [
-    ...[...real(s, 'DDLOrderType').slice(0, 3), ''].map((x) => [ev('DDLOrderType_SelectedIndexChanged', 'DDLOrderType', { DDLOrderType: x })]),
-    [ev('DDLSO_SelectedIndexChanged', 'DDLSO', { DDLSO: '' })],
-    ...[...real(s, 'DDLMaterial').slice(0, 3), ''].map((x) => [ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', { DDLMaterial: x })]),
-  ]],
-  ['/production/planningorderform', await first('select top 1 PlanNo from PLANOrder order by PlanNo desc'), {}, (s) => [[ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', {})]]],
-  ['/production/machineavailibilityform', null, {}, async (s) => {
-    const busy = await first("select top 1 StationCode from WorkCenterCalander where ScheduledStartOn >= '2026-08-01' group by StationCode order by count(*) desc");
-    const go = (date, f, wc = busy) => ev('Go_Click', 'Go', { DDLWorkCenter: wc, tbDate: date, ddlFrequency: f });
-    return [
-      ...[...real(s, 'DDLDepartment').slice(0, 2), ''].map((x) => [ev('DDLDepartment_SelectedIndexChanged', 'DDLDepartment', { DDLDepartment: x })]),
-      ...['1', '2', '3', '4', '5'].map((f) => [go('2026-08-10', f)]),
-      [go('2026-02-28', '2')], [go('', '3')], [go('2026-08-10', '3', '')],
-      // schedule blocks need WorkCenterAvailability rows (none on WRL): see the MIGRATION_PLAN note on this page
-      [go('2026-08-20', '3', '1240002')], [go('2024-11-20', '3', '1230018')],
-    ];
-  }],
-  ['/production/processorderplanform', null, {}, async (s) => {
-    const prods = real(s, 'DDLCustomer');
-    const withJobs = await first('select top 1 PRODNo from ProcessOrder po where exists (select 1 from WorkCenterCalander w where w.PSNo=po.PSNo) order by PRODNo desc');
-    const job = await first(`select top 1 PSNo from ProcessOrder where PRODNO=${Number(withJobs) || 0} order by PSNo desc`);
-    const pick = (x) => ev('DDLCustomer_SelectedIndexChanged', 'DDLCustomer', { DDLCustomer: x });
-    return [
-      ...[prods[0], withJobs, ''].map((x) => [pick(x ?? '')]),
-      [pick(withJobs), ev('PrimaryKey_SelectedIndexChanged', 'PrimaryKey', { PrimaryKey: job })],
-      [pick(withJobs), ev('PrimaryKey_SelectedIndexChanged', 'PrimaryKey', { PrimaryKey: job, TBStartON: '' })],
-      [ev('PrimaryKey_SelectedIndexChanged', 'PrimaryKey', { PrimaryKey: '' })],
-      [pick(withJobs), ev('BtnGo_Click', 'BtnGo', { PrimaryKey: job, TBStartON: '2026-11-01T08:00' })],
-      [ev('BtnGo_Click', 'BtnGo', { PrimaryKey: '' })],
-      [pick(withJobs), ev('BtnReset_Click', 'BtnReset', { PrimaryKey: job, TBStartON: '' })],
-      [ev('BtnGroup_Click', 'BtnGroup', { PrimaryKey: '' }), ev('BtnDelete_Click1', 'BtnDelete', { PrimaryKey: '' })],
-    ];
-  }],
   // QC checklist popup: area 1240001's checklist (on WRL it is empty; the run adds one item of each input type first)
-  ['/quality/areacleaningform', null, {}, () => {
-    const load = ev('Page_Load', 'TitleControl');
-    const open = [load, ev('DDLArea_SelectedIndexChanged', 'DDLArea', { DDLArea: '1240001' }), ev('BtnUD_Click', 'BtnUD')];
-    return [
-      [ev('DDLArea_SelectedIndexChanged', 'DDLArea', { DDLArea: '1240001' })],
-      [...open],
-      [...open, qcStep('BtnNext_Click'), qcStep('BtnNext_Click'), qcStep('BtnNext_Click'), qcStep('BtnPrevious_Click')],
-      [...open, qcStep('btnSave_Click', { TBValue: 'Ravi', TBRemark: 'ok' }), qcStep('TBValue_TextChanged', { TBValue: '4' }), qcStep('TBValue_TextChanged', { TBValue: '2' }), qcStep('btnSave_Click', { TBRemark: 'in range' })],
-      [...open, qcStep('BtnNext_Click'), qcStep('BtnNext_Click'), qcStep('DDLList_SelectedIndexChanged', { DDLList: '0' }), qcStep('btnSave_Click', { TBRemark: 'no' }), qcStep('DDLList_SelectedIndexChanged', { DDLList: '2' }), qcStep('btnSave_Click')],
-      [...open, qcStep('GVDetails_RowCommand', {}, { command: 'Select', index: 4 }), qcStep('GVDetails_RowCommand', {}, { command: 'Select', index: 1 }), qcStep('GVDetails_RowCommand', {}, { command: 'Fail', index: 2 }), qcStep('GVDetails_RowCommand', {}, { command: 'Pass', index: 2 })],
-      [...open, qcStep('GVDetails_RowCommand', {}, { command: 'Select', index: 5 }), qcStep('btnSave_Click', { TBValue: '7' }), qcStep('Go_Click', { TBBarcode: 'X1' }), qcStep('btnSave_Click'), qcStep('BtnNext_Click'), qcStep('BtnNext_Click')],
-      [...open, qcStep('btnSave_Click', { TBValue: 'Ravi' }), qcStep('IMBClose_Click')],
-    ];
-  }],
   ['/quality/qualityinspectionform', null, { PendingQty: '0' }, async (s) => {
     const load = ev('Page_Load', 'TitleControl');
     const go = (b) => ev('Go_Click', 'Go', { TBBarcode: b });
@@ -363,18 +243,6 @@ const PLAN = [
       
     ];
   }],
-  ['/quality/reworkconfirmation', null, { PendingQty: '0', __Go: 'Go', __BarcodeEnabled: '1' }, async () => {
-    const load = ev('Page_Load', 'TitleControl');
-    const go = (b) => ev('Go_Click', 'Go', { TBBarcode: b });
-    const rework = (await query("select top 2 mb.Serial from InspectionTrans it join MaterialBarcode mb on mb.BarcodeNo=it.SampleBarcode where mb.QCStatus=13 and it.Status<>12 and it.NextAction=1 order by it.ID desc")).map((r) => r.Serial);
-    const done = await first('select top 1 Serial from MaterialBarcode where QCStatus=12 order by BarcodeNo desc');
-    return [
-      ...[...rework, done, 'NOPE-1'].map((b) => [go(b)]),
-      [go(rework[0]), go(rework[0])],
-      [load, go(rework[1] ?? rework[0]), ev('BtnUD_Click', 'BtnUD'), qcStep('IMBClose_Click')],
-      [load, { target: 'Footer', handler: 'BtnSave_Click', control: 'Footer', values: {} }],
-    ];
-  }],
   ['/quality/reworkconfirmationnew', null, { Qty: '0', __Go: 'Go', __BarcodeEnabled: '1' }, async () => {
     const load = ev('Page_Load', 'TitleControl');
     const go = (b) => ev('Go_Click', 'Go', { TBBarcode: b });
@@ -398,19 +266,6 @@ const PLAN = [
     const go = (b) => ev('Go_Click', 'Go', { TBBarcode: b });
     return [[go(fg)], [go(` ${fg} `)], [go('NOPE-1')], [go('')], [go(fg), go('')], [ev('btnSave_Click1', 'btnSave', { TBRemark: '' })]];
   }],
-  ['/production/workstationutilizationform', null, { __StationGo: 'Go', __CardGo: 'Go' }, async () => {
-    const st = (await query("select top 1 StationCode, Alias from WorkCenter where BusinessUnit=12201 and exists (select 1 from WorkCenterProcesses p where p.StationCode=WorkCenter.StationCode) order by StationCode"))[0];
-    const started = (await query("select top 1 pa.StationCode, po.PSNo, po.Alias from ProcessActivity pa join ProcessOrder po on po.PSNo=pa.PSNo and po.Status=1 where pa.ActivityType=1 order by pa.ROWID desc"))[0] ?? {};
-    const card = (await query('select top 1 PSNo, Alias from ProcessOrder where Status=1 order by PSNo desc'))[0];
-    const station = (x) => ev('btnStationGo_Click', 'btnStationGo', { TbStation: x });
-    const job = (x) => ev('btnCardGo_Click', 'btnCardGo', { TbJobCard: x });
-    return [
-      [station(String(st.StationCode))], [station(st.Alias)], [station('NOPE')], [station('')], [station(st.Alias), station('')],
-      [station(st.Alias), job(card.Alias)], [station(st.Alias), job(String(card.PSNo))], [station(st.Alias), job('NOPE')], [station(st.Alias), job(card.Alias), job('')],
-      [station(String(started.StationCode ?? st.StationCode)), job(started.Alias ?? card.Alias)],
-      [job(card.Alias)],
-    ];
-  }],
   ['/production/rmreplacementform', null, { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' }, async () => {
     const fg = (await query("select top 1 mb.Serial, mb.DocNo from MaterialBarcode mb where mb.Status<>99 and exists (select 1 from ProcessInputBOMScan pb where pb.PSNo=mb.DocNo and pb.Serial is not null) order by mb.BarcodeNo desc"))[0];
     const comp = await first(`select top 1 Serial from ProcessInputBOMScan where PSNo=${fg.DocNo} and Serial is not null`);
@@ -425,12 +280,6 @@ const PLAN = [
       [go(fg.Serial), exist(comp), neu(comp)], [go(fg.Serial), exist(comp), neu(other)], [go(fg.Serial), exist(comp), neu('BADFORMAT')],
       [neu('X1')],
     ];
-  }],
-  ['/production/scrappostingform', null, { PendingQty: '0', __Go: 'Go' }, async () => {
-    const serial = await first('select top 1 Serial from MaterialBarcode where Department in (select DeptCode from Department where BusinessUnit=12201) order by BarcodeNo desc');
-    const otherDept = await first('select top 1 Serial from MaterialBarcode where Department not in (select DeptCode from Department where BusinessUnit=12201) order by BarcodeNo desc');
-    const go = (b) => ev('btnGo_Click', 'btnGo', { TBBarcode: b });
-    return [[go(serial)], [go(serial), go('')], [go('NOPE-1')], ...(otherDept ? [[go(otherDept)]] : []), [ev('ddlScrapCategory_SelectedIndexChanged', 'ddlScrapCategory', { ddlScrapCategory: '' })], [ev('Post', 'TitleControl:post')]];
   }],
   ['/production/productionorderform', null, {}, async () => {
     const mat = (x) => ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', { DDLMaterial: x });
@@ -509,59 +358,6 @@ const PLAN = [
       [print({ DDLDepartment: '' })], [d, print()], [...chain, print({ TBQty: '0' })], [...chain, print({ TBQty: '999999' })], [...chain, print({ TBQty: '1', DDLPrinter: '' })],
     ];
   }],
-  ['/production/processorderform', null, {}, async () => {
-    // an open order of the production department (nothing assigned yet), its material and a line with stations
-    const order = await first("select top 1 ph.PRODNo from PRODHeader ph join Material m on m.MatCode=ph.Material where ph.Qty>isnull(ph.AssignedQty,0) and ph.Status=1 and ph.Department=1220001 and not exists (select 1 from ProcessOrder po where po.PRODNo=ph.PRODNo) and (exists (select 1 from RoutingHeader r where r.Material=ph.Material) or exists (select 1 from RoutingHeader r where r.model=m.Model)) order by ph.PRODNo desc");
-    const closing = await first("select top 1 ph.PRODNo from PRODHeader ph where ph.Qty>isnull(ph.AssignedQty,0) and ph.Status=1 and ph.Department=1220001 order by ph.PRODNo asc");
-    const before = await first(`select Status from PRODHeader where PRODNo=${closing}`);
-    RESTORES.push(() => execute('update PRODHeader set Status=@s where PRODNo=@p', { s: before, p: closing }));
-    const line = await first("select top 1 pl.LineCode from ProductionLine pl where pl.Department=1220001 and pl.Status=1 and exists (select 1 from WorkCenter w where w.ManfLine=pl.LineCode) order by pl.LineCode");
-    const mat = await first(`select Material from PRODHeader where PRODNo=${order}`);
-    const route = await first(`select top 1 RouteCode from RoutingHeader where material=${mat} union all select top 1 RouteCode from RoutingHeader where model in (select model from material where matcode=${mat})`);
-    const proc = await first(`select top 1 ProcessCode from RoutingTrans where RouteCode=${route} order by SeqNo`);
-    const station = await first(`select top 1 w.StationCode from workcenter w inner join WorkCenterProcesses wp on w.StationCode=wp.stationcode where w.Department=1220001 and wp.ProcessCode=${proc}`);
-    const inMat = await first(`select top 1 bi.Material from BOMInput bi where bi.BOMCode=(select BOMCode from PRODHeader where PRODNo=${order})`);
-    const outMat = await first(`select top 1 bo.Material from BOMOutput bo where bo.BOMCode=(select BOMCode from PRODHeader where PRODNo=${order})`);
-    const inRow = await first(`select top 1 RowID from BOMInput where BOMCode=(select BOMCode from PRODHeader where PRODNo=${order}) order by RowID`);
-    const outRow = await first(`select top 1 RowID from BOMOutput where BOMCode=(select BOMCode from PRODHeader where PRODNo=${order}) order by RowID`);
-    const seq = await first(`select top 1 SeqNo from RoutingTrans where RouteCode=${route} order by SeqNo`);
-    const d = (x = '1220001') => ev('DDLDepartment_SelectedIndexChanged', 'DDLDepartment', { DDLDepartment: x });
-    const p = (x) => ev('DDLProduction_SelectedIndexChanged', 'DDLProduction', { DDLProduction: x });
-    const create = (vals = {}) => ev('btnCreate_Click', 'btnCreate', vals);
-    const opened = [d(), p(order)];
-    const made = [...opened, create()];
-    const lined = [...opened, create({ DDLProdLine: line })];
-    const inAdd = (vals) => ev('BtnInputAdd_Click', 'BtnInputAdd', vals);
-    const outAdd = (vals) => ev('BtnOutputAdd_Click', 'BtnOutputAdd', vals);
-    const proc1 = ev('DDLProcess_SelectedIndexChanged', 'DDLProcess', { DDLProcess: proc });
-    return [
-      [d()], [d('')], opened, [...opened, p('')], [...opened, d('')],
-      [...opened, ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', { DDLMaterial: mat })], [...opened, ev('DDLMaterial_SelectedIndexChanged', 'DDLMaterial', { DDLMaterial: '' })],
-      [d(), create()], [...opened, create({ DDLRouting: '' })], [...opened, create({ DDLBom: '' })], made, lined,
-      [...made, ev('DDLRouting_SelectedIndexChanged', 'DDLRouting', {})], [...made, ev('DDLBom_SelectedIndexChanged', 'DDLBom', {})],
-      [...made, ev('DDLMultiple_SelectedIndexChanged', 'DDLMultiple', { DDLMultiple: '0' })], [...opened, ev('DDLMultiple_SelectedIndexChanged', 'DDLMultiple', { DDLMultiple: '0' })],
-      [...made, proc1], [...lined, proc1, ev('BtnAdd_Click', 'BtnAdd', { DDLStation: station })], [...made, proc1, ev('BtnAdd_Click', 'BtnAdd', {})],
-      [...made, inAdd({})], [...made, inAdd({ DDLInputMaterial: inMat })], [...made, inAdd({ DDLInputMaterial: inMat, DdlNewProcess: proc })],
-      [...made, inAdd({ DDLInputMaterial: inMat, DdlNewProcess: proc, TbInputQuantity: '2', DDLInputScan: '0', DDLOutputScan: '1' })],
-      [...opened, inAdd({ DDLInputMaterial: inMat, DdlNewProcess: proc, TbInputQuantity: '2' })],
-      [...made, outAdd({ DDLOutputMaterial: outMat, DdlNewProcess: proc, TBOutputQty: '1.5' })],
-      [...made, ev('DDLInputMaterial_SelectedIndexChanged', 'DDLInputMaterial', { DDLInputMaterial: inMat }), ev('DDLOutputMaterial_SelectedIndexChanged', 'DDLOutputMaterial', { DDLOutputMaterial: outMat })],
-      [...made, cmd('GVBOMInput_RowDeleting', 'delete', inRow, {}, 'GVBOMInput')], [...made, cmd('GVOutput_RowDeleting', 'delete', outRow, {}, 'GVOutput')], [...lined, cmd('GVRoute_RowDeleting', 'delete', seq, {}, 'GVRoute')],
-      [d(), p(closing), ev('ProdClose_Click', 'ProdClose')],
-    ];
-  }],
-  ['/production/reworkorderform', null, {}, async () => {
-    // a job card under rework; WRL has no rework routing (RoutingHeader Type 2), so btnCreate stops at its check
-    const ps = await first('select top 1 IH.DocNo from InspectionHeader IH inner join InspectionTrans IT on IT.InspectionLotNo=IH.InspectionLotNo where IT.NextAction=1 and IH.DocType=4001 and IH.Status=10 order by IH.DocNo desc');
-    const route = await first('select top 1 RouteCode from RoutingHeader order by RouteCode');
-    const d = (x = '1220001') => ev('DDLDepartment_SelectedIndexChanged', 'DDLDepartment', { DDLDepartment: x });
-    const p = (x) => ev('DDLProduction_SelectedIndexChanged', 'DDLProduction', { DDLProduction: x });
-    return [
-      [d()], [d('')], [d(), p(ps)], [d(), p(ps), p('')], [d(), p(ps), ev('btnCreate_Click', 'btnCreate', { DDLRouting: route })],
-      [d(), ev('BtnInputAdd_Click', 'BtnInputAdd', {})], [d(), ev('BtnInputAdd_Click', 'BtnInputAdd', { DDLInputMaterial: await first(`select Material from ProcessOrder where PSNo=${ps}`), DdlNewProcess: '12210', TbInputQuantity: '1' })],
-      [d(), ev('BtnAdd_Click', 'BtnAdd', {})], [d(), cmd('GVRoute_RowDeleting', 'delete', '1', {}, 'GVRoute')],
-    ];
-  }],
   ['/ceat/ceatinselfinspectionform', null, { PendingQty: '0' }, async (s) => {
     const held = await first('select top 1 mb.Serial from MaterialBarcode mb join InspectionHeader ih on ih.InspectionLotNo=mb.InspectionLotNo where mb.QCStatus=11 and ih.InspectionType=300 and not exists (select 1 from InspectionTrans it where it.Serial=mb.Serial) order by mb.BarcodeNo desc');
     const finalQ = await first('select top 1 mb.Serial from MaterialBarcode mb join InspectionHeader ih on ih.InspectionLotNo=mb.InspectionLotNo where mb.QCStatus=11 and ih.InspectionType<>300 order by mb.BarcodeNo desc');
@@ -578,7 +374,6 @@ const PLAN = [
       [go(held), ev('BtnUD_Click', 'BtnUD')],
     ];
   }],
-  ['/production/productioncaptureform', null, {}, () => ['1220001', '1230001', '1230005', ''].map((d) => [ev('DDLDepartment_SelectedIndexChanged', 'DDLDepartment', { DDLDepartment: d })])],
   ['/authorization/usersform', null, {}, () => [true, false].map((x) => [ev('CBAllProcess_CheckedChanged', 'CBAllProcess', { CBAllProcess: x })])],
   ['/settings/parameterform', await first('select top 1 h.ParameterCode from ParameterHeader h where exists (select 1 from ParameterTran x where x.ParameterCode = h.ParameterCode) order by h.ParameterCode'), { btnAdd: '1' }, (s) => [[cmd('GVTransData_SelectedIndexChanged', 'select', s.controls.find((c) => c.id === 'GVTransData').rows[0]?.LineCode ?? '1')]]],
 ];
@@ -667,9 +462,9 @@ async function runNew(spec, key, viewState, steps) {
 }
 
 // pages whose handlers show/hide panels (elsewhere panels are set by Page_Load, which the harness does not run)
-const PANEL_EVENTS = new Set(['/production/processorderform', '/production/reworkorderform', '/ceat/ceatinselfinspectionform', '/quality/reworkconfirmationnew', '/production/productioncaptureform', '/production/productionassignmentform', '/production/processguideform', '/production/workstationutilizationform', '/production/rmreplacementform', '/production/fgscrapform', '/quality/repairconfirmation', '/quality/finishingconfirmation', '/quality/reworkconfirmation', '/quality/ncmrconfirmation', '/quality/qualityinspectionform', '/settings/parameterform', '/businesssetup/storageareaform', '/materialsetup/billofmaterial', '/productionsetup/routingform', '/productionsetup/routingguideform', '/materialsetup/serialgenerationlogicform']);
+const PANEL_EVENTS = new Set(['/ceat/ceatinselfinspectionform', '/quality/reworkconfirmationnew', '/production/productionassignmentform', '/production/processguideform', '/production/rmreplacementform', '/production/fgscrapform', '/quality/repairconfirmation', '/quality/finishingconfirmation', '/quality/reworkconfirmation', '/quality/ncmrconfirmation', '/quality/qualityinspectionform', '/settings/parameterform', '/businesssetup/storageareaform', '/materialsetup/billofmaterial', '/productionsetup/routingform', '/productionsetup/routingguideform', '/materialsetup/serialgenerationlogicform']);
 // lists filled by a query without ORDER BY: compared as sets
-const UNORDERED = { '/production/processorderplanform': new Set(['PrimaryKey']) };
+const UNORDERED = {};
 const setOf = (route, id, opts) => (UNORDERED[route]?.has(id) ? [...opts].sort() : opts);
 function shapeNew(res, route) {
   const o = {};
@@ -749,7 +544,6 @@ for (let i = 0; i < cases.length; i += 10) {
   for (const o of JSON.parse(raw.slice(raw.indexOf('[')))) orig.set(o.id, o);
 }
 for (const r of RESTORES) await r();
-if (QC_SETUP) await dropQcItems();
 
 // "now" stamped by each side a moment apart (e.g. a start time defaulted to now): today's times compared as NOW
 const T = new Date();

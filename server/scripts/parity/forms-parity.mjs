@@ -19,7 +19,7 @@ const FORCED = new Map(prefixes.filter((p) => p.includes('#')).map((p) => p.spli
 const MODULES = prefixes.length ? prefixes.map((p) => p.split('#')[0]) : ['/businesssetup/', '/materialsetup/', '/productionsetup/', '/settings/', '/authorization/'];
 const NOT_USED = ['/settings/existingstockentryform', '/settings/existingstockprintform']; // left out of the app
 const routes = Object.keys(SPECS).filter((r) => MODULES.some((m) => r.startsWith(m)) && !NOT_USED.includes(r));
-const UNORDERED = [['/settings/routingupdateform', 'DDLJobCard']];
+const UNORDERED = [];
 const ctx = { businessUnit: '12201', department: '1230001', userCode: '123003', userId: '123003' };
 await loadSettings();
 
