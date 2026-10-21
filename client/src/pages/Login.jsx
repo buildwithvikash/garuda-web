@@ -1,7 +1,14 @@
-// LoginForm.aspx: business unit, user + password or badge scan, production line (WRL).
-import { useEffect, useRef, useState } from 'react';
+// Sign in (QMAS design): business unit, user + password or badge scan, production line (WRL).
+import { ArrowRight, Eye, EyeOff, Lock, ScanBarcode, User, KeyRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
+import Button from '../ui/Button.jsx';
+import { FormError, Select, TextInput } from '../ui/fields.jsx';
+import AuthShell from './AuthShell.jsx';
+
+const opts = (list = []) => list.map((o) => ({ value: o.value, label: o.text }));
 
 export default function Login() {
   const navigate = useNavigate();
@@ -9,9 +16,9 @@ export default function Login() {
   const [form, setForm] = useState({ businessUnit: '', userId: '', password: '', scanned: '', line: '' });
   const [qr, setQr] = useState(false);
   const [buLocked, setBuLocked] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const scanRef = useRef(null);
 
   useEffect(() => {
     api('/auth/login-page')
@@ -22,13 +29,9 @@ export default function Login() {
       .catch((e) => setError(e.message));
   }, []);
 
-  useEffect(() => {
-    if (qr) scanRef.current?.focus();
-  }, [qr]);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e?.target ? e.target.value : (e ?? '') }));
 
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  // AssignBusinessUnit: after the user ID is entered, a single assigned unit is selected and locked.
+  // After the user ID is entered, a single assigned business unit is selected and locked.
   async function onUserBlur() {
     setBuLocked(false);
     if (!form.userId.trim()) return;
@@ -46,7 +49,10 @@ export default function Login() {
     try {
       const lineName = page?.lines.find((l) => l.value === form.line)?.text ?? '';
       const r = await api('/auth/login', { method: 'POST', body: { ...form, qr, lineName } });
-      if (r.ok) return navigate(r.redirect, { replace: true });
+      if (r.ok) {
+        toast.success('Signed in');
+        return navigate(r.redirect, { replace: true });
+      }
       if (r.changePassword) return navigate('/change-password', { state: { userId: r.userId } });
       setError(r.message);
       setForm((f) => ({ ...f, scanned: '' }));
@@ -58,72 +64,52 @@ export default function Login() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="relative hidden lg:block">
-        <img src="/Assets/Images/LoginImage.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/70 to-slate-900/10" />
-        <div className="absolute bottom-10 left-10 right-10 text-white">
-          <p className="text-3xl font-semibold">{page?.companyName || 'Garuda'}</p>
-          <p className="mt-1 text-sm text-white/80">Manufacturing execution &amp; warehouse management</p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center p-6">
-        <form onSubmit={submit} className="w-full max-w-sm space-y-5">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <img src={page?.logo ?? '/Assets/Images/Logo.png'} alt="Company logo" className="h-16 object-contain" />
-            <h1 className="text-xl font-semibold text-slate-900">Sign in</h1>
-          </div>
-
-          <div>
-            <label className="label" htmlFor="bu">Business unit</label>
-            <select id="bu" className="field" value={form.businessUnit} onChange={set('businessUnit')} disabled={buLocked} required>
-              {page?.businessUnits.map((b) => (
-                <option key={b.value} value={b.value}>{b.text}</option>
-              ))}
-            </select>
-          </div>
-
-          {qr ? (
-            <div>
-              <label className="label" htmlFor="scan">Scan badge</label>
-              <input id="scan" ref={scanRef} className="field" value={form.scanned} onChange={set('scanned')} autoComplete="off" required />
-            </div>
-          ) : (
-            <>
-              <div>
-                <label className="label" htmlFor="user">User ID</label>
-                <input id="user" className="field" value={form.userId} onChange={set('userId')} onBlur={onUserBlur} autoComplete="username" required />
-              </div>
-              <div>
-                <label className="label" htmlFor="pw">Password</label>
-                <input id="pw" type="password" className="field" value={form.password} onChange={set('password')} autoComplete="current-password" />
-              </div>
-            </>
-          )}
-
-          {page?.lineRequired && (
-            <div>
-              <label className="label" htmlFor="line">Production line</label>
-              <select id="line" className="field" value={form.line} onChange={set('line')}>
-                <option value="">Select A Value</option>
-                {page.lines.map((l) => (
-                  <option key={l.value} value={l.value}>{l.text}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {error && <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-
-          <button className="btn w-full" disabled={busy || !page}>{busy ? 'Signing in…' : 'Sign in'}</button>
-          <button type="button" className="btn-ghost w-full" onClick={() => { setQr((q) => !q); setError(''); }}>
-            {qr ? 'Use user ID and password' : 'Scan badge instead'}
-          </button>
-
-          {page && <p className="text-center text-xs text-slate-400">{page.server}</p>}
-        </form>
-      </div>
-    </div>
+    <AuthShell title="Welcome to Garuda" subtitle={page?.lineRequired ? 'Sign in and choose the line you are working on' : 'Sign in to continue'}>
+      <form onSubmit={submit} className="space-y-5">
+        <FormError message={error} />
+        <Select
+          label="Business unit"
+          required
+          value={form.businessUnit}
+          onChange={set('businessUnit')}
+          disabled={buLocked}
+          hint={buLocked ? 'Set by your user account' : undefined}
+          options={opts(page?.businessUnits)}
+          placeholder="Select a business unit"
+        />
+        {qr ? (
+          <TextInput label="Badge" size="lg" icon={ScanBarcode} autoFocus autoComplete="off" value={form.scanned} onChange={set('scanned')} hint="Scan your ID badge" required />
+        ) : (
+          <>
+            <TextInput label="User ID" size="lg" icon={User} autoFocus autoComplete="username" value={form.userId} onChange={set('userId')} onBlur={onUserBlur} required />
+            <TextInput
+              label="Password"
+              size="lg"
+              icon={Lock}
+              type={showPass ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={form.password}
+              onChange={set('password')}
+              trailing={
+                <button type="button" onClick={() => setShowPass((s) => !s)} aria-label={showPass ? 'Hide password' : 'Show password'} className="p-1 text-slate-500 hover:text-slate-800 cursor-pointer">
+                  {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              }
+            />
+          </>
+        )}
+        {page?.lineRequired && (
+          <Select label="Production line" required value={form.line} onChange={set('line')} options={opts(page.lines)} placeholder="Select a production line" />
+        )}
+        <Button type="submit" size="lg" className="w-full py-4! text-base! rounded-xl! shadow-lg shadow-blue-600/25" loading={busy} disabled={!page}>
+          Sign in {!busy && <ArrowRight className="w-5 h-5" />}
+        </Button>
+        <button type="button" onClick={() => (setQr((q) => !q), setError(''))} className="flex w-full items-center justify-center gap-2 text-sm font-medium text-blue-700 hover:underline cursor-pointer">
+          {qr ? <KeyRound className="w-4 h-4" /> : <ScanBarcode className="w-4 h-4" />}
+          {qr ? 'Use user ID and password' : 'Scan badge instead'}
+        </button>
+        {page && <p className="text-center text-xs text-slate-400">{page.server}</p>}
+      </form>
+    </AuthShell>
   );
 }

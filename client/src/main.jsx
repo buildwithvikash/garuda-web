@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './index.css';
 import Login from './pages/Login.jsx';
@@ -17,10 +18,10 @@ createRoot(document.getElementById('root')).render(
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/start" replace />} />
           <Route path="/start" element={<Start />} />
-          {/* Further migrated module routes go here. */}
           <Route path="*" element={<NotMigrated />} />
         </Route>
       </Routes>
     </BrowserRouter>
+    <Toaster position="top-right" toastOptions={{ duration: 3500, style: { fontSize: '14px' } }} />
   </StrictMode>,
 );

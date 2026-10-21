@@ -1,26 +1,161 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300..800&display=swap');
+@import 'tailwindcss';
+@import './styles/dark.css' layer(utilities);
+
+/* Same design system as QMAS (Western Refrigeration): Outfit type, frost canvas, refrigerant blue, flat steel cards.
+   Dark mode is the `dark` class on <html> (set from the user's choice); dark: utilities follow it. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9eaff;
-  --color-brand-500: #2563eb;
-  --color-brand-600: #1d4ed8;
-  --color-brand-700: #1e40af;
+  --font-sans: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  --color-canvas: #f2f5f9;
+  --color-blue-50: #e8f4fd;
+  --color-blue-100: #cce7fb;
+  --color-blue-200: #99cef6;
+  --color-blue-300: #5eb0ef;
+  --color-blue-400: #2b93e3;
+  --color-blue-500: #0f7bd1;
+  --color-blue-600: #0067b8;
+  --color-blue-700: #005396;
+  --color-blue-800: #06457a;
+  --color-blue-900: #0b3a64;
+  /* Western Refrigeration logo green, used once: the strip on top of the app bar. */
+  --color-wrl: #3f8f3a;
+  --shadow-lift: 0 12px 32px -12px rgb(11 58 100 / 0.28);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-canvas text-slate-900 antialiased;
+}
+html.dark body {
+  color: #e8edf4;
+}
+html.dark .section-title {
+  color: #d9e0ea;
+}
+
+/* Thin scrollbars: shop-floor users need to see that a table scrolls. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-slate-300) transparent;
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-blue-500);
+    outline-offset: 2px;
+  }
 }
 
 @layer components {
+  /* Work panels: flat, steel border. Hierarchy comes from borders and background, not shadows. */
+  .card {
+    @apply rounded-[10px] border border-slate-200 bg-white shadow-[0_1px_2px_rgb(15_23_42/0.04)];
+  }
+  :where(html.dark) .card {
+    background-color: var(--surface);
+  }
+  .card-hover {
+    @apply transition-colors duration-150 hover:border-blue-300;
+  }
+  .section-title {
+    @apply text-[13px] font-semibold text-slate-800;
+  }
+  .eyebrow {
+    @apply text-[11px] font-medium text-slate-500;
+  }
+  .brand-gradient {
+    @apply bg-blue-600;
+  }
+  .skeleton {
+    @apply rounded-md bg-slate-200/70;
+    background-image: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / var(--shimmer, 0.6)) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+
+  /* The generated (engine) screens use these: the same look as the kit's inputs and buttons (ui/fields, ui/Button). */
   .field {
-    @apply block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition
-      focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-100 disabled:text-slate-500;
+    @apply w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-800 placeholder-slate-400 outline-none transition-colors
+      hover:border-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10
+      disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed read-only:bg-slate-50;
+  }
+  /* @apply'd colours escape dark.css's class remap, so .field gets its dark colours here */
+  :where(html.dark) .field {
+    background-color: var(--surface);
+    color: #d9e0ea;
+    border-color: #2b3a52;
+  }
+  :where(html.dark) .field::placeholder {
+    color: #64748b;
+  }
+  :where(html.dark) .field:disabled {
+    color: #8492a6;
   }
   .label {
-    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500;
+    @apply block text-[11px] font-semibold text-slate-600 mb-1.5;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm
-      transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white transition-all duration-150 cursor-pointer
+      hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100;
+    @apply inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-lg text-slate-600 transition-all duration-150 cursor-pointer
+      hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed;
   }
+}
+
+@keyframes shimmer {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+@keyframes slideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.animate-slideIn {
+  animation: slideIn 0.18s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.15s ease-out;
+}
+@keyframes pageIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-page {
+  animation: pageIn 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Numbers in tables line up. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+html.dark {
+  --shimmer: 0.05;
+  --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.6);
 }

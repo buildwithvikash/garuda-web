@@ -7,9 +7,6 @@ export const PAGES = {
     checkSearch: { TBCheckListSearch: 'CBProcess' },
     labels: { CBProcess: 'Process List' },
   },
-  '/settings/workcenteravailabilityform': {
-    checkSearch: { TBCheckListSearch: 'cbWorkstations' },
-  },
   '/authorization/userroleform': {
     labels: { TreeView1: 'Detail' },
   },

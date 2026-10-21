@@ -1,35 +1,22 @@
-// Any menu entry whose screen hasn't been migrated yet: point to the same page in the existing app.
-import { useLocation } from 'react-router-dom';
+// Any route inside the app: a screen of this app (EngineForm), or a clear "not here" page.
+import { Home, SearchX } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import { useMe } from '../layouts/AppLayout.jsx';
 import EngineForm from './forms/EngineForm.jsx';
-
-const LEGACY = import.meta.env.VITE_LEGACY_URL ?? '';
 
 export default function NotMigrated() {
   const { pathname } = useLocation();
   const me = useMe();
-  // Screens rebuilt from a shared definition are resolved here rather than one route each.
   const path = pathname.toLowerCase();
   if (me.migrated?.forms?.includes(path)) return <EngineForm key={path} path={path} />;
-  const item = (function find(nodes) {
-    for (const n of nodes) {
-      if (n.route === pathname) return n;
-      const c = find(n.children);
-      if (c) return c;
-    }
-  })(me.menu);
-
   return (
-    <div className="mx-auto max-w-lg rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
-      <h1 className="text-lg font-semibold text-slate-900">{item?.caption ?? 'Page not found'}</h1>
-      <p className="mt-2 text-sm text-slate-500">
-        {item ? 'This screen has not been migrated yet. Use it in the existing application for now.' : 'There is no screen at this address.'}
-      </p>
-      {item && LEGACY && (
-        <a className="btn mt-6" href={`${LEGACY}/View${pathname}.aspx`} target="_blank" rel="noreferrer">
-          Open in existing app
-        </a>
-      )}
+    <div className="p-4">
+      <div className="card mx-auto mt-10 flex max-w-lg flex-col items-center gap-2 px-6 py-14 text-center">
+        <span className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center"><SearchX className="w-6 h-6 text-slate-400" /></span>
+        <p className="text-sm font-semibold text-slate-700">This screen is not available</p>
+        <p className="text-xs text-slate-500">There is no screen at {pathname}, or your role cannot open it. Use the menu or Ctrl+K to find a screen.</p>
+        <Link to="/start" className="btn mt-3"><Home className="w-4 h-4" /> Back to home</Link>
+      </div>
     </div>
   );
 }
