@@ -2,7 +2,7 @@ import { ChevronRight, Home } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useMe } from '../layouts/AppLayout.jsx';
-import { groupsOf, flatten } from '../layouts/nav.js';
+import { groupsOf, flatten } from '../layouts/Sidebar.jsx';
 
 /** Where the current page sits in the menu: its group, then the page (as in QMAS's breadcrumb). */
 function useCrumbs() {

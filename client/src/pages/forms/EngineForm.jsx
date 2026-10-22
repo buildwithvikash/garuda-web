@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../../api.js';
 import { useMe } from '../../layouts/AppLayout.jsx';
-import { screenOf } from '../../layouts/nav.js';
+import { screenOf } from '../../layouts/Sidebar.jsx';
 import Button from '../../ui/Button.jsx';
 import { FormError } from '../../ui/fields.jsx';
 import Loader from '../../ui/Loader.jsx';
