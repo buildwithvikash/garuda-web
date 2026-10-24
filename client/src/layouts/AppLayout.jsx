@@ -1,9 +1,9 @@
 // App shell (QMAS layout): signed-in check, top bar, collapsible sidebar with the role-filtered menu, content area.
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { api } from '../api.js';
-import { useApplyTheme } from '../app/theme.js';
-import Loader from '../ui/Loader.jsx';
+import { api } from '@/api.js';
+import { useApplyTheme } from '@/app/theme.js';
+import Loader from '@/components/shared/Loader.jsx';
 import ConfirmHost from './ConfirmHost.jsx';
 import Navbar from './Navbar.jsx';
 import Sidebar from './Sidebar.jsx';
@@ -45,8 +45,8 @@ export default function AppLayout() {
         <ConfirmHost />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar menu={me.menu} expanded={expanded} onToggle={toggle} isMobile={isMobile} />
-          <main className={`flex-1 overflow-auto transition-all duration-300 ${isMobile ? 'ml-0' : expanded ? 'ml-64' : 'ml-[56px]'}`}>
-            <div key={pathname} className="animate-page min-h-full">
+          <main className={`flex-1 overflow-hidden transition-all duration-300 ${isMobile ? 'ml-0' : expanded ? 'ml-64' : 'ml-[72px]'}`}>
+            <div key={pathname} className="h-full">
               <Outlet />
             </div>
           </main>

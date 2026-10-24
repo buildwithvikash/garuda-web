@@ -50,7 +50,7 @@ export const QUICK = [
   {
     route: "/production/wipcaptureform",
     icon: ScanBarcode,
-    tone: "bg-blue-600",
+    tone: "bg-primary",
     hint: "Scan at a station: start, complete, QC, FG label",
   },
   {
@@ -80,68 +80,23 @@ export const QUICK = [
   {
     route: "/quality/qualityinspectionform",
     icon: CheckCircle2,
-    tone: "bg-rose-600",
+    tone: "bg-destructive",
     hint: "Final inspection of held units",
   },
 ];
 
 // Full class names so Tailwind can see them at build time.
-const PALETTE = [
-  {
-    iconBg: "bg-blue-100",
-    iconText: "text-blue-600",
-    activeIconBg: "bg-blue-600",
-    activeBg: "bg-blue-50",
-    activeText: "text-blue-700",
-    dot: "bg-blue-500",
-    border: "border-l-blue-500",
-  },
-  {
-    iconBg: "bg-emerald-100",
-    iconText: "text-emerald-600",
-    activeIconBg: "bg-emerald-600",
-    activeBg: "bg-emerald-50",
-    activeText: "text-emerald-700",
-    dot: "bg-emerald-500",
-    border: "border-l-emerald-500",
-  },
-  {
-    iconBg: "bg-violet-100",
-    iconText: "text-violet-600",
-    activeIconBg: "bg-violet-600",
-    activeBg: "bg-violet-50",
-    activeText: "text-violet-700",
-    dot: "bg-violet-500",
-    border: "border-l-violet-500",
-  },
-  {
-    iconBg: "bg-orange-100",
-    iconText: "text-orange-600",
-    activeIconBg: "bg-orange-600",
-    activeBg: "bg-orange-50",
-    activeText: "text-orange-700",
-    dot: "bg-orange-500",
-    border: "border-l-orange-500",
-  },
-  {
-    iconBg: "bg-rose-100",
-    iconText: "text-rose-600",
-    activeIconBg: "bg-rose-600",
-    activeBg: "bg-rose-50",
-    activeText: "text-rose-700",
-    dot: "bg-rose-500",
-    border: "border-l-rose-500",
-  },
-  {
-    iconBg: "bg-cyan-100",
-    iconText: "text-cyan-600",
-    activeIconBg: "bg-cyan-600",
-    activeBg: "bg-cyan-50",
-    activeText: "text-cyan-700",
-    dot: "bg-cyan-500",
-    border: "border-l-cyan-500",
-  },
-];
+// One neutral look for every group (shadcn sidebar tokens). The brand colour only marks the active group and page.
+const GROUP_LOOK = {
+  iconBg: "bg-muted",
+  iconText: "text-muted-foreground",
+  activeIconBg: "bg-primary",
+  activeBg: "bg-sidebar-accent",
+  activeText: "text-sidebar-accent-foreground",
+  dot: "bg-primary",
+  border: "border-l-primary",
+};
+const PALETTE = [GROUP_LOOK];
 
 const HEADER_MODULE_ID = 10000; // hidden top-level group
 const HIDDEN_ITEM_ID = 10001; // hidden leaf screen
@@ -222,17 +177,17 @@ const NavItem = memo(function NavItem({ item, active, color }) {
     <Link
       to={item.route}
       aria-current={active ? "page" : undefined}
-      className={`group flex items-center gap-2.5 rounded-lg px-3 py-1.75 text-[12.5px] font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-500 ${
+      className={`group flex items-center gap-2.5 rounded-lg px-3 py-1.75 text-[12.5px] font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring ${
         active
           ? `${color.activeBg} ${color.activeText} font-semibold`
-          : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground/80"
       }`}
     >
       <span
         className={`h-1.5 w-1.5 shrink-0 rounded-full transition-transform ${
           active
             ? `${color.dot} scale-125`
-            : "bg-slate-300 group-hover:bg-slate-400"
+            : "bg-muted-foreground/30 group-hover:bg-muted-foreground/50"
         }`}
       />
       <span className="truncate">{item.caption}</span>
@@ -258,7 +213,7 @@ const Section = memo(function Section({
         showLabels ? "h-7 w-7" : "h-8 w-8"
       } ${
         isActive
-          ? `${color.activeIconBg} text-white shadow-sm`
+          ? `${color.activeIconBg} text-primary-foreground shadow-sm`
           : `${color.iconBg} ${color.iconText}`
       }`}
     >
@@ -274,16 +229,16 @@ const Section = memo(function Section({
           onClick={() => onToggle(id)}
           aria-expanded={isOpen}
           aria-controls={panelId}
-          className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl border-l-2 px-2 py-2 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-blue-500 ${
+          className={`flex w-full cursor-pointer items-center gap-2.5 rounded-xl border-l-2 px-2 py-2 text-[13px] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring ${
             isActive
               ? `${color.activeBg} ${color.activeText} ${color.border} font-semibold`
-              : "border-l-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+              : "border-l-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
           }`}
         >
           {iconBox}
           <span className="flex-1 truncate text-left">{caption}</span>
           <ChevronRight
-            className={`h-3.5 w-3.5 text-slate-300 transition-transform ${isOpen ? "rotate-90" : ""}`}
+            className={`h-3.5 w-3.5 text-muted-foreground/50 transition-transform ${isOpen ? "rotate-90" : ""}`}
           />
         </button>
       ) : (
@@ -293,14 +248,14 @@ const Section = memo(function Section({
           onClick={() => onToggle(id)}
           title={caption}
           aria-label={caption}
-          className={`relative flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-blue-500 ${
-            isActive ? color.activeBg : "hover:bg-slate-50"
+          className={`relative flex w-full cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-ring ${
+            isActive ? color.activeBg : "hover:bg-muted/50"
           }`}
         >
           {iconBox}
           <span
             className={`w-full truncate text-center text-[9.5px] leading-tight ${
-              isActive ? `${color.activeText} font-semibold` : "text-slate-500"
+              isActive ? `${color.activeText} font-semibold` : "text-muted-foreground"
             }`}
           >
             {caption}
@@ -311,7 +266,7 @@ const Section = memo(function Section({
       {showLabels && isOpen && (
         <div
           id={panelId}
-          className="ml-3.5 mt-0.5 border-l-2 border-slate-100 pb-1.5 pl-3"
+          className="ml-3.5 mt-0.5 border-l-2 border-border pb-1.5 pl-3"
         >
           {items.map((item) => (
             <NavItem
@@ -430,7 +385,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
     <>
       {isMobile && expanded && (
         <div
-          className="fixed inset-0 top-16 z-30 bg-slate-900/40 backdrop-blur-sm"
+          className="fixed inset-0 top-16 z-30 bg-foreground/40 backdrop-blur-sm"
           onClick={onToggle}
           aria-hidden="true"
         />
@@ -440,7 +395,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
           type="button"
           onClick={onToggle}
           aria-label="Open menu"
-          className="fixed left-3 top-18 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-md"
+          className="fixed left-3 top-18 z-30 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground shadow-md"
         >
           <Menu className="h-4 w-4" />
         </button>
@@ -449,16 +404,16 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
       <aside
         aria-label="Main navigation"
         inert={isMobile && !expanded ? "" : undefined}
-        className={`fixed left-0 top-16 z-40 flex h-[calc(100vh-64px)] select-none flex-col border-r border-slate-100 bg-white shadow-sm transition-[width,transform] duration-300 motion-reduce:transition-none ${asideWidth}`}
+        className={`fixed left-0 top-16 z-40 flex h-[calc(100vh-64px)] select-none flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-[width,transform] duration-300 motion-reduce:transition-none ${asideWidth}`}
       >
         {/* Header */}
         <div
-          className={`flex h-12 shrink-0 items-center border-b border-slate-100 px-2.5 ${
+          className={`flex h-12 shrink-0 items-center border-b border-border px-2.5 ${
             showLabels ? "justify-between" : "justify-center"
           }`}
         >
           {showLabels && (
-            <span className="px-1 text-xs font-medium text-slate-500">
+            <span className="px-1 text-xs font-medium text-muted-foreground">
               Navigation
             </span>
           )}
@@ -466,7 +421,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
             type="button"
             onClick={onToggle}
             aria-label={showLabels ? "Collapse menu" : "Expand menu"}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-blue-500"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground/70 hover:bg-muted hover:text-foreground/80 focus-visible:outline-2 focus-visible:outline-ring"
           >
             {showLabels ? (
               <PanelLeftClose className="h-4 w-4" />
@@ -480,7 +435,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
         {showLabels && sections.length > 0 && (
           <div className="shrink-0 px-2 pt-2">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
               <input
                 ref={searchRef}
                 type="search"
@@ -488,7 +443,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Find a screen"
                 aria-label="Find a screen"
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-7 text-[12.5px] text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+                className="w-full rounded-lg border border-border bg-muted/50 py-1.5 pl-8 pr-7 text-[12.5px] text-foreground/80 placeholder:text-muted-foreground/70 focus:border-primary/50 focus:bg-card focus:outline-none [&::-webkit-search-cancel-button]:hidden"
               />
               {query && (
                 <button
@@ -498,7 +453,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
                     setQuery("");
                     searchRef.current?.focus();
                   }}
-                  className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:text-slate-700"
+                  className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground/70 hover:text-foreground/80"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -522,14 +477,14 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
             />
           ))}
           {searching && visible.length === 0 && (
-            <p className="px-3 py-6 text-center text-xs text-slate-400">
+            <p className="px-3 py-6 text-center text-xs text-muted-foreground/70">
               No screens match “{query.trim()}”.
             </p>
           )}
         </nav>
 
         {showLabels && (
-          <p className="shrink-0 border-t border-slate-100 px-3 py-2 text-center text-[10px] text-slate-300">
+          <p className="shrink-0 border-t border-border px-3 py-2 text-center text-[10px] text-muted-foreground/50">
             Garuda · Western Refrigeration
           </p>
         )}
