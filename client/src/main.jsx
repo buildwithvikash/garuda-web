@@ -3,11 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { Toaster } from 'react-hot-toast';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './index.css';
-import Login from './pages/Login.jsx';
-import ChangePassword from './pages/ChangePassword.jsx';
-import AppLayout from './layouts/AppLayout.jsx';
-import Start from './pages/Start.jsx';
-import NotMigrated from './pages/NotMigrated.jsx';
+import Login from '@/pages/auth/Login.jsx';
+import ChangePassword from '@/pages/auth/ChangePassword.jsx';
+import AppLayout from '@/layouts/AppLayout.jsx';
+import Start from '@/pages/home/index.jsx';
+import ScreenRouter from '@/routes/ScreenRouter.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -18,7 +18,7 @@ createRoot(document.getElementById('root')).render(
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/start" replace />} />
           <Route path="/start" element={<Start />} />
-          <Route path="*" element={<NotMigrated />} />
+          <Route path="*" element={<ScreenRouter />} />
         </Route>
       </Routes>
     </BrowserRouter>

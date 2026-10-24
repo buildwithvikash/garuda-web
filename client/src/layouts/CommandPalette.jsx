@@ -2,8 +2,8 @@ import { ArrowRight, Clock, CornerDownLeft, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { loadPref, savePref } from '../utils/prefs.js';
-import { flatten } from './nav.js';
+import { loadPref, savePref } from '@/utils/prefs.js';
+import { flatten } from './Sidebar.jsx';
 
 const RECENT_KEY = 'recent-screens';
 
@@ -62,10 +62,10 @@ export default function CommandPalette({ me, onClose }) {
 
   let index = -1;
   return createPortal(
-    <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-start justify-center p-4 pt-[12vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Go to a screen" className="animate-fadeIn w-full max-w-xl card shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-4 border-b border-slate-100">
-          <Search className="w-4 h-4 text-slate-400" />
+    <div className="fixed inset-0 z-[60] bg-foreground/40 backdrop-blur-sm flex items-start justify-center p-4 pt-[12vh]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label="Go to a screen" className="animate-in fade-in-0 zoom-in-95 w-full max-w-xl rounded-xl border bg-card text-card-foreground shadow-sm shadow-2xl overflow-hidden">
+        <div className="flex items-center gap-3 px-4 border-b border-border">
+          <Search className="w-4 h-4 text-muted-foreground/70" />
           <input
             ref={input}
             value={q}
@@ -73,16 +73,16 @@ export default function CommandPalette({ me, onClose }) {
             placeholder="Type a screen name, e.g. WIP Capture, Routing, Defect…"
             aria-label="Search screens"
             aria-activedescendant={flat[current] ? `cp-${current}` : undefined}
-            className="flex-1 py-4 text-[15px] bg-transparent outline-none focus-visible:outline-none placeholder-slate-400"
+            className="flex-1 py-4 text-[15px] bg-transparent outline-none focus-visible:outline-none placeholder:text-muted-foreground"
           />
-          <button type="button" onClick={onClose} aria-label="Close" className="p-1 rounded-md text-slate-400 hover:bg-slate-100 cursor-pointer">
+          <button type="button" onClick={onClose} aria-label="Close" className="p-1 rounded-md text-muted-foreground/70 hover:bg-muted cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
         <div ref={listRef} role="listbox" className="max-h-[55vh] overflow-auto p-2">
           {sections.map((s) => (
             <div key={s.key} className="mb-1">
-              <div className="eyebrow px-2.5 pt-2 pb-1">{s.label}</div>
+              <div className="text-xs font-medium text-muted-foreground px-2.5 pt-2 pb-1">{s.label}</div>
               {s.items.map((it) => {
                 index += 1;
                 const i = index;
@@ -98,27 +98,27 @@ export default function CommandPalette({ me, onClose }) {
                     data-active={on}
                     onMouseEnter={() => setActive(i)}
                     onClick={() => open(it)}
-                    className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left cursor-pointer ${on ? 'bg-blue-50' : ''}`}
+                    className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-lg text-left cursor-pointer ${on ? 'bg-primary/5' : ''}`}
                   >
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${on ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${on ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}`}>
                       <Icon className="w-4 h-4" />
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className={`block text-sm truncate ${on ? 'text-blue-800 font-semibold' : 'text-slate-800 font-medium'}`}>{it.title}</span>
-                      {it.subtitle && <span className="block text-xs text-slate-500 truncate">{it.subtitle}</span>}
+                      <span className={`block text-sm truncate ${on ? 'text-primary font-semibold' : 'text-foreground font-medium'}`}>{it.title}</span>
+                      {it.subtitle && <span className="block text-xs text-muted-foreground truncate">{it.subtitle}</span>}
                     </span>
-                    {on && <CornerDownLeft className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+                    {on && <CornerDownLeft className="w-3.5 h-3.5 text-primary/70 shrink-0" />}
                   </button>
                 );
               })}
             </div>
           ))}
-          {flat.length === 0 && <p className="px-3 py-6 text-center text-sm text-slate-500">No screen matches “{q}”.</p>}
+          {flat.length === 0 && <p className="px-3 py-6 text-center text-sm text-muted-foreground">No screen matches “{q}”.</p>}
         </div>
-        <div className="flex items-center gap-4 px-4 py-2 border-t border-slate-100 text-[11px] text-slate-400">
-          <span><kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50">↑</kbd> <kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50">↓</kbd> move</span>
-          <span><kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50">Enter</kbd> open</span>
-          <span><kbd className="font-sans px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50">Esc</kbd> close</span>
+        <div className="flex items-center gap-4 px-4 py-2 border-t border-border text-[11px] text-muted-foreground/70">
+          <span><kbd className="font-sans px-1.5 py-0.5 rounded border border-border bg-muted/50">↑</kbd> <kbd className="font-sans px-1.5 py-0.5 rounded border border-border bg-muted/50">↓</kbd> move</span>
+          <span><kbd className="font-sans px-1.5 py-0.5 rounded border border-border bg-muted/50">Enter</kbd> open</span>
+          <span><kbd className="font-sans px-1.5 py-0.5 rounded border border-border bg-muted/50">Esc</kbd> close</span>
         </div>
       </div>
     </div>,

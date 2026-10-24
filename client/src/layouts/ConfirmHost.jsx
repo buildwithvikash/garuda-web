@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { setConfirmListener } from '../app/confirm.js';
-import { ConfirmDialog } from '../ui/Modal.jsx';
+import { setConfirmListener } from '@/app/confirm.js';
+import { ConfirmDialog } from '@/components/shared/Modal.jsx';
 
 /** Draws the questions asked with askConfirm() (app/confirm.js), one at a time. Mounted once in the layout. */
 export default function ConfirmHost() {
