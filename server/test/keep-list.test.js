@@ -2,10 +2,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { KEEP } from '../src/modules/menu/keep.js';
+import { KEEP } from '../src/data/menu/keep.js';
 
-const forms = JSON.parse(readFileSync(new URL('../src/modules/forms/forms.json', import.meta.url), 'utf8'));
-const menu = JSON.parse(readFileSync(new URL('../src/modules/menu/menu.json', import.meta.url), 'utf8'));
+const forms = JSON.parse(readFileSync(new URL('../src/data/forms/forms.json', import.meta.url), 'utf8'));
+const menu = JSON.parse(readFileSync(new URL('../src/data/menu/menu.json', import.meta.url), 'utf8'));
 const routeOf = (url) => (url ? '/' + url.replace(/^View\//i, '').replace(/\.aspx$/i, '').toLowerCase() : null);
 const menuRoutes = new Set();
 (function walk(ns) {

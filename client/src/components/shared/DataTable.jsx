@@ -96,7 +96,7 @@ const alignClass = (a) => (a === 'right' ? 'text-right' : a === 'center' ? 'text
  */
 export default function DataTable({
   columns, rows = [], loading, error, sort, onSort, rowKey = 'id', empty = 'No records found.', emptyAction, onRowClick, tableId, toolbar, leading,
-  onPreview, rowMenu, activeKey, selectable = false, exportName = 'export', pagination, tabs,
+  onPreview, rowMenu, activeKey, selectable = false, exportName = 'export', pagination, tabs, inlineLeading = false,
 }) {
   const [hidden, toggle] = useHiddenColumns(tableId);
   const [view, setView] = useView(tableId);
@@ -119,8 +119,8 @@ export default function DataTable({
       {showToolbar && (
         <div className="space-y-2 border-b p-3">
           <div className="flex flex-wrap items-end gap-2">
-            {leading}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            {leading && (inlineLeading ? <div className="min-w-0 flex-1">{leading}</div> : leading)}
+            <div className={cn('ml-auto flex shrink-0 items-center gap-2', inlineLeading && 'ml-0')}>
               {tableId && <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} />}
               {tableId && <ViewSwitch view={view} onChange={setView} />}
             </div>

@@ -1,9 +1,9 @@
 // Read-only menu check per role: what the original shows (Layout.Master links + UserRoleForm) vs the new menu.
 import { readFileSync } from 'node:fs';
-import { query } from '../../src/db/index.js';
-import { loadUserMenu } from '../../src/modules/menu/service.js';
+import { query } from '../../src/db/connection.js';
+import { loadUserMenu } from '../../src/services/menu/menu.service.js';
 
-const MENU = JSON.parse(readFileSync(new URL('../../src/modules/menu/menu.json', import.meta.url), 'utf8'));
+const MENU = JSON.parse(readFileSync(new URL('../../src/data/menu/menu.json', import.meta.url), 'utf8'));
 const parentOf = new Map();
 const byId = new Map();
 (function walk(ns, p) {

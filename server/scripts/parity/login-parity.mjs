@@ -7,9 +7,9 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { validateLogin, validateLoginQR } from '../../src/modules/auth/service.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { validateLogin, validateLoginQR } from '../../src/services/auth/auth.service.js';
 
 const bin = process.argv[2];
 const WRONG = '__parity_wrong_password__';

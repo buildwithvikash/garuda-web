@@ -1,5 +1,5 @@
 // Read-only: column names/types of the tables the foundation uses, plus the login-related settings.
-import { query } from '../../src/db/index.js';
+import { query } from '../../src/db/connection.js';
 
 const tables = ['Users', 'UserBusinessUnits', 'UserRoleForm', 'Settings', 'Company', 'BusinessUnit', 'ProductionLine', 'employee', 'Modules'];
 for (const t of tables) {

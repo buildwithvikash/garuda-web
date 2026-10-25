@@ -4,22 +4,46 @@
 //     (text fields carry a marker: ZZPO = original, ZZPN = new)
 //  3. update both the same way, then cancel both; after every step compare the stored rows and the EventLog entries
 //  4. finally hard-delete both test rows and the EventLog rows they produced, and restore the key counters
-// Usage: node --env-file=.env scripts/parity/forms-write-parity.mjs <originalBinDir> [route...]
+// Usage: node --env-file=.env scripts/parity/forms-write-parity.mjs <originalBinDir> [--api] [route...]
+//   --api: the new side saves through the screen's domain API service (routes/<domain>) instead of the forms writer:
+//   the same values become the API's JSON, pass its validator, and go through its create / save / cancel.
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { newFormState, displayState, fill, engineControls } from '../../src/modules/forms/state.js';
-import { PAGE_EVENTS } from '../../src/modules/forms/pages.js';
-import { collect, insert, update, cancel } from '../../src/modules/forms/write.js';
-import { formTables, tableSchema } from '../../src/modules/forms/schema.js';
-import { toText } from '../../src/modules/forms/values.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { newFormState, displayState, engineControls } from '../../src/services/forms/state.service.js';
+import { fill } from '../../src/db/options.js';
+import { PAGE_EVENTS } from '../../src/services/forms/pages.service.js';
+import { collect, insert, update, cancel } from '../../src/services/forms/write.service.js';
+import { formTables, tableSchema } from '../../src/services/forms/schema.service.js';
+import { toText } from '../../src/shared/utils/values.js';
+import * as ordersApi from '../../src/services/production/orders.service.js';
+import { validateOrder } from '../../src/validators/production/orders.validator.js';
 
-const [bin, ...only] = process.argv.slice(2);
-const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
+const [bin, ...rest] = process.argv.slice(2);
+const viaApi = rest.includes('--api');
+const only = rest.filter((a) => a !== '--api');
+
+// screens with a domain API: control values -> the API's JSON (its field map), then its validator and service
+const API = {
+  [ordersApi.SCREEN]: { fields: ordersApi.FIELDS, grid: ordersApi.GRID, lines: (r) => ({ prodNo: r.PRODNo, seqNo: r.SeqNo, orderCode: r.OrderCode, orderNo: r.OrderNo }), list: 'orders', validate: validateOrder, create: ordersApi.create, save: ordersApi.save, cancel: ordersApi.cancel },
+};
+/** the API's JSON for the values the harness would post (controls the API does not name are left to its defaults) */
+function apiBody(api, v) {
+  const body = {};
+  for (const [f, id] of Object.entries(api.fields)) if (id in v && f !== 'prodNo') body[f] = v[id] === true ? '1' : v[id] === false ? '0' : String(v[id] ?? '');
+  if (Array.isArray(v[api.grid])) body[api.list] = v[api.grid].map(api.lines);
+  return body;
+}
+async function apiCall(api, step, body, fn) {
+  const { value, errors } = api.validate(body);
+  if (errors) throw new Error(`validator refused (${step}): ${JSON.stringify(errors)}`);
+  return fn(value);
+}
+const SPECS = JSON.parse(readFileSync(new URL('../../src/data/forms/forms.json', import.meta.url), 'utf8'));
 const MODULES = ['/businesssetup/', '/materialsetup/', '/productionsetup/', '/settings/', '/authorization/'];
 const SKIP = new Set(['/businesssetup/companyform']); // single-row company record: not touched
 const ctx = { businessUnit: '12201', department: '1230001', userCode: '123003', userId: '123003' };
@@ -232,8 +256,9 @@ for (const route of routes) {
     const so = original({ id: 0, mode: 'save', spec: { top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits }, ctx, values: vO });
     let keyN = null;
     try {
-      const base = sent(state);
-      keyN = await insert(spec, await collect(spec, { ...base, ...vN }, ctx), ctx);
+      const api = viaApi && API[route];
+      if (api) keyN = (await apiCall(api, 'save', apiBody(api, { ...sent(state), ...vN }), (b) => api.create(ctx, b))).prodNo; // the client sends the whole order it was given
+      else keyN = await insert(spec, await collect(spec, { ...sent(state), ...vN }, ctx), ctx);
     } catch (e) {
       keyN = { error: e.message };
     }
@@ -255,7 +280,7 @@ for (const route of routes) {
       const ev = await events([keyO, keyN]);
       const eo = ev.filter((e) => toText(e.DocRef) === keyO).map((e) => norm(JSON.stringify([e.Module, e.Action, e.AppResponse, e.Message, e.TransactionData, e.BusinessUnit, e.EventUser]), K));
       const en = ev.filter((e) => toText(e.DocRef) === keyN).map((e) => norm(JSON.stringify([e.Module, e.Action, e.AppResponse, e.Message, e.TransactionData, e.BusinessUnit, e.EventUser]), K));
-      if (JSON.stringify(eo) !== JSON.stringify(en)) report.push(`${step} events: ${JSON.stringify(eo).slice(0, 200)} vs ${JSON.stringify(en).slice(0, 200)}`);
+      if (JSON.stringify(eo) !== JSON.stringify(en)) report.push(`${step} events: ${JSON.stringify(eo).slice(0, 2000)} vs ${JSON.stringify(en).slice(0, 2000)}`);
       const co = await childRows(spec, keyO, K);
       const cn = await childRows(spec, keyN, K);
       for (const t of Object.keys(co)) if (JSON.stringify(co[t]) !== JSON.stringify(cn[t])) report.push(`${step} ${t}: ${JSON.stringify(co[t]).slice(0, 250)} vs ${JSON.stringify(cn[t]).slice(0, 250)}`);
@@ -269,7 +294,9 @@ for (const route of routes) {
     const cur = sent(disp);
     let un = null;
     try {
-      await update(spec, await collect(spec, { ...cur, ...uN }, ctx), ctx);
+      const api = viaApi && API[route];
+      if (api) await apiCall(api, 'update', apiBody(api, { ...cur, ...uN }), (b) => api.save(ctx, keyN, b));
+      else await update(spec, await collect(spec, { ...cur, ...uN }, ctx), ctx);
     } catch (e) {
       un = e.message;
     }
@@ -280,7 +307,9 @@ for (const route of routes) {
     const d2 = await displayState(spec, ctx, keyN);
     let cn = null;
     try {
-      await cancel(spec, await collect(spec, sent(d2), ctx), ctx, 'parity');
+      const api = viaApi && API[route];
+      if (api) await api.cancel(ctx, keyN, 'parity');
+      else await cancel(spec, await collect(spec, sent(d2), ctx), ctx, 'parity');
     } catch (e) {
       cn = e.message;
     }
@@ -307,6 +336,6 @@ for (const route of routes) {
     }
   }
 }
-for (const [r, m] of results) console.log(`${m === 'IDENTICAL' ? 'OK  ' : 'DIFF'} ${r}: ${m}`.slice(0, 500));
+for (const [r, m] of results) console.log(`${m === 'IDENTICAL' ? 'OK  ' : 'DIFF'} ${r}: ${m}`.slice(0, process.env.PARITY_DEBUG ? Infinity : 500));
 console.log(`pages: ${results.length}, identical: ${results.filter(([, m]) => m === 'IDENTICAL').length}`);
 process.exit(0);

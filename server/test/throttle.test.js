@@ -1,7 +1,7 @@
-// Failed sign-in throttle (lib/throttle.js).
+// Failed sign-in throttle (shared/utils/throttle.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { throttle } from '../src/lib/throttle.js';
+import { throttle } from '../src/shared/utils/throttle.js';
 
 test('blocks after max failures, frees the key as failures age out, success clears', () => {
   let t = 0;

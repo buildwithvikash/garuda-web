@@ -5,15 +5,15 @@ import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { queryTable } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { newFormState, displayState, copyState, copyOptions } from '../../src/modules/forms/state.js';
-import { listQuery, PAGE_SIZE } from '../../src/modules/forms/lists.js';
-import { CUSTOM_DISPLAY } from '../../src/modules/forms/pages.js';
-import { toText } from '../../src/modules/forms/values.js';
+import { queryTable } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { newFormState, displayState, copyState, copyOptions } from '../../src/services/forms/state.service.js';
+import { listQuery, PAGE_SIZE } from '../../src/services/forms/lists.service.js';
+import { CUSTOM_DISPLAY } from '../../src/services/forms/pages.service.js';
+import { toText } from '../../src/shared/utils/values.js';
 
 const [bin, ...prefixes] = process.argv.slice(2);
-const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
+const SPECS = JSON.parse(readFileSync(new URL('../../src/data/forms/forms.json', import.meta.url), 'utf8'));
 // "route#key" also displays that record (pages whose list shows nothing on this database)
 const FORCED = new Map(prefixes.filter((p) => p.includes('#')).map((p) => p.split('#')));
 const MODULES = prefixes.length ? prefixes.map((p) => p.split('#')[0]) : ['/businesssetup/', '/materialsetup/', '/productionsetup/', '/settings/', '/authorization/'];

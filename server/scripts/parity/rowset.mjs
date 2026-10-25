@@ -4,7 +4,8 @@
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { query, execute, transaction } from '../../src/db/index.js';
+import { query, execute } from '../../src/db/connection.js';
+import { transaction } from '../../src/db/transaction.js';
 
 const meta = new Map();
 async function columnsOf(table) {
