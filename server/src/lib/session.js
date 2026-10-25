@@ -27,11 +27,11 @@ export function writeSession(res, values) {
   res.cookie(COOKIE, `${data}.${sign(data)}`, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: config.cookieSecure,
     maxAge,
   });
 }
 
 export function clearSession(res) {
-  res.clearCookie(COOKIE);
+  res.clearCookie(COOKIE, { httpOnly: true, sameSite: 'lax', secure: config.cookieSecure });
 }

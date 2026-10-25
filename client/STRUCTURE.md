@@ -14,7 +14,7 @@ src/
     shopfloor/           scan-first building blocks (ScanBox, ResultBanner, StatusPill ...)
   engine/                the server-driven form engine (EngineScreen, RecordForm, RecordList ...). Pages wrap it.
   features/wip-capture/  the parts of the WIP Capture page (Station, Cabinet, Inspection ...)
-  layouts/               AppLayout, Navbar, Sidebar, CommandPalette
+  layouts/               AppLayout, Navbar, Sidebar
   routes/ScreenRouter    picks the page file for the URL
   pages/
     <group>/<PageName>.jsx    ONE FILE PER SIDEBAR TAB   (production/ProductionOrder.jsx, quality/..., ...)

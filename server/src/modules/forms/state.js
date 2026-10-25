@@ -3,6 +3,7 @@
 // at least 4 segments take part, as in the original.
 import { query, scalar } from '../../db/index.js';
 import { netString, netBool } from '../../lib/net.js';
+import { num } from '../../lib/sql.js';
 import { setting } from '../settings/service.js';
 import { formTables } from './schema.js';
 import { toText } from './values.js';
@@ -288,8 +289,9 @@ export async function displayState(spec, ctx, key, { pageCode = true } = {}) {
       if (want !== '' && want !== '0' && s.value !== want && ctl.query.trim() !== '') {
         // FillDropDownListDisplay: add the stored (e.g. inactive) value so it shows
         const q = ctl.query.toLowerCase();
-        const extra = `${q.split(' where')[0]} where ${q.split(',')[0].replace('select', '')} = ${want}`;
         try {
+          // the stored value is spliced unquoted as the original did: a number only (anything else failed there too)
+          const extra = `${q.split(' where')[0]} where ${q.split(',')[0].replace('select', '')} = ${num(want)}`;
           const base = (await fill(ctl.query)) ?? [];
           const add = ((await fill(extra)) ?? []).slice(1);
           // DataBind rebinds the rows, then throws because the earlier invalid SelectedValue is still cached;

@@ -8,10 +8,33 @@ import { requireAuth } from '../../middleware/auth.js';
 import { netString, alertText } from '../../lib/net.js';
 import { config } from '../../config.js';
 import { FORMS } from '../forms/routes.js';
+import { throttle } from '../../lib/throttle.js';
+import { friendly } from '../../lib/messages.js';
+import { log } from '../../lib/http.js';
 
 export const authRoutes = Router();
 
 const text = (v, max = 200) => (typeof v === 'string' ? v.slice(0, max) : '');
+
+// failed sign-ins / wrong current passwords: per user ID, and per client address (several user IDs from one device)
+const windowMs = config.loginWindowMinutes * 60_000;
+const byUser = throttle({ max: config.loginMaxFailures, windowMs });
+const byClient = throttle({ max: config.loginMaxFailures * 5, windowMs });
+const keysOf = (req, userId) => [`u:${userId.trim().toLowerCase()}`, `ip:${req.ip}`];
+/** a 429 answer when either key is locked out, else null */
+function locked(req, res, userId) {
+  const [u, ip] = keysOf(req, userId);
+  const wait = Math.max(byUser.retryIn(u), byClient.retryIn(ip));
+  if (!wait) return false;
+  log('warn', `[auth] sign-in locked for ${u} from ${req.ip} (${Math.ceil(wait / 1000)} s)`);
+  res.status(429).json({ ok: false, message: `Too many failed attempts. Try again in ${Math.ceil(wait / 60_000)} minute(s).` });
+  return true;
+}
+const failed = (req, userId) => {
+  const [u, ip] = keysOf(req, userId);
+  byUser.fail(u);
+  byClient.fail(ip);
+};
 
 // LoginForm Page_Load: dropdowns, company name/logo, defaults from config.
 authRoutes.get('/login-page', async (_req, res) => {
@@ -28,7 +51,7 @@ authRoutes.get('/login-page', async (_req, res) => {
       ? config.defaultBusinessUnit
       : netString(bus[0]?.BUCode),
     lineRequired: config.erp === 'WRL',
-    server: `${config.db.server} ${config.db.database}`, // original lblServer
+    server: config.showDbOnLogin ? `${config.db.server} ${config.db.database}` : '', // original lblServer
   });
 });
 
@@ -40,6 +63,7 @@ authRoutes.get('/business-units', async (req, res) => {
 
 authRoutes.post('/login', async (req, res) => {
   const b = req.body ?? {};
+  if (locked(req, res, text(b.userId))) return;
   try {
     const { msg, session } = await login({
       userId: text(b.userId),
@@ -50,16 +74,18 @@ authRoutes.post('/login', async (req, res) => {
       line: text(b.line, 50),
     });
     if (msg === 1) {
+      byUser.clear(keysOf(req, text(b.userId))[0]);
       await loadSettings(); // Settings.SetSettings() after a successful login
       const menu = await loadUserMenu(session.userCode);
       writeSession(res, { ...session, line: text(b.line, 50), lineName: text(b.lineName) });
       return res.json({ ok: true, redirect: menu.defaultRoute ?? '/start' });
     }
     if (msg === 7 || msg === 4) return res.json({ ok: false, changePassword: true, userId: text(b.userId) });
+    failed(req, text(b.userId));
     res.json({ ok: false, message: LOGIN_MESSAGES[msg] ?? 'Login failed' });
   } catch (e) {
-    console.error('login failed', e);
-    res.json({ ok: false, message: alertText(e.message) });
+    log('error', `${req.id} login failed: ${e.stack ?? e}`);
+    res.json({ ok: false, message: friendly(alertText(e.message)) });
   }
 });
 
@@ -67,12 +93,16 @@ authRoutes.post('/login', async (req, res) => {
 authRoutes.post('/change-password', async (req, res) => {
   const b = req.body ?? {};
   const [userId, current, next, retype] = [text(b.userId), text(b.current), text(b.next), text(b.retype)];
+  if (locked(req, res, userId)) return;
   if (current === '' || next !== retype) {
     return res.json({ ok: false, message: 'Make sure that current password is not blank and retype password is correct' });
   }
   const r = await changePassword({ userId, current, next });
   if (r === 0) return res.json({ ok: false, field: 'next', message: 'Pasword must be 8 character long, Includes  number and special character' });
-  if (r === 6) return res.json({ ok: false, field: 'current', message: 'Current Password is wrong!!' });
+  if (r === 6) {
+    failed(req, userId);
+    return res.json({ ok: false, field: 'current', message: 'Current Password is wrong!!' });
+  }
   res.json({ ok: true, message: 'Password Changed!!' });
 });
 

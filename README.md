@@ -1,29 +1,35 @@
 # Garuda Web
 
-React + Node.js + Tailwind rebuild of Garuda, running against the **existing** SQL Server database.
-Migration plan and progress: [`../docs/MIGRATION_PLAN.md`](../docs/MIGRATION_PLAN.md).
+The Garuda WRL shop floor (production order → assignment → WIP capture → QC → FG label, plus its masters) rebuilt in
+React + Node.js on the **existing** SQL Server database. Same tables, same writes as the original ASP.NET app: the
+parity scripts prove it against the original DLLs.
+
+- 47 screens (the keep-list in `server/src/modules/menu/keep.js` drives both the menu and the API).
+- Client: React 19, Vite 6, Tailwind 4, shadcn/ui (JavaScript). Layout: [`client/STRUCTURE.md`](client/STRUCTURE.md).
+- Server: Express 5 + mssql. Status, history and decisions: [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
 ## Setup
 
-Requires Node.js 22+ (developed on 24).
+Node.js 22+ (developed on 24). From this folder:
 
 ```bash
 npm install
-cp server/.env.example server/.env   # then fill in DB_*, PASSWORD_AES_KEY, SESSION_SECRET
+cp server/.env.example server/.env
 ```
 
-- `PASSWORD_AES_KEY` must be the key the existing app uses in `WrapperAvatar.encrypt`, or no one can log in
-  when `Settings.PasswordEncrypt = 1`.
-- Point `DB_*` at the **UAT** database while modules are being migrated and parity-tested.
+Fill in `server/.env` (every setting is explained in [`server/.env.example`](server/.env.example)):
 
-## Run
+- `DB_*`: the database. Use the test copy `Garuda_WRL_TEST` for development and for every parity run.
+- `PASSWORD_AES_KEY`: the original site's key (Web.config), or existing passwords will not work.
+- `SESSION_SECRET`: any long random string.
+
+## Run (development)
 
 ```bash
-npm run dev -w server      # API on http://localhost:4000
-npm run dev -w client      # UI on http://localhost:5180 (proxies /api to 4000)
+npm run dev
 ```
 
-Production: `npm run build`, then `npm start` serves the API and the built UI from one Node process.
+API on http://localhost:4000 (restarts on change), UI on http://localhost:5180 (proxies `/api` and `/GuideFiles`).
 
 ## Test
 
@@ -31,71 +37,103 @@ Production: `npm run build`, then `npm start` serves the API and the built UI fr
 npm test
 ```
 
-Checks login rules against the original `AVLogin` behaviour and password encryption against values produced
-by the original `Avatar.dll`.
+Unit tests: login rules, password encryption against the original `Avatar.dll`, .NET number formats, the keep-list,
+operator messages and the sign-in throttle.
 
-## Layout
+## Deploy (production)
+
+```bash
+npm install
+npm run build        # client -> client/dist
+npm start            # one Node process: API + built UI on PORT
+```
+
+Run it as a service, e.g. with pm2 (`pm2 start npm --name garuda -- start`, then `pm2 save`), or as a Windows service.
+
+Settings to check on a server (`server/.env`):
+
+| Setting | When |
+|---|---|
+| `NODE_ENV=production` | always |
+| `COOKIE_SECURE=false` | while the plant serves plain HTTP (the cookie is HTTPS-only by default in production) |
+| `TRUST_PROXY=1` | behind IIS / a reverse proxy, so sign-in limits see the real client address |
+| `GUIDE_FILES_DIR` | the old site's `GuideFiles` folder (station guides) |
+| `LOG_FILE` | a file for request / error lines (rotate it with the OS) |
+| `CSP=enforce` | after checking the screens show no "Content Security Policy" lines in the browser console (default: report only) |
+
+Database changes for a new site: review and run [`server/sql/2026-10-phase5-rule-fixes.sql`](server/sql/2026-10-phase5-rule-fixes.sql)
+(Serial index only if missing, then the `PRODHeader.AssignedQty` backfill: preview first, the update is commented out).
+On TEST both are done.
+
+## Maintain
+
+**Where things are**
 
 ```
 server/src/
-  config.js            env settings
-  db/                  mssql pool, parameterized query/scalar/execute/transaction
-  lib/                 .NET-compatible conversions, password crypto, signed session cookie
-  middleware/auth.js   requireAuth (logged in) + authorize(ModuleID) (role check)
-  modules/<name>/      routes · service · repo per module
-  modules/menu/menu.json  menu tree generated from the original Layout.Master (npm run extract-menu -w server)
-client/src/
-  layouts/AppLayout.jsx   header, role-filtered menu, menu search
-  pages/                  one screen per original page
+  index.js                 app: security headers, request IDs, routes, built UI
+  config.js                every setting (from .env)
+  db/                      mssql pool: query / scalar / execute / transaction
+  lib/                     .NET-compatible conversions, sql guards, session cookie, messages, throttle, http (log)
+  modules/auth/            sign-in, change password, /me
+  modules/menu/            menu (menu.json from the original Layout.Master) and the keep-list
+  modules/forms/           the screen engine: forms.json (screen specs), routes, state, write (Save/Update/Delete),
+                           pages.js (each screen's own code-behind), wip.js / production.js / quality.js / labels.js
+server/scripts/parity/     original vs new comparisons (see below)
+server/sql/                database scripts (reviewed before running)
+client/src/                see client/STRUCTURE.md
 ```
 
-## Parity checks (original vs new, read-only on UAT)
+**Change a screen's look**: edit its page file `client/src/pages/<group>/<Page>.jsx` (one per sidebar tab).
+**Change what a screen does**: its handlers are in `server/src/modules/forms/pages.js` (search for the page's
+`.aspx` name); keep the original's writes unless the change is intended, and run the parity scripts after.
+**Add or remove a screen**: the route in `server/src/modules/menu/keep.js`, then refresh `forms.json` from the
+original site's source (in `server/`:
+`node scripts/extract-forms.mjs ../../source/Garuda src/modules/menu/menu.json src/modules/forms/forms.json`), and
+`npm run page -w client -- <route> "<Title>"` for its page file.
+**Operator messages**: the wording rules are in `server/src/lib/messages.js` (the original text is logged as
+`[message] …`).
+**Logs**: one line per API call (`<request id> <method> <path> <status> <ms> user=…`); an error shown to an operator
+carries the same reference.
 
-Each script runs the **original** compiled code from `build/Publish WRL/bin` (via Windows PowerShell) and the new code
-on the same inputs, then compares results:
+**SQL safety**: queries keep the original SQL text. Every value spliced into SQL goes through `lib/sql.js`
+(`num`, `digitsOrEmpty`, `requireDigits`, `lit`) or is passed as a parameter; keep it that way in new code.
+
+## Parity checks (original vs new)
+
+Each script runs the **original** compiled pages from `build/Publish WRL/bin` (through Windows PowerShell) and the
+new code on the same inputs, then compares screens, database rows and printed labels. They write, so run them on
+`Garuda_WRL_TEST` only; each puts its rows back. Run them one at a time (they share rows), from `server/`.
+In Git Bash put `MSYS_NO_PATHCONV=1` in front, or `/route/` arguments are turned into Windows paths.
 
 ```bash
-node --env-file=.env scripts/parity/login-parity.mjs "<path>/build/Publish WRL/bin"
-node --env-file=.env scripts/parity/dashboards-parity.mjs "<path>/build/Publish WRL/bin"
-node --max-old-space-size=8192 --env-file=.env scripts/parity/reports-parity.mjs "<path>/build/Publish WRL/bin"
-node --max-old-space-size=8192 --env-file=.env scripts/parity/wrlreports-parity.mjs "<path>/build/Publish WRL/bin"
+B="<path>/build/Publish WRL/bin"
+node --max-old-space-size=8192 --env-file=.env scripts/parity/events-parity.mjs "$B"
+node --max-old-space-size=8192 --env-file=.env scripts/parity/forms-parity.mjs "$B" /businesssetup/ /materialsetup/ /productionsetup/ /settings/ /authorization/ /production/ /quality/ /ceat/
+node --env-file=.env scripts/parity/wip-parity.mjs "$B" comp      # also: qc, fg
+node --env-file=.env scripts/parity/print-parity.mjs "$B"
+node --env-file=.env scripts/parity/rework-new-parity.mjs "$B"
+node --env-file=.env scripts/parity/production-writes-parity.mjs "$B"
+node --env-file=.env scripts/parity/page-writes-parity.mjs "$B"
+node --env-file=.env scripts/parity/upload-parity.mjs "$B"
+node --env-file=.env scripts/parity/grid-db-parity.mjs "$B"
+node --env-file=.env scripts/parity/login-parity.mjs "$B"
 ```
 
-(run from `server/`; `PARITY_SHIFT='{...}'` replays a past shift for dashboards).
+Baselines (25 Oct 2026): events 196/202 identical (5 fail alike, 1 harness limit: ParameterForm's duplicate
+`ctl00`); forms 127/138 identical, 0 different; WIP comp/qc/fg, rework, production writes identical; print 9/10
+identical, 1 failing alike. `PARITY_DEBUG=1` adds the harness line to original-side errors.
 
-Form scripts (they write, so run them on the test copy `Garuda_WRL_TEST` only; each puts its rows back):
-`forms-parity.mjs`, `events-parity.mjs [route ...]`, `print-parity.mjs`, `wip-parity.mjs <bin> comp|qc|fg`,
-`rework-new-parity.mjs`, `order-writes-parity.mjs` (ProcessOrder / ReWorkOrder / CEAT self inspection saves).
-`PARITY_DEBUG=1` adds the harness line to original-side errors. Don't run two at once: they share rows.
+Intended differences from the original (owner's decisions, 21 Oct 2026): operator-friendly messages; no scans on a
+production order on hold (11) or cancelled (200); the WIP QC remark is saved; `PRODHeader.AssignedQty` follows the
+job cards.
 
-Known gaps (the port raises a clear error, or the original's own behaviour is kept):
-- WIPCapture: scan result 20 (multi-qty stage-1 output; no WRL line has one), stage type 7, and department
-  ControlIndicator values other than 10000 are not ported. Output printing for serial logic > 1 is not ported.
-- ReworkConfirmationNew: confirming part of a quantity needs the ERP posting split, which is not ported.
-- FG save for a material with SalesTax=1 (other plant) fails with a null reference, as in the original (the Sanjan
-  connection string is commented out in Web.config).
-- ProcessOrderForm / ReWorkOrderForm display(key): a failure while choosing the record's department, order or
-  material stops the display with its alert (the original showed the half-filled form with the alert). For
-  ProcessOrderForm that is the usual case: an order already fully assigned is not in the order list.
-  ProcessOrderForm's SATO save (SavePharma) is not ported; the yellow marking of BOM-only materials is not shown.
-  WRL has no process-card label template (MaterialTag type 10), so its print sends an empty job, as the original.
-- ReWorkOrderForm: WRL has no rework routing (RoutingHeader Type 2), so btnCreate stops at "Select a Routing" and
-  nothing can be saved, as in the original.
-- CEATINSelfInspectionForm: Go ends with an "Invalid object name SCADACuringDetails" alert (a CEAT table WRL does not
-  have), after filling the form, as in the original. Delete is not ported (the form is cleared after a save, so there
-  is no record to delete).
-- events-parity ParameterForm "add, select, delete" case: the harness fails on the original side (duplicate `ctl00`);
-  a harness limit, not a port difference.
+## Known gaps
 
-## Reports
-
-- Generic reports (`ReportControl` pages) are data: regenerate `reports.json` with `npm run extract-reports -w server`.
-- `MAX_REPORT_ROWS` (default 100000) caps a report result; larger results ask the user to narrow the filters.
-
-## Adding a migrated screen
-
-1. Server: `server/src/modules/<module>/{repo,service,routes}.js`; mount in `src/index.js` with
-   `requireAuth, authorize(<ModuleID from menu.json>)`.
-2. Client: page under `client/src/pages/<module>/`, route in `client/src/main.jsx` at the path the menu uses
-   (original `View/X/Y.aspx` → `/x/y`).
-3. Parity-check against the existing page on UAT, then update the record in the migration plan.
+- WIP Capture: scan result 20 (multi-quantity stage output; no WRL line has one), stage type 7, and department
+  ControlIndicator values other than 10000 are not ported; output printing for serial logic > 1 is not ported.
+- Rework Confirmation New: confirming part of a quantity needs the ERP posting split, which is not ported.
+- FG save for a material with SalesTax=1 (other plant) fails with a null reference, as in the original.
+- Self Inspection (`/ceat/ceatinselfinspectionform`) fails on this database (a CEAT column / table WRL lacks), as the
+  original does.
+- Deleting a job card does not lower `PRODHeader.AssignedQty`.

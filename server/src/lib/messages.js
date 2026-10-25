@@ -65,7 +65,7 @@ export function friendly(text) {
 }
 
 /** A response body with its alert / message / statusMessage reworded; each change is logged with the original. */
-export function friendlyBody(body, where) {
+export function friendlyBody(body, where, warn = console.warn) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
   let out = body;
   for (const k of ['alert', 'message', 'statusMessage']) {
@@ -74,7 +74,7 @@ export function friendlyBody(body, where) {
     if (f === v) continue;
     out = out === body ? { ...body } : out;
     out[k] = f;
-    console.warn(`[message] ${where} ${k}: ${JSON.stringify(v)}`);
+    warn(`[message] ${where} ${k}: ${JSON.stringify(v)}`);
   }
   return out;
 }
