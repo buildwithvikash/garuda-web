@@ -1,4 +1,4 @@
-import { EngineField } from '@/engine/FormControls.jsx';
+import { EngineField } from '@/components/shared/FormControls.jsx';
 
 /** An engine control by id, under a caption, when the page shows it. */
 export default function Ctl({ e, id, label, className = '' }) {

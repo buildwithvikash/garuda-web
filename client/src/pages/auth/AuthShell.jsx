@@ -27,7 +27,7 @@ export default function AuthShell({ title, subtitle, children }) {
           <img src={logo} alt="Western Refrigeration and Hoshizaki" className="h-16 w-auto self-start drop-shadow" />
           <p className="mt-6 text-sm font-medium uppercase tracking-[0.3em] text-blue-100/90">Western Refrigeration Pvt. Ltd.</p>
           <h1 className="mt-3 text-7xl font-bold tracking-tight">GARUDA</h1>
-          <p className="mt-3 text-3xl font-semibold leading-tight">Shop Floor Execution<br />Production Order to FG Label</p>
+          <p className="mt-3 text-3xl font-semibold leading-tight">Manufacturing Execution System<br />Traceability from Order to FG Label</p>
           <p className="mt-4 max-w-md text-lg leading-snug text-blue-50/90">Assignment, station scans, quality, rework and labels for every unit on the line.</p>
 
           <ul className="mt-8 space-y-4">

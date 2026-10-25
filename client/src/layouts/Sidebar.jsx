@@ -485,7 +485,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
 
         {showLabels && (
           <p className="shrink-0 border-t border-border px-3 py-2 text-center text-[10px] text-muted-foreground/50">
-            Garuda · Western Refrigeration
+            MES Team · Western Refrigeration Pvt Ltd
           </p>
         )}
       </aside>
