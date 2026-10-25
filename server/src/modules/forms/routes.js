@@ -13,12 +13,20 @@ import { printerOptions } from './labels.js';
 import { cabinetByLabel, routeByLabel } from './wip.js';
 import { listPage, searchColumns, distinctValues, operatorsFor, OPERATOR_TEXT } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
+import { friendlyBody } from '../../lib/messages.js';
+import { log } from '../../lib/http.js';
 
 // the screens this app offers: specs extracted for the keep-list only (scripts/extract-forms.mjs, menu/keep.js)
 export const FORMS = Object.fromEntries(Object.entries(JSON.parse(readFileSync(new URL('./forms.json', import.meta.url), 'utf8'))).filter(([r]) => KEEP.has(r)));
 
 export const formRoutes = Router();
 formRoutes.use(requireAuth);
+// what the operator reads: the handlers' original texts reworded (lib/messages.js), originals to the server log
+formRoutes.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => json(friendlyBody(body, `${req.id} ${req.method} ${req.baseUrl}${req.path}`, (line) => log('warn', line)));
+  next();
+});
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();
@@ -31,7 +39,7 @@ async function load(req, res) {
 const ctxOf = (req) => ({ businessUnit: req.session.businessUnit, department: req.session.department, userCode: req.session.userCode, userId: req.session.userId, line: req.session.line ?? '0', lineName: req.session.lineName ?? '' });
 const publicState = (s) => ({ title: s.title, controls: s.controls, viewState: s.viewState ?? {}, recordStatus: s.recordStatus ?? null, statusMessage: s.statusMessage ?? null, buttons: s.buttons });
 
-// Original messages are shown as they were (alert / status bar).
+// errors go out as { message } (reworded by the middleware above)
 const fail = (res, e) => res.status(400).json({ message: e.message });
 
 formRoutes.get('/spec', async (req, res) => {
@@ -195,7 +203,7 @@ formRoutes.get('/unit', async (req, res) => {
   const label = netString(req.query.label).trim();
   if (label === '' || label.length > 100) return void res.status(400).json({ message: 'Scan a unit serial' });
   const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
-  for (const r of [route, cabinet]) if (r.status === 'rejected') console.error('forms/unit:', r.reason?.message);
+  for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} forms/unit: ${r.reason?.message}`);
   res.json({ route: route.value ?? null, cabinet: cabinet.value ?? null });
 });
 

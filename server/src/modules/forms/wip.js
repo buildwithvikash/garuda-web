@@ -27,6 +27,18 @@ const ex = (sql, tx) => execute(sql, {}, tx);
 const STATUS = { Active: 1, Closed: 10, Hold: 11, Approved: 12, Rejected: 13 };
 const ACT = { Start: 1, Pause: 2, BreakDown: 3, Restart: 4, Complete: 5 };
 const DOC_PROCESS_ORDER = 4001;
+const ORDER_CANCELLED = 200;
+/** Rule fix (owner, 21 Oct): the WIP QC remark (TBWQCRemark) is kept on the inspection; the original dropped it.
+ *  None typed: no value, as before. */
+const qcRemark = (r) => (netString(r).trim() === '' ? null : netString(r).trim().slice(0, 150));
+
+/** Rule fix (owner, 21 Oct): no scan on a job card whose production order (PRODHeader) is on hold or cancelled. The
+ *  original let such units through; the texts are reworded for the operator in lib/messages.js. */
+export async function assertOrderOpen(psNo, tx) {
+  const status = netInt(await sc(`Select h.Status from ProcessOrder p inner join PRODHeader h on h.PRODNo=p.PRODNo where p.PSNo=${num(psNo)}`, tx));
+  if (status === STATUS.Hold) throw new Error('Order is on hold');
+  if (status === ORDER_CANCELLED) throw new Error('Order is cancelled');
+}
 
 /** a row of a table as NewRow + assignments (others DBNull) */
 async function newRow(table, values) {
@@ -359,6 +371,7 @@ export async function scanStageLabelNew(barcodeStage, station, printer, ctx) {
   const st = num(station);
   const pros = str(await sc(`Select top 1 ProcessCode  from WorkCenterProcesses where StationCode=${st}`));
   const p0 = ps[0];
+  await assertOrderOpen(p0.PSNo);
   if (netInt(p0.StationCode) > 0 && pros === str(p0.ProcessCode) && str(p0.StationCode) !== station) return { code: -1, rows: [] };
   const rows = [{ PsNo: str(p0.PSNo), Process: pros, Station: station, RowID: '0' }];
   const psNo = num(p0.PSNo);
@@ -428,6 +441,7 @@ export async function scanStageLabelNew(barcodeStage, station, printer, ctx) {
 /** StageRMScanValidate: a component serial for the job card's stage: a barcode in stock (QC approved), or a vendor
  *  serial matching one of the stage's materials (then a barcode is created for it). */
 export async function stageRMScanValidate(psNo, process, serial, ctx) {
+  await assertOrderOpen(psNo);
   const s = lit(serial);
   if (str(await sc(`Select Serial from ProcessInputBOMSCan where Serial=${s} AND ProcessCode =${num(process)}`)) === serial) throw new Error('Already Scanned');
   const bar = await q(`Select BarcodeNo,Material,CurrentQty,QCStatus,StorageCode, uom ,DocNo from MaterialBarcode Where StorageCode>=0 and Serial=${s}`);
@@ -655,7 +669,7 @@ export async function processCompleteStageQCBarcode(ps, station, process, barcod
  *  next-stage label printing (indicator 10000) the barcode gets the next stage's serial and its label is printed.
  *  Returns "0" (lot still open / rejected), "" or the barcode number (stage completed). The checklist / remark texts
  *  are parameters. */
-export async function saveQCINProcess({ ud, defects, status, nextAction, barcode, ps, rowID, process, lot, parameterCode, station, controlId, printer, bee, dept }, ctx) {
+export async function saveQCINProcess({ ud, defects, status, nextAction, barcode, ps, rowID, process, lot, parameterCode, station, controlId, printer, bee, dept, remark }, ctx) {
   try {
     const strBEE = bee === '' ? '0' : bee;
     const tables = {};
@@ -675,7 +689,7 @@ export async function saveQCINProcess({ ud, defects, status, nextAction, barcode
             if (s === 0) s = netInt(await sc('select top 1 ShiftCode from Shift where (starttime>Endtime) and ((Starttime<CONVERT (TIME, CURRENT_TIMESTAMP) and Endtime<=CONVERT (TIME, CURRENT_TIMESTAMP)) or (Starttime>CONVERT (TIME, CURRENT_TIMESTAMP) and Endtime>=CONVERT (TIME, CURRENT_TIMESTAMP)))'));
             return s;
           })();
-          put('InspectionTrans', { InspectionLotNo: lot, ID: 0, QTY: b.CurrentQty, Barcode: b.BarcodeNo, SampleBarcode: b.BarcodeNo, Serial: b.Serial, UOM: b.UOM, Status: status, ParameterCode: parameterCode, NextAction: nextAction, UserCode: netInt(ctx.userCode), Shift: String(shift) });
+          put('InspectionTrans', { InspectionLotNo: lot, ID: 0, QTY: b.CurrentQty, Barcode: b.BarcodeNo, SampleBarcode: b.BarcodeNo, Serial: b.Serial, UOM: b.UOM, Status: status, ParameterCode: parameterCode, NextAction: nextAction, UserCode: netInt(ctx.userCode), Shift: String(shift), Remark: qcRemark(remark) });
           sQty += netDouble(b.CurrentQty);
           await insert(null, { tables: Object.values(tables) }, { ...ctx, businessUnit: 0, userCode: 0 }, { plain: true, tx });
           await ex(`Update MaterialBarcode Set QCStatus=${num(status)} , ParentBarcode =${num(strBEE)} where BarCodeNo=${num(b.BarcodeNo)}`, tx);
@@ -983,7 +997,7 @@ export async function getNextSerialNo(fgMat, material, bu, dept, process) {
 /** AVProductionCapture.SaveQCFInalProcess: the FG stage's QC decision; an approval gives the barcode its FG serial,
  *  asset tag and green tag (and the plan's printed count), and a fully inspected lot completes the stage (with the
  *  next stage's label printed at indicator 10000). Returns "0", "1" or the printed barcode number. */
-export async function saveQCFinalProcess({ ud, defects, status, nextAction, barcode, ps, process, lot, parameterCode, station, controlId, printer, serial, assetTag, greenTag, otherPlant, dept }, ctx) {
+export async function saveQCFinalProcess({ ud, defects, status, nextAction, barcode, ps, process, lot, parameterCode, station, controlId, printer, serial, assetTag, greenTag, otherPlant, dept, remark }, ctx) {
   // the other plant's (Sanjan) database: its connection string is not configured at WRL
   if (otherPlant === 1) throw NRE();
   const tables = {};
@@ -1011,7 +1025,7 @@ export async function saveQCFinalProcess({ ud, defects, status, nextAction, barc
           if (s === 0) s = netInt(await sc('select top 1 ShiftCode from Shift where (starttime>Endtime) and ((Starttime<CONVERT (TIME, CURRENT_TIMESTAMP) and Endtime<=CONVERT (TIME, CURRENT_TIMESTAMP)) or (Starttime>CONVERT (TIME, CURRENT_TIMESTAMP) and Endtime>=CONVERT (TIME, CURRENT_TIMESTAMP)))'));
           return s;
         })();
-        put('InspectionTrans', { InspectionLotNo: lot, ID: 0, QTY: b.CurrentQty, Barcode: b.BarcodeNo, SampleBarcode: b.BarcodeNo, Serial: b.Serial, UOM: b.UOM, Status: status, ParameterCode: parameterCode, NextAction: nextAction, UserCode: netInt(ctx.userCode), Shift: String(shift) });
+        put('InspectionTrans', { InspectionLotNo: lot, ID: 0, QTY: b.CurrentQty, Barcode: b.BarcodeNo, SampleBarcode: b.BarcodeNo, Serial: b.Serial, UOM: b.UOM, Status: status, ParameterCode: parameterCode, NextAction: nextAction, UserCode: netInt(ctx.userCode), Shift: String(shift), Remark: qcRemark(remark) });
         sQty += netDouble(b.CurrentQty);
         await insert(null, { tables: Object.values(tables) }, { ...ctx, businessUnit: 0, userCode: 0 }, { plain: true, tx });
         const tSerial = str(tables.InspectionTrans.rows[0].get(tables.InspectionTrans.schema.col('Serial').name));

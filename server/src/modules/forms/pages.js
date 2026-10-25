@@ -2825,6 +2825,8 @@ Object.assign(PAGE_EVENTS, {
           const head = po.rows[0];
           const [hBu, hDept, hUom] = ['BusinessUnit', 'Department', 'UOM'].map((c) => head.get(col(po, c)));
           const psNo = await insert(spec, ds, h.ctx, { wrl: true, tx });
+          // rule fix (owner, 21 Oct): the order's assigned quantity follows each job card (the original never set it)
+          await execute(`Update PRODHeader set AssignedQty=isnull(AssignedQty,0)+1 where PRODNo=${digitsOrEmpty(v.DDlProdOrder)}`, {}, tx);
           if (i === 1) {
             // SaveMaterialBarcodeWRLProdcutionPrintWithoutAllData
             if (auto < 0) {
@@ -3388,7 +3390,7 @@ Object.assign(PAGE_EVENTS[WIP], {
       const order = netString(v.DDLProdOrder);
       const base = () => {
         if (h.vs.LineCode === undefined || h.vs.InspectionLotNo === undefined) throw NRE();
-        return { ud: Array.isArray(h.vs.QCDataTable) ? h.vs.QCDataTable : null, defects, status, nextAction: netString(v.DDLNextAction), barcode: netString(v.TBBarcode), ps: order, rowID: netString(h.vs.LineCode), process: netString(h.vs.ProcessCode), lot: netString(h.vs.InspectionLotNo), parameterCode: '0', station: tagOf(h, out, 'TBWorkStation'), controlId: netInt(h.vs.ControlID), printer: netString(v.DDLQCPrinter), bee: netString(v.TbBEENo).trim(), dept: netString(v.DDLDepartment) };
+        return { ud: Array.isArray(h.vs.QCDataTable) ? h.vs.QCDataTable : null, defects, status, nextAction: netString(v.DDLNextAction), barcode: netString(v.TBBarcode), ps: order, rowID: netString(h.vs.LineCode), process: netString(h.vs.ProcessCode), lot: netString(h.vs.InspectionLotNo), parameterCode: '0', station: tagOf(h, out, 'TBWorkStation'), controlId: netInt(h.vs.ControlID), printer: netString(v.DDLQCPrinter), bee: netString(v.TbBEENo).trim(), dept: netString(v.DDLDepartment), remark: netString(v.TBWQCRemark) };
       };
       let rtn;
       if (netInt(h.vs.I) === 40) {

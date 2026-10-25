@@ -175,7 +175,7 @@ try {
     const routeCode = await pick(`select top 1 h.RouteCode from RoutingHeader h where h.[Type]=1 and h.Status=1 and exists (select 1 from WorkCenter wc inner join WorkCenterProcesses wp on wp.StationCode=wc.StationCode where wc.Department=${dept} and wp.ProcessCode=(select top 1 rt.ProcessCode from RoutingTrans rt where rt.RouteCode=h.RouteCode and rt.StageLabel=1 order by rt.SeqNo)) order by h.RouteCode`);
     const process = await pick(`Select top 1 rt.ProcessCode from RoutingTrans rt where rt.RouteCode=${routeCode} and rt.StageLabel=1 order by rt.SeqNo`);
     const station = await pick(`select top 1 wc.StationCode from WorkCenter wc inner join WorkCenterProcesses wp on wc.StationCode=wp.StationCode where wp.ProcessCode=${process} and wc.Department=${dept}`);
-    const order = (await query(`select top 1 ph.PRODNo, ph.Department, ph.BOMCode from PRODHeader ph where ph.Qty>isnull(ph.AssignedQty,0)+2 and ph.Status=1 and ph.Department=${dept} and exists (select 1 from BOMInput bi where bi.BOMCode=ph.BOMCode and bi.ProcessCode=${process}) and exists (select 1 from BOMHeader b where b.BOMCode=ph.BOMCode and b.BaseQty>0) order by ph.PRODNo desc`))[0];
+    const order = (await query(`select top 1 ph.PRODNo, ph.Department, ph.BOMCode from PRODHeader ph where ph.Qty>isnull((select sum(p.Qty) from ProcessOrder p where p.PRODNo=ph.PRODNo),0)+2 and ph.Status=1 and ph.Department=${dept} and exists (select 1 from BOMInput bi where bi.BOMCode=ph.BOMCode and bi.ProcessCode=${process}) and exists (select 1 from BOMHeader b where b.BOMCode=ph.BOMCode and b.BaseQty>0) order by ph.PRODNo desc`))[0];
     const stageMat = await pick(`Select top 1 Material from BOMINPUT where BOMCODE=${order.BOMCode} and ProcessCode=${process}`);
     const ASSIGN_PRINTER = 99999903;
     await execute('delete from BarcodePrinter where RowID=@a', { a: ASSIGN_PRINTER });
@@ -188,6 +188,7 @@ try {
       log: await pick('select isnull(max(EventID),0) from EventLog'),
     };
     const ids = await query("select IDTable, Year, SLNo from IDValue where IDTable in ('ProcessOrder','MaterialBarcode','InspectionHeader','EventLog') and Year=@yy", { yy });
+    const assigned = await pick(`select isnull(AssignedQty,0) from PRODHeader where PRODNo=${order.PRODNo}`);
     const serials = await query('select ID, NextSerialNo from SerialBarcode where Material=@m and Station=@p and BusinessUnit=12201 and Year=@yy', { m: stageMat, p: process, yy });
     const rowMask = (r) => JSON.stringify(Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x instanceof Date ? x.toISOString().slice(0, 10) : x])));
     const rowsOf = async (sql, p) => (await query(sql, p)).map(rowMask);
@@ -201,9 +202,12 @@ try {
       insp: await rowsOf('select * from InspectionHeader where DocType=4001 and DocNo > @f order by InspectionLotNo', { f: floors.ps }),
       log: await rowsOf("select EventUser, Module, Action, AppResponse, Message, DocRef, TransactionData, BusinessUnit from EventLog where EventID > @f and Module='Last Status'", { f: floors.log }),
       ids: await rowsOf("select IDTable, SLNo from IDValue where IDTable in ('ProcessOrder','MaterialBarcode','InspectionHeader') and Year=@yy order by IDTable", { yy }),
+      // the rule fix (assigned quantity per job card) is the one intended difference: shown, not compared
       serial: await rowsOf('select Material, Station, NextSerialNo from SerialBarcode where Material=@m and Station=@p and BusinessUnit=12201 and Year=@yy order by ID', { m: stageMat, p: process, yy }),
     });
+    const assignedNow = () => pick(`select isnull(AssignedQty,0) from PRODHeader where PRODNo=${order.PRODNo}`);
     const putBack = async () => {
+      await execute(`update PRODHeader set AssignedQty=@a where PRODNo=${order.PRODNo}`, { a: Number(assigned) });
       for (const t of ['ProcessRouting', 'ProcessInputBOM', 'ProcessOutputBOM', 'ProcessStageLabel', 'ProcessOrder']) await execute(`delete from ${t} where PSNo > @f`, { f: floors.ps });
       await execute('delete from MaterialBarcode where DocType=4001 and DocNo > @f', { f: floors.ps }); // keys are a series, not above the max
       await execute('delete from InspectionHeader where DocType=4001 and DocNo > @f', { f: floors.ps });
@@ -247,6 +251,7 @@ try {
       }
       await settle();
       const nJobs = jobs.map(mask);
+      const nAssigned = await assignedNow();
       const nDb = await state();
       const problems = [];
       if (!o.ok) problems.push(`original ERROR ${o.error} (new: ${last.alert ?? "ok"})`);
@@ -260,7 +265,7 @@ try {
         for (const k of Object.keys(a)) if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) problems.push(`${k} ${JSON.stringify(a[k]).slice(0, 500)} vs ${JSON.stringify(b[k]).slice(0, 500)}`);
       }
       const counts = Object.entries(JSON.parse(nDb)).map(([k, x]) => `${k} ${x.length}`).join(', ');
-      results.push([`production assignment ${order.PRODNo} x2 (${process} @ ${station})`, problems.length ? problems.join(' | ') : `IDENTICAL (${oJobs.length} job(s); ${counts})`]);
+      results.push([`production assignment ${order.PRODNo} x2 (${process} @ ${station})`, problems.length ? problems.join(' | ') : `IDENTICAL (${oJobs.length} job(s); ${counts}${nAlert ? `; alert "${nAlert}"` : ''}; assigned qty ${assigned} -> ${nAssigned})`]);
     } finally {
       await putBack();
       await execute('delete from BarcodePrinter where RowID=@a', { a: ASSIGN_PRINTER });

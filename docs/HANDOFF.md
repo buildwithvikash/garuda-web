@@ -63,12 +63,16 @@ control patches.
 | `b075850` (tag `backup-before-redesign`) | Full port + E2E fixes (below) |
 | `71fdd50` | Keep-list (47 screens), reports/dashboards APIs off, Windows-safe `npm run dev`, keep-list test, audit/plan doc |
 | `e34a1a7` | Reports & dashboards removed from codebase; `reports/format.js` -> `lib/format.js` |
-| `182dce1` | Phase 1: specs/page code trimmed to the keep-list (now 56 screens), `lib/sql.js`, parity scripts pruned. Regression equal to baseline |
+| `182dce1` | Phase 1: specs/page code trimmed to the keep-list (47 screens, including the 9 the owner added), `lib/sql.js`, parity scripts pruned. Regression equal to baseline |
 | `551ef5f` | Phases 2-3: client on the **QMAS design system** (owner asked to use QMAS's design) |
 | `78d25b9` | Phase 4 (in progress): `useEngine.js` (shared event plumbing for RecordForm and flow screens), `pages/flow/` kit (ScanBox, result banner, beep, step track), dedicated WIP Capture (scan-first, results 11/21/30/40), sectioned layouts for Production Order, Production Assignment, Rework Confirmation New (`flow/layouts.js`); ScanBox no longer a nested `<form>` |
 | `a6508f5` | ComboField search no longer a nested `<form>` (Enter/search button submitted the record form instead) |
 | `e545591` | WIP Capture: route progress and the stage's components as a checklist (fitted when consumed >= required) |
 | next | WIP Capture redesigned to the owner's mockup: Scan & Identify, Cabinet Details, Process History (whole route with Completed / In Process / Pending), Component Details, Inspection & Defect Recording. Read-only `GET /api/forms/unit?path=/production/wipcaptureform&label=` (replaces `/route`) returns `route` (`routeByLabel`) and `cabinet` (`cabinetByLabel`: FG material name/category/model/image, MaterialVariant values such as colour/dimension, customer via PRODHeader.SalesOrder -> SOHeader -> Ledger); each part fails alone (logged) |
+| `c174b1b` (PR #5, Varun) | Client moved to **shadcn/ui** (JS), one page file per sidebar tab: see `client/STRUCTURE.md` (`engine/`, `features/wip-capture/`, `pages/<group>/`). Replaces the QMAS kit of §5 |
+| `401703e` Phase 5 | Operator messages (`server/src/lib/messages.js`, applied to every `/forms/*` response; originals logged as `[message]`), rule fixes: scans blocked on Hold(11) / Cancelled(200) production orders (`assertOrderOpen`, wip.js), WIP QC remark saved (InspectionTrans.Remark), PRODHeader.AssignedQty +1 per job card. DB script `server/sql/2026-10-phase5-rule-fixes.sql`: run on TEST 25 Oct (index: already there; AssignedQty backfill: 31,289 orders), **not on LIVE** |
+| *uncommitted* Phase 6 | Security: `lib/throttle.js` (sign-in / change-password lockout per user ID and per client), `lib/http.js` (security headers, CSP report-only by default, `X-Request-Id`, one log line per API call, `LOG_FILE`), cookie Secure flag from `COOKIE_SECURE`, `TRUST_PROXY`, DB name hidden on the sign-in page (`SHOW_DB_ON_LOGIN`), sign-in errors reworded, unreadable request bodies -> 400, stored dropdown value in `state.js` guarded with `num()`; `server/.env.example` added |
+| *uncommitted* Phase 7 | README rewritten (run / deploy / maintain / parity / gaps), dead `client/src/layouts/CommandPalette.jsx` removed, STRUCTURE.md line fixed |
 
 E2E test (21 Oct, browser, test DB): freezer F390GL24 (22600118), route 12502 (17 stations) from order PO82603053 to
 FG label; rework, hold/cancel, ~47 scenarios. Report: https://claude.ai/artifact/A3Ddeh4NKpLysYmtfPUaQS (private to
@@ -120,17 +124,26 @@ Recovery of anything removed: `git checkout backup-before-redesign -- <path>` or
 
 ## 7. Remaining plan (see AUDIT-AND-PLAN.md §3)
 
-- **Phase 4 (in progress):** checked in the browser on the test DB: WIP Capture start/complete scans (FOAMING A), Production
-  Assignment order postback, Rework Confirmation New renders. **Still to check in the browser:** rework scan with the
-  fixed ScanBox (Enter must fire `Go`, not submit the record), ComboField search, Production Order layout, the redesigned WIP Capture on a real unit (cabinet
-  fields: colour/dimension come from Material variants and the customer from the sales order; `cabinetByLabel` is
-  untested against the DB, check the server log for `forms/unit:` errors), the component checklist. Then server
-  regression suites (client + useEngine change). WIP Capture now has every planned part (station -> serial, banner, sound, route progress, component checklist, QC
-  with checklist/defects, FG serial/asset/printer). Left for Phase 4: rowset/label parity runs proving the flow screens
-  write the same as the original (decision §6.1).
-- **Phase 5:** messages + rule fixes (§6). **Phase 6:** parameterise remaining spliced SQL, login rate limit,
-  security headers, secure cookie by config, request IDs + log file, Serial index. **Phase 7:** cleanup, README
-  (run/deploy/maintain), final report (old vs new structure, fixes, tests, remaining issues).
+- **Phase 4: done.** Server parity after Phase 5 (25 Oct): WIP comp/qc/fg, rework, production writes identical; events
+  196/202 (baseline); print 9/10 identical + 1 failing alike (baseline), incl. a real 2-piece Production Assignment (print-parity now picks the
+  order by its job cards, and reports AssignedQty).
+- **Phase 5: done** (`401703e`). DB script run on TEST 25 Oct: part 1 no-op (unique `IX_MaterialBarcode` on Serial
+  exists), part 2 backfilled AssignedQty on 31,289 orders (assignment list in PRODUCTION: 9,866 -> 859 orders). Not run
+  on LIVE. Notes: the original already limits assignment per stage (`assignProcess`), so AssignedQty mainly fixes the
+  order list (`Qty > AssignedQty`); a deleted job card does not lower AssignedQty yet; 1,075 orders were assigned
+  beyond their quantity in the past and now show it.
+- **Phase 6: done, uncommitted.** Verified: 28/28 unit tests; forms parity 127/138, 0 different (baseline); on a
+  throwaway server: headers present, DB name hidden, 3rd failed sign-in -> 429, bad JSON -> 400, sign-in page shows
+  no CSP violations. SQL audit: every spliced value goes through `lib/sql.js` guards, the list search is
+  parameterised; the one gap (stored dropdown value in `state.js`) is fixed. Not done: CSP enforce (needs a check of
+  the screens behind sign-in in a browser: then `CSP=enforce`); 'User does not exist' vs 'Wrong password' still
+  tells which user IDs exist (original wording; owner to decide).
+- **Phase 7: done, uncommitted** (README, cleanup). Left as is: 3 unused shadcn primitives (separator, tabs,
+  tooltip: Varun's kit, tree-shaken), functions exported but only used in their module.
+- **Owner rule (25 Oct): Claude does not commit.** Leave changes in the working tree; the owner commits.
+  `package-lock.json` has npm `peer` flag changes from an install: not part of this work.
+- Open: push `401703e` and the uncommitted work; restart the API on :4000 (it runs pre-Phase-5 code); LIVE: run
+  the SQL script after review (part 1 builds the index only if missing: outside production hours).
 
 ## 8. Known issues / gotchas
 
