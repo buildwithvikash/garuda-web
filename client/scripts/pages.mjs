@@ -8,6 +8,8 @@
 // then paste into a file named menu.json in the project root. Run the sync again whenever tabs are added.
 //
 // A page is  src/pages/<group>/<PageName>.jsx  (group = first part of the route). Existing files are never touched.
+// Each new file is COMPLETE: the page's state, server calls, list view and form view are all inside it, so you can
+// change that one page without touching any other. Only the UI components (@/components/ui, @/components/shared) are shared.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -36,20 +38,15 @@ function existingRoutes() {
   return found;
 }
 
-const template = (name, caption, group, route) => `// ${caption}
-// Sidebar: ${group} › ${caption}. This file is the whole page: edit it freely.
-//
-// Right now it shows the screen the server describes (fields, buttons, saving: nothing to change on the backend).
-// To build your own layout, replace the return with your JSX using the components in @/components/ui (shadcn)
-// and @/components/shared (Page, Section, DataTable, Modal ...). See src/pages/_template/PageName.jsx for an example.
-import EngineScreen from '@/engine/EngineScreen.jsx';
-
-export const route = '${route}';
-
-export default function ${name}() {
-  return <EngineScreen path={route} />;
-}
-`;
+// The complete page (the same code as every other page): scripts/templates/engine-page.jsx.tpl
+const TEMPLATE = path.resolve('scripts/templates/engine-page.jsx.tpl');
+const template = (name, caption, group, route) =>
+  fs
+    .readFileSync(TEMPLATE, 'utf8')
+    .replaceAll('__NAME__', name)
+    .replaceAll('__CAPTION__', caption)
+    .replaceAll('__GROUP__', group)
+    .replaceAll('__ROUTE__', route);
 
 function create({ route, caption, groupCaption }, known) {
   route = route.toLowerCase();

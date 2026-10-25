@@ -82,7 +82,7 @@ export default function Navbar({ me }) {
             </span>
 
             <span className="mt-0.5 block text-[10px] font-medium tracking-wide text-muted-foreground">
-              SHOP FLOOR EXECUTION
+              MES Traceability Platform
             </span>
           </span>
         </Link>
