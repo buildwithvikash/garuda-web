@@ -28,7 +28,7 @@ const ScanBox = forwardRef(function ScanBox(
     else if (String(value ?? "").trim() !== "") onScan();
   };
   return (
-    <div className="flex gap-2">
+    <div className={cn('flex gap-2', !lg && 'max-w-xl')}>
       <label className="relative min-w-0 flex-1">
         <span className="sr-only">{label}</span>
         <Icon

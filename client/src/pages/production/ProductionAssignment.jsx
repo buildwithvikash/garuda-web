@@ -17,14 +17,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ArrowLeft, Boxes, ClipboardList, Copy, Factory, Plus, Printer, RotateCcw, Route, Save, Search, Send, Trash2 } from 'lucide-react';
+import { RotateCw, ArrowLeft, Boxes, ClipboardList, Copy, Factory, Plus, Printer, RotateCcw, Route, Save, Search, Send, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '@/api.js';
 import { askConfirm } from '@/app/confirm.js';
 import Grid from '@/components/shared/DataGrid.jsx';
 import DataTable from '@/components/shared/DataTable.jsx';
 import { CheckList, ComboField, EngineField, FileField, GuideView, ImageField, Panel, RoleTree } from '@/components/shared/FormControls.jsx';
-import { FormError } from '@/components/shared/FormField.jsx';
 import Loader from '@/components/shared/Loader.jsx';
 import Modal, { ModalFooter } from '@/components/shared/Modal.jsx';
 import Page from '@/components/shared/Page.jsx';
@@ -121,7 +120,17 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
   const [viewState, setViewState] = useState(state.viewState ?? {});
   const [buttonPatch, setButtonPatch] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(initialError ?? state.statusMessage ?? '');
+  // Errors are never drawn on the page: they pop up as toasts.
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
+  useEffect(() => {
+    const first = initialError ?? state.statusMessage;
+    if (first) setError(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const report = (r) => {
     if (r.alert) setError(r.alert);
@@ -202,7 +211,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     setLoading(true);
     api(`/forms/list?path=${enc(path)}&page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
-      .catch((e) => setError({ data: { message: e.message } }))
+      .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
       .finally(() => setLoading(false));
   }, [path, page, applied, filter]);
   useEffect(load, [load]);
@@ -441,9 +450,9 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
         <Section key={x.title} icon={Icon} title={x.title}>
           <div className="space-y-4">
             {scan && (
-              <ScanBox label={x.scan.label} placeholder={x.scan.placeholder} value={values[x.scan.box]} onChange={(v) => change(x.scan.box, v)} onScan={() => fire(x.scan.go, values)} locked={ctl(x.scan.go)?.text === 'Clr'} onClear={() => fire(x.scan.go, values)} busy={busy} disabled={cancelled} />
+              <ScanBox size="md" label={x.scan.label} placeholder={x.scan.placeholder} value={values[x.scan.box]} onChange={(v) => change(x.scan.box, v)} onScan={() => fire(x.scan.go, values)} locked={ctl(x.scan.go)?.text === 'Clr'} onClear={() => fire(x.scan.go, values)} busy={busy} disabled={cancelled} />
             )}
-            {items.length > 0 && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{items.map((i) => one(ctl(i.id), i.label))}</div>}
+            {items.length > 0 && <div className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fill,minmax(16rem,22rem))]">{items.map((i) => one(ctl(i.id), i.label))}</div>}
           </div>
         </Section>
       );
@@ -492,12 +501,11 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
         </div>
       </Toolbar>
 
-      <FormError message={error} />
 
       <fieldset disabled={cancelled} className="space-y-4">
         {!layout && fields.length > 0 && (
           <Panel>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fill,minmax(16rem,22rem))]">
               {fields.map(({ c, label: l }) =>
                 c.type === 'ComboBox' ? <ComboField key={c.id} path={path} c={c} label={l} value={values[c.id]} onPick={pick(c.id)} /> : <EngineField key={c.id} c={live(c)} label={l} value={values[c.id]} onChange={set(c.id)} />,
               )}
@@ -564,7 +572,11 @@ export default function ProductionAssignment() {
   const screen = me ? screenOf(me.menu, pathname) : null;
   const [spec, setSpec] = useState(null);
   const [view, setView] = useState({ kind: 'list' });
-  const [error, setError] = useState('');
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
   const [seq, setSeq] = useState(0);
   const [listFilter, setListFilter] = useState({});
   const show = (v) => {
@@ -597,9 +609,8 @@ export default function ProductionAssignment() {
       subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
       actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
     >
-        <FormError message={error} />
         {!spec ? (
-          !error && <Loader />
+          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
           <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
         ) : (

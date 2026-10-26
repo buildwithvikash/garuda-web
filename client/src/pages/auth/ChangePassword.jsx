@@ -5,14 +5,18 @@ import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { api } from '@/api.js';
 import { Button } from '@/components/ui/button.jsx';
-import { FormError, TextInput } from '@/components/shared/FormField.jsx';
+import { TextInput } from '@/components/shared/FormField.jsx';
 import AuthShell from './AuthShell.jsx';
 
 export default function ChangePassword() {
   const navigate = useNavigate();
   const userId = useLocation().state?.userId ?? '';
   const [form, setForm] = useState({ current: '', next: '', retype: '' });
-  const [error, setError] = useState('');
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
   const [busy, setBusy] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const mismatch = form.retype !== '' && form.next !== form.retype;
@@ -35,7 +39,6 @@ export default function ChangePassword() {
   return (
     <AuthShell title="Set a new password" subtitle="Your password has expired or must be changed before you continue">
       <form onSubmit={submit} className="space-y-5">
-        <FormError message={error} />
         <TextInput label="User ID" size="lg" icon={User} value={userId} disabled />
         <TextInput label="Current password" size="lg" icon={Lock} type="password" autoComplete="current-password" value={form.current} onChange={set('current')} required />
         <TextInput label="New password" size="lg" icon={Lock} type="password" autoComplete="new-password" value={form.next} onChange={set('next')} required />

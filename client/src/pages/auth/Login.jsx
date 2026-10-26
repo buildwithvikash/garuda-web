@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/api.js';
 import { Button } from '@/components/ui/button.jsx';
-import { FormError, Select, TextInput } from '@/components/shared/FormField.jsx';
+import { Select, TextInput } from '@/components/shared/FormField.jsx';
 import AuthShell from './AuthShell.jsx';
 
 const opts = (list = []) => list.map((o) => ({ value: o.value, label: o.text }));
@@ -17,7 +17,11 @@ export default function Login() {
   const [qr, setQr] = useState(false);
   const [buLocked, setBuLocked] = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -66,7 +70,6 @@ export default function Login() {
   return (
     <AuthShell title="Welcome to Garuda" subtitle={page?.lineRequired ? 'Sign in and choose the line you are working on' : 'Sign in to continue'}>
       <form onSubmit={submit} className="space-y-5">
-        <FormError message={error} />
         <Select
           label="Business unit"
           required

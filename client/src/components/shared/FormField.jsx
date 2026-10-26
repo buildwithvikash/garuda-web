@@ -83,13 +83,3 @@ export function Toggle({ label, checked, onChange, disabled, description }) {
     </div>
   );
 }
-
-/** Banner for form-level errors returned by the API. */
-export function FormError({ message }) {
-  if (!message) return null;
-  return (
-    <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3.5 py-2.5 text-sm text-destructive">
-      {message}
-    </div>
-  );
-}

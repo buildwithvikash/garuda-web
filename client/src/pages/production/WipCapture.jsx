@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertTriangle,
+  RotateCw, AlertTriangle,
   BookOpen,
   Boxes,
   CheckCircle2,
@@ -40,14 +40,12 @@ import toast from "react-hot-toast";
 import { api } from "@/api.js";
 import Grid from "@/components/shared/DataGrid.jsx";
 import { GuideView, Panel } from "@/components/shared/FormControls.jsx";
-import { FormError } from "@/components/shared/FormField.jsx";
 import Loader from "@/components/shared/Loader.jsx";
 import Page from "@/components/shared/Page.jsx";
 import QCPanel from "@/components/shared/QCPanel.jsx";
 import ComponentChecklist from "@/components/shopfloor/ComponentChecklist.jsx";
 import Ctl from "@/components/shopfloor/Ctl.jsx";
 import MuteButton from "@/components/shopfloor/MuteButton.jsx";
-import ResultBanner from "@/components/shopfloor/ResultBanner.jsx";
 import ScanBox from "@/components/shopfloor/ScanBox.jsx";
 import SectionCard from "@/components/shopfloor/SectionCard.jsx";
 import StatusPill from "@/components/shopfloor/StatusPill.jsx";
@@ -96,7 +94,11 @@ function beep(ok) {
 /** the screen's first state (/forms/spec: Page_Load already run) */
 function useSpec(path) {
   const [spec, setSpec] = useState(null);
-  const [error, setError] = useState("");
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
   useEffect(() => {
     api(`/forms/spec?path=${encodeURIComponent(path)}`).then(setSpec, (e) =>
       setError(e.message),
@@ -193,7 +195,17 @@ function useEngine({
   const [viewState, setViewState] = useState(state.viewState ?? {});
   const [buttonPatch, setButtonPatch] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(initialError ?? state.statusMessage ?? "");
+  // Errors are never drawn on the page: they pop up as toasts.
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
+  useEffect(() => {
+    const first = initialError ?? state.statusMessage;
+    if (first) setError(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const report = (r) => {
     if (r.alert) setError(r.alert);
@@ -317,7 +329,7 @@ function useUnit(label, tick) {
 // 5. CARDS
 // The panels of the screen: cabinet, route history, components, inspection, guide.
 // ────────────────────────────────────────────────────────────────────────────
-function Cabinet({ unit, e, serialOk, line, className }) {
+function Cabinet({ unit, e, line, className }) {
   const { values, ctl } = e;
   const c = unit?.cabinet;
   const [model, serial] = String(values.tbFG ?? "").split("|");
@@ -345,22 +357,7 @@ function Cabinet({ unit, e, serialOk, line, className }) {
       ?.text;
   if (c && !c.order && order) rows.splice(rows.length - 2, 0, ["Order", order]);
   return (
-    <SectionCard
-      icon={Refrigerator}
-      title="Cabinet"
-      className={className}
-      actions={
-        serialOk === true ? (
-          <Badge variant="success" dot>
-            Valid serial
-          </Badge>
-        ) : serialOk === false ? (
-          <Badge variant="danger" dot>
-            Serial not accepted
-          </Badge>
-        ) : null
-      }
-    >
+    <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
       {rows.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">
           Scan a serial to see the cabinet.
@@ -841,19 +838,22 @@ function Guide({ e }) {
 // 6. STATION
 // The screen itself: scan the work station, scan a serial, then the cards react.
 // ────────────────────────────────────────────────────────────────────────────
+/** One popup per scan result (a new result replaces the previous popup, so they never pile up). */
+function notify(kind, title, text) {
+  const body = (
+    <div>
+      <p className="font-semibold">{title}</p>
+      {text && <p className="text-sm opacity-80">{text}</p>}
+    </div>
+  );
+  (kind === "error" ? toast.error : toast.success)(body, {
+    id: "wip-scan",
+    duration: kind === "error" ? 7000 : 2500,
+  });
+}
+
 function Station({ spec }) {
   const navigate = useNavigate();
-  const [banner, setBanner] = useState(
-    spec.statusMessage
-      ? {
-          tone: "error",
-          title: "Could not open the station",
-          text: spec.statusMessage,
-        }
-      : { tone: "info", title: "Scan the work station to begin" },
-  );
-  // the last serial scan's verdict for the cabinet card: true accepted, false refused, null none yet
-  const [serialOk, setSerialOk] = useState(null);
   const stationRef = useRef(null);
   const serialRef = useRef(null);
   const [unitTick, setUnitTick] = useState(0);
@@ -863,32 +863,28 @@ function Station({ spec }) {
     events: spec.events ?? [],
     onResult: (r, control) => {
       setUnitTick((t) => t + 1); // a scan, a QC save or a consume can move the unit along its route
-      if (control === "BtnWorderScan")
-        setSerialOk(r.alert ? false : r.success ? true : null);
-      if (control === "BtnWorkStationScan") setSerialOk(null);
       if (r.alert) {
         beep(false);
-        setBanner({ tone: "error", title: "Not accepted", text: r.alert });
+        notify("error", "Not accepted", r.alert);
       } else if (control === "BtnWorkStationScan")
-        setBanner({ tone: "info", title: "Station ready — scan a serial" });
+        notify("success", "Station ready", "Scan a serial");
       else if (r.success) {
         beep(true);
         // scanStageLabelNew's result: 11 the stage started (nothing to scan), 21 the stage completed
         const scanned =
           { 11: "Stage started", 21: "Stage completed" }[r.viewState?.I] ??
           "Scan recorded";
-        setBanner({
-          tone: "ok",
-          title:
-            control === "btnQCSave"
-              ? "Quality result saved"
-              : control === "BtnInwardMaterial"
-                ? "Component consumed"
-                : scanned,
-          text: r.viewState?.LastScanned
+        notify(
+          "success",
+          control === "btnQCSave"
+            ? "Quality result saved"
+            : control === "BtnInwardMaterial"
+              ? "Component consumed"
+              : scanned,
+          r.viewState?.LastScanned
             ? `Serial ${r.viewState.LastScanned}`
             : undefined,
-        });
+        );
       }
     },
   });
@@ -1008,9 +1004,6 @@ function Station({ spec }) {
               className="md:col-span-2 2xl:col-span-1"
             />
           </div>
-          <ResultBanner
-            {...(busy ? { tone: "busy", title: "Working…" } : banner)}
-          />
           {vis("BtnRework") && (
             <div className="flex justify-end">
               <Button
@@ -1026,7 +1019,7 @@ function Station({ spec }) {
       </SectionCard>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <Cabinet unit={unit} e={e} serialOk={serialOk} line={line} />
+        <Cabinet unit={unit} e={e} line={line} />
         <ProcessHistory route={unit?.route} e={e} className="xl:col-span-2" />
       </div>
       <ComponentDetails e={e} />
@@ -1077,8 +1070,7 @@ export default function WipCapture() {
   if (spec) return <Station spec={spec} />;
   return (
     <Page {...header}>
-      <FormError message={error} />
-      {!error && <Loader />}
+      {(error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)}
     </Page>
   );
 }
