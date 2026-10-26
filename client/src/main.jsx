@@ -22,6 +22,13 @@ createRoot(document.getElementById('root')).render(
         </Route>
       </Routes>
     </BrowserRouter>
-    <Toaster position="top-right" toastOptions={{ duration: 3500, style: { fontSize: '14px' } }} />
+    <Toaster
+      position="top-center"
+      toastOptions={{
+        duration: 3000,
+        error: { duration: 6000 },
+        style: { background: 'var(--card)', color: 'var(--card-foreground)', border: '1px solid var(--border)', fontSize: '14px', maxWidth: '28rem' },
+      }}
+    />
   </StrictMode>,
 );

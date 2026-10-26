@@ -9,6 +9,7 @@ import { Field } from '@/components/shared/FormField.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
+import toast from 'react-hot-toast';
 
 const enc = encodeURIComponent;
 const maxLen = (c) => (c.maxLength > 0 && c.maxLength < 100000 ? c.maxLength : undefined);
@@ -54,13 +55,12 @@ export function ComboField({ path, c, label, value, onPick }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [data, setData] = useState(null);
-  const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const load = (q) => {
     setLoading(true);
     api(`/forms/combo?path=${enc(path)}&id=${enc(c.id)}${q == null ? '' : `&search=${enc(q)}`}`)
-      .then((d) => (setData(d), setErr('')))
-      .catch((e) => setErr(e.message))
+      .then((d) => setData(d))
+      .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
       .finally(() => setLoading(false));
   };
   const current = c.options?.find((o) => o.value === value);
@@ -80,7 +80,6 @@ export function ComboField({ path, c, label, value, onPick }) {
             <Button variant="outline" icon={Search} aria-label="Search" onClick={() => load(search)} />
             <Button variant="ghost" icon={X} aria-label="Close" onClick={() => setOpen(false)} />
           </div>
-          {err && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{err}</p>}
           {loading ? (
             <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading…</div>
           ) : (
