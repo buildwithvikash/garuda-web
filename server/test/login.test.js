@@ -6,9 +6,9 @@ Object.assign(process.env, {
   DB_SERVER: 'x', DB_NAME: 'x', DB_USER: 'x', DB_PASSWORD: 'x', ERP: 'WRL',
   PASSWORD_AES_KEY: process.env.PASSWORD_AES_KEY ?? 'test-key', SESSION_SECRET: 's',
 });
-const { validateLogin, validateLoginQR, login, changePassword } = await import('../src/modules/auth/service.js');
-const { loadSettings } = await import('../src/modules/settings/service.js');
-const { netDateString, netInt } = await import('../src/lib/net.js');
+const { validateLogin, validateLoginQR, login, changePassword } = await import('../src/services/auth/auth.service.js');
+const { loadSettings } = await import('../src/services/settings/settings.service.js');
+const { netDateString, netInt } = await import('../src/shared/utils/net.js');
 
 const recent = new Date(Date.now() - 5 * 86400000);
 const user = (o = {}) => ({

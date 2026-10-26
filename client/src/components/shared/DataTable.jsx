@@ -123,6 +123,7 @@ export default function DataTable({
   exportName = "export",
   pagination,
   tabs,
+  inlineLeading = false,
 }) {
   const [hidden, toggle] = useHiddenColumns(tableId);
   const [selected, setSelected] = useState(() => new Set());
@@ -156,8 +157,18 @@ export default function DataTable({
       {showToolbar && (
         <div className="space-y-2 border-b p-3">
           <div className="flex flex-wrap items-end gap-2">
-            {leading}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            {leading &&
+              (inlineLeading ? (
+                <div className="min-w-0 flex-1">{leading}</div>
+              ) : (
+                leading
+              ))}
+            <div
+              className={cn(
+                "ml-auto flex shrink-0 items-center gap-2",
+                inlineLeading && "ml-0",
+              )}
+            >
               {tableId && (
                 <ColumnPicker
                   columns={columns}

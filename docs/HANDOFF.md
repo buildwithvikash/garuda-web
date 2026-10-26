@@ -39,17 +39,17 @@ client/src
   layouts/AppLayout.jsx    menu from /api/auth/me, menu search, header
   pages/NotMigrated.jsx    picks EngineForm for any route in me.migrated.forms
   pages/forms/EngineForm.jsx (791 lines) draws EVERY screen from a server control list (ASP.NET markup -> JSON)
-server/src
-  index.js                 express app: /api/auth, /api/forms, static client, error handler
-  modules/menu/keep.js     THE keep-list of 47 screens (forms routes + menu read it)
-  modules/menu/service.js  menu.json pruned to keep-list, per-user role filter
-  modules/forms/forms.json specs of the 47 kept screens (scripts/extract-forms.mjs regenerates, filtered by KEEP)
-  modules/forms/routes.js  /spec /list /record /event /save /update /cancel /print
-  modules/forms/pages.js   per-screen ported code-behind (PAGE_EVENTS[file][control], PAGE_LOAD, PAGE_SAVE...) ~3,600 lines
-  modules/forms/wip.js, production.js, quality.js, qc.js, labels.js   ported Avatar.dll business logic (DB writes, labels)
-  modules/forms/write.js   generic DataWrapper insert/update/cancel; state.js, lists.js, children.js: generic engine
-  lib/sql.js               the ONLY SQL splice guards: num, digitsOrEmpty, requireDigits, lit
-  lib/net.js, lib/format.js  .NET-compatible parsing/formatting; db/index.js pool/query/transaction
+server/src  (layered layout since 25 Oct; see README "Where things are")
+  data/menu/keep.js                THE keep-list of 47 screens (forms routes + menu read it)
+  services/menu/menu.service.js    menu.json pruned to keep-list, per-user role filter
+  data/forms/forms.json            specs of the 47 kept screens (scripts/extract-forms.mjs regenerates, filtered by KEEP)
+  routes/forms/forms.routes.js     /spec /list /record /event /save /update /cancel /print -> controllers/forms/forms.controller.js
+  services/forms/pages.service.js  per-screen ported code-behind (PAGE_EVENTS[file][control], PAGE_LOAD, PAGE_SAVE...) ~3,600 lines
+  services/production/{wip,production,labels}.service.js, services/quality/quality.service.js, services/forms/qc.service.js
+                                   ported Avatar.dll business logic (DB writes, labels)
+  services/forms/write.service.js  generic DataWrapper insert/update/cancel; state, lists, children: generic engine
+  shared/utils/sql.js              the ONLY SQL splice guards: num, digitsOrEmpty, requireDigits, lit
+  shared/utils/{net,format}.js     .NET-compatible parsing/formatting; db/connection.js pool/query, db/transaction.js
 server/scripts/parity      original-vs-new harness (PowerShell runs the original DLLs; compares screens, DB rows, labels)
 ```
 Key behaviour: each client event posts all field values + ViewState + `ui` (visibility/enabled/text, and the items of
@@ -140,6 +140,20 @@ Recovery of anything removed: `git checkout backup-before-redesign -- <path>` or
   tells which user IDs exist (original wording; owner to decide).
 - **Phase 7: done, uncommitted** (README, cleanup). Left as is: 3 unused shadcn primitives (separator, tabs,
   tooltip: Varun's kit, tree-shaken), functions exported but only used in their module.
+- **Backend layout (25 Oct, uncommitted):** `server/src` moved to config / db / middleware / routes / controllers /
+  services / repositories / data / shared (owner's tree; per-domain stubs left out: every screen runs through the forms
+  engine). Pure moves and splits, no logic change: imports rewritten by script, tests + parity re-run.
+- **Domain APIs (25 Oct, uncommitted; owner chose "one API per screen"):** screens move out of the generic engine one
+  at a time: routes/<domain>/x.routes.js -> controllers -> services -> repositories, a validator, its own client page
+  (features/<x>/). The service keeps the proven rules: it runs the screen's own handlers for option changes and
+  saves through the forms writer, translating its JSON names to the control ids (one FIELDS map). Proof per screen:
+  `forms-write-parity.mjs <bin> --api <route>` (original page vs the API: rows, lines, event log) + events parity.
+  Done: **Production Order** (/api/production/orders; write parity IDENTICAL via API and via engine, events 15/15).
+  **Production Assignment** (/api/production/assignments: new, changes/:field, print): Print replays the choices
+  through the screen handlers on the server (services/forms/events.service.js runEvent/openForm) and refuses values the
+  server did not offer; print-parity --api IDENTICAL, events 14/14; not yet checked in a browser.
+  Next, in order: Rework Confirmation, WIP Capture, then the masters. Not yet checked in a
+  browser (needs a sign-in). Known: order type 4 fails on TEST (no SRHeader table), as the original does.
 - **Owner rule (25 Oct): Claude does not commit.** Leave changes in the working tree; the owner commits.
   `package-lock.json` has npm `peer` flag changes from an install: not part of this work.
 - Open: push `401703e` and the uncommitted work; restart the API on :4000 (it runs pre-Phase-5 code); LIVE: run

@@ -9,13 +9,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { toText } from '../../src/modules/forms/values.js';
-import { PAGE_EVENTS, eventHelpers, importExcel } from '../../src/modules/forms/pages.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { toText } from '../../src/shared/utils/values.js';
+import { PAGE_EVENTS, eventHelpers, importExcel } from '../../src/services/forms/pages.service.js';
 
 const [bin] = process.argv.slice(2);
-const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
+const SPECS = JSON.parse(readFileSync(new URL('../../src/data/forms/forms.json', import.meta.url), 'utf8'));
 await loadSettings();
 const ctx = { businessUnit: '12201', department: '1230001', userCode: '123003', userId: '123003' };
 const specOf = (spec) => ({ top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits });

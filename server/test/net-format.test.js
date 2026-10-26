@@ -1,7 +1,7 @@
 // .NET Framework number formatting the dashboards depend on (values confirmed by the UAT parity runs).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { netNum, netFixed1, roundHalfEven, netDouble } from '../src/lib/net.js';
+import { netNum, netFixed1, roundHalfEven, netDouble } from '../src/shared/utils/net.js';
 
 test('double.ToString()', () => {
   assert.equal(netNum(450), '450');

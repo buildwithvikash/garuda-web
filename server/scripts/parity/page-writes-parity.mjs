@@ -9,15 +9,15 @@ import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { newFormState, displayState } from '../../src/modules/forms/state.js';
-import { PAGE_EVENTS, PAGE_SAVE, PAGE_UPDATE, PAGE_LOAD, PAGE_POSTBACK, eventHelpers } from '../../src/modules/forms/pages.js';
-import { toText } from '../../src/modules/forms/values.js';
-import { collect, insert, update } from '../../src/modules/forms/write.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { newFormState, displayState } from '../../src/services/forms/state.service.js';
+import { PAGE_EVENTS, PAGE_SAVE, PAGE_UPDATE, PAGE_LOAD, PAGE_POSTBACK, eventHelpers } from '../../src/services/forms/pages.service.js';
+import { toText } from '../../src/shared/utils/values.js';
+import { collect, insert, update } from '../../src/services/forms/write.service.js';
 
 const [bin, jobArg] = process.argv.slice(2);
-const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
+const SPECS = JSON.parse(readFileSync(new URL('../../src/data/forms/forms.json', import.meta.url), 'utf8'));
 await loadSettings();
 const specOf = (spec) => ({ top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits });
 

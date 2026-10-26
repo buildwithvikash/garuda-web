@@ -1,7 +1,7 @@
 // Expected values were produced by calling WrapperAvatar.encrypt in the original Avatar.dll.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { encryptPassword, decryptPassword, isStrongPassword } from '../src/lib/password.js';
+import { encryptPassword, decryptPassword, isStrongPassword } from '../src/shared/utils/password.js';
 
 const key = process.env.PASSWORD_AES_KEY;
 const vectors = [

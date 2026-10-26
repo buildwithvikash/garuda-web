@@ -2,7 +2,9 @@
 // listens on port 9100 (what AIPPrint connects to). The original page's print handler runs (original-forms.ps1 mode
 // "event", TitleControl's printer list holding that printer), then the new app's; the bytes each sent, the alerts and
 // the database changes (PrintStatus, BarcodePrintTrail) are compared, then put back.
-// Usage: node --env-file=.env scripts/parity/print-parity.mjs <originalBinDir>
+// Usage: node --env-file=.env scripts/parity/print-parity.mjs <originalBinDir> [--api]
+//   --api: the production assignment's new side prints through its domain service (services/production/
+//   assignments.service.js: the same choices replayed on the server) instead of calling the page handlers directly.
 import net from 'node:net';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -10,14 +12,16 @@ import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { PAGE_PRINT, PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
-import { newFormState } from '../../src/modules/forms/state.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { PAGE_PRINT, PAGE_EVENTS, eventHelpers } from '../../src/services/forms/pages.service.js';
+import { newFormState } from '../../src/services/forms/state.service.js';
+import * as assignments from '../../src/services/production/assignments.service.js';
 
 const run = promisify(execFile);
-const [bin] = process.argv.slice(2);
-const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
+const [bin, flag] = process.argv.slice(2);
+const viaApi = flag === '--api';
+const SPECS = JSON.parse(readFileSync(new URL('../../src/data/forms/forms.json', import.meta.url), 'utf8'));
 await loadSettings();
 const ctx = { businessUnit: '12201', department: '1220001', userCode: '123003', userId: 'ZZPPRINTER' };
 const specOf = (spec) => ({ top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits });
@@ -238,7 +242,12 @@ try {
       let v = Object.fromEntries(st.controls.map((c) => [c.id, c.type === 'GridView' ? c.rows : c.value]));
       let vs = {};
       let last = null;
-      for (const step of steps) {
+      if (viaApi) {
+        // the choices as the client sends them; the service replays them through the page's handlers, then prints
+        const draft = { department: dept, order: String(order.PRODNo), routing: routeCode, process, station, qty: '2', printer: String(ASSIGN_PRINTER) };
+        last = await assignments.print(actx, draft).then((r) => ({ success: true, message: r.message, alerts: r.alerts }), (e) => ({ alert: `THROW ${e.message}` }));
+      }
+      for (const step of viaApi ? [] : steps) {
         v = { ...v, ...step.values };
         // the printer list is the department's (the test printer is the only one we choose)
         last = await PAGE_EVENTS[spec.file][step.control](v, eventHelpers(spec, actx, v, { viewState: vs })).catch((e) => ({ alert: `THROW ${e.message}${globalThis.process.env.PARITY_DEBUG ? e.stack.split('\n').slice(1, 3).join(' ') : ""}` }));

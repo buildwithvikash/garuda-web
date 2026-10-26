@@ -12,6 +12,7 @@ export async function api(path, { method = 'GET', body } = {}) {
     return new Promise(() => {});
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message ?? `Request failed (${res.status})`);
+  // the answer travels with the error: domain APIs send per-field problems as data.errors
+  if (!res.ok) throw Object.assign(new Error(data.message ?? `Request failed (${res.status})`), { status: res.status, data });
   return data;
 }

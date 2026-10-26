@@ -8,13 +8,13 @@ import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { newFormState, displayState } from '../../src/modules/forms/state.js';
-import { PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { newFormState, displayState } from '../../src/services/forms/state.service.js';
+import { PAGE_EVENTS, eventHelpers } from '../../src/services/forms/pages.service.js';
 
 const [bin, ...only] = process.argv.slice(2);
-const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
+const SPECS = JSON.parse(readFileSync(new URL('../../src/data/forms/forms.json', import.meta.url), 'utf8'));
 const ctx = { businessUnit: '12201', department: '1230001', userCode: '123003', userId: '123003' };
 await loadSettings();
 

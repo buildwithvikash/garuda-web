@@ -1,7 +1,7 @@
-// Operator wording of the original messages (lib/messages.js).
+// Operator wording of the original messages (shared/utils/messages.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { friendly, friendlyBody } from '../src/lib/messages.js';
+import { friendly, friendlyBody } from '../src/shared/utils/messages.js';
 
 test('runtime and SQL internals become plain advice', () => {
   // as exceptionAlert / errorMsg leave them: no dots or commas

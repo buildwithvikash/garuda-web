@@ -4,7 +4,7 @@ The Garuda WRL shop floor (production order → assignment → WIP capture → Q
 React + Node.js on the **existing** SQL Server database. Same tables, same writes as the original ASP.NET app: the
 parity scripts prove it against the original DLLs.
 
-- 47 screens (the keep-list in `server/src/modules/menu/keep.js` drives both the menu and the API).
+- 47 screens (the keep-list in `server/src/data/menu/keep.js` drives both the menu and the API).
 - Client: React 19, Vite 6, Tailwind 4, shadcn/ui (JavaScript). Layout: [`client/STRUCTURE.md`](client/STRUCTURE.md).
 - Server: Express 5 + mssql. Status, history and decisions: [`docs/HANDOFF.md`](docs/HANDOFF.md).
 
@@ -61,7 +61,7 @@ Settings to check on a server (`server/.env`):
 | `LOG_FILE` | a file for request / error lines (rotate it with the OS) |
 | `CSP=enforce` | after checking the screens show no "Content Security Policy" lines in the browser console (default: report only) |
 
-Database changes for a new site: review and run [`server/sql/2026-10-phase5-rule-fixes.sql`](server/sql/2026-10-phase5-rule-fixes.sql)
+Database changes for a new site: review and run [`server/sql/migrations/2026-10-phase5-rule-fixes.sql`](server/sql/migrations/2026-10-phase5-rule-fixes.sql)
 (Serial index only if missing, then the `PRODHeader.AssignedQty` backfill: preview first, the update is commented out).
 On TEST both are done.
 
@@ -71,32 +71,43 @@ On TEST both are done.
 
 ```
 server/src/
-  index.js                 app: security headers, request IDs, routes, built UI
-  config.js                every setting (from .env)
-  db/                      mssql pool: query / scalar / execute / transaction
-  lib/                     .NET-compatible conversions, sql guards, session cookie, messages, throttle, http (log)
-  modules/auth/            sign-in, change password, /me
-  modules/menu/            menu (menu.json from the original Layout.Master) and the keep-list
-  modules/forms/           the screen engine: forms.json (screen specs), routes, state, write (Save/Update/Delete),
-                           pages.js (each screen's own code-behind), wip.js / production.js / quality.js / labels.js
+  server.js                entry point: database, Settings table, listen
+  app.js                   the Express app: middleware, /api, guide files, the built UI
+  config/                  env.js (every setting, from .env), database.js (pool options)
+  db/                      connection.js (pool, query / scalar / execute), transaction.js
+  middleware/              authenticate, authorize, request-log, security-headers, operator-messages, error-handler
+  routes/                  index.js (/api), auth/auth.routes.js, forms/forms.routes.js: the wiring only
+  controllers/             auth/, forms/: one function per request (read the request, call services, answer)
+  services/
+    auth/                  sign-in rules, change password
+    menu/                  menu.json pruned to the keep-list, per-user role filter
+    settings/              the Settings table
+    forms/                 the screen engine: specs, state, lists, write (Save / Update / Delete), children, qc,
+                           values, schema, pages.service.js (each screen's own code-behind)
+    production/            WIP capture, production, labels (+ raw-print.ps1)
+    quality/               final and self inspection, NCMR, repair / rework / finishing confirmation
+  repositories/auth/       the sign-in queries
+  data/                    forms/forms.json (screen specs), menu/menu.json + menu/keep.js (the 47 screens)
+  shared/utils/            .NET-compatible conversions (net, format), sql guards, password, messages, throttle, log
+  shared/session/          the signed session cookie
 server/scripts/parity/     original vs new comparisons (see below)
-server/sql/                database scripts (reviewed before running)
+server/sql/migrations/     database scripts (reviewed before running)
 client/src/                see client/STRUCTURE.md
 ```
 
 **Change a screen's look**: edit its page file `client/src/pages/<group>/<Page>.jsx` (one per sidebar tab).
-**Change what a screen does**: its handlers are in `server/src/modules/forms/pages.js` (search for the page's
+**Change what a screen does**: its handlers are in `server/src/services/forms/pages.service.js` (search for the page's
 `.aspx` name); keep the original's writes unless the change is intended, and run the parity scripts after.
-**Add or remove a screen**: the route in `server/src/modules/menu/keep.js`, then refresh `forms.json` from the
+**Add or remove a screen**: the route in `server/src/data/menu/keep.js`, then refresh `forms.json` from the
 original site's source (in `server/`:
-`node scripts/extract-forms.mjs ../../source/Garuda src/modules/menu/menu.json src/modules/forms/forms.json`), and
+`node scripts/extract-forms.mjs ../../source/Garuda src/data/menu/menu.json src/data/forms/forms.json`), and
 `npm run page -w client -- <route> "<Title>"` for its page file.
-**Operator messages**: the wording rules are in `server/src/lib/messages.js` (the original text is logged as
+**Operator messages**: the wording rules are in `server/src/shared/utils/messages.js` (the original text is logged as
 `[message] …`).
 **Logs**: one line per API call (`<request id> <method> <path> <status> <ms> user=…`); an error shown to an operator
 carries the same reference.
 
-**SQL safety**: queries keep the original SQL text. Every value spliced into SQL goes through `lib/sql.js`
+**SQL safety**: queries keep the original SQL text. Every value spliced into SQL goes through `shared/utils/sql.js`
 (`num`, `digitsOrEmpty`, `requireDigits`, `lit`) or is passed as a parameter; keep it that way in new code.
 
 ## Parity checks (original vs new)

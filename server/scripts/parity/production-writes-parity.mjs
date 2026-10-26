@@ -1,9 +1,9 @@
 // Write parity for the Production pages' own code, on the test copy: each case runs on the original, the touched rows
 // are read and put back, then the same on the new app; rows, alerts and results compared, everything restored after.
 // Usage: node --env-file=.env scripts/parity/production-writes-parity.mjs <originalBinDir> [section name part...]
-import { query, execute } from '../../src/db/index.js';
-import { loadSettings } from '../../src/modules/settings/service.js';
-import { PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
+import { query, execute } from '../../src/db/connection.js';
+import { loadSettings } from '../../src/services/settings/settings.service.js';
+import { PAGE_EVENTS, eventHelpers } from '../../src/services/forms/pages.service.js';
 import { SPECS, specOf, ctx, original as run } from './lib.mjs';
 
 const [bin, ...only] = process.argv.slice(2);
