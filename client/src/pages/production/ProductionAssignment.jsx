@@ -1,8 +1,19 @@
-// Production Assignment
-// Sidebar: Production › Production Assignment. Its own API: /api/production/assignments (features/production-assignment).
-import { Printer } from 'lucide-react';
-import { Page } from '@/components/shared';
-import AssignmentForm from '@/features/production-assignment/AssignmentForm.jsx';
+// ════════════════════════════════════════════════════════════════════════════════
+//  Production Assignment
+//  Sidebar: Production › Production Assignment
+//
+//  THIS FILE IS THE WHOLE PAGE. Change how it works or looks right here: nothing in this
+//  file is used by any other page. Only the UI pieces are shared (@/components/ui = shadcn,
+//  @/components/shared = Page, Section, DataTable, Modal ...).
+//
+//  Map of this file
+//    1. SETTINGS    this page's layout and captions                       <- start here
+//    2. STATE       how the form's state is read and patched
+//    3. ENGINE      sends events to the server and applies its reply
+//    4. LIST VIEW   saved records: search, table, paging
+//    5. FORM VIEW   one record: fields, buttons, grids, print ...
+//    6. PAGE        loads the screen and switches between list and form
+// ════════════════════════════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';

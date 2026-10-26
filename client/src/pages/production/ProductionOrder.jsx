@@ -33,10 +33,15 @@ import Toolbar from '@/components/shared/Toolbar.jsx';
 import { ScanBox } from '@/components/shopfloor';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import OrderForm from '@/features/production-orders/OrderForm.jsx';
-import OrderList from '@/features/production-orders/OrderList.jsx';
+import { Input } from '@/components/ui/input.jsx';
+import { NativeSelect } from '@/components/ui/native-select.jsx';
+import { useMe } from '@/layouts/AppLayout.jsx';
+import { screenOf } from '@/layouts/Sidebar.jsx';
 
-/** The sidebar route this page answers (lower case, as the server lists it in me.migrated.forms). */
+// ────────────────────────────────────────────────────────────────────────────
+// 1. SETTINGS
+// Edit these for this page. `layout` arranges the fields in sections; `page` adds captions / search boxes.
+// ────────────────────────────────────────────────────────────────────────────
 export const route = '/production/productionorderform';
 
 /** Dedicated layout: sections of control ids. Save / Update / Delete and every event stay the server page's own handlers. */
@@ -598,10 +603,10 @@ export default function ProductionOrder() {
   const title = spec?.title || screen?.caption || 'Screen';
   return (
     <Page
-      icon={ClipboardList}
-      title="Production Order"
-      subtitle={open ? 'Product, quantity and service requests of one order' : 'Saved orders — click one to open it'}
-      actions={!open && <Button size="sm" icon={Plus} onClick={() => show('new')}>Add new</Button>}
+      icon={layout?.icon ?? screen?.group.icon}
+      title={title}
+      subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
+      actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
     >
         {!spec ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
