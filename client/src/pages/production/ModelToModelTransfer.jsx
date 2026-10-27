@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ArrowLeft, Copy, Plus, Printer, RotateCcw, Save, Search, Send, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '@/api.js';
+import { screenApi } from '@/lib/screenApi.js';
 import { askConfirm } from '@/app/confirm.js';
 import Grid from '@/components/shared/DataGrid.jsx';
 import DataTable from '@/components/shared/DataTable.jsx';
@@ -124,7 +124,7 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
   async function fire(control, next = values, arg, base = controls, index) {
     setBusy(true);
     try {
-      const r = await api('/forms/event', { method: 'POST', body: { path, control, values: next, viewState, arg, index, ui: uiOf(base) } });
+      const r = await screenApi(path).event({ control, values: next, viewState, arg, index, ui: uiOf(base) })
       const p = applyPatch(base, next, r.set);
       setControls(p.controls);
       setValues(p.values);
@@ -190,7 +190,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     // filter: what the page's own code put in the list's Tag (e.g. the area chosen on the form)
     const q = (applied ? `&column=${enc(applied.column)}&op=${enc(applied.op)}&value=${enc(applied.value)}` : '') + Object.entries(filter).map(([k, v]) => `&f.${enc(k)}=${enc(v)}`).join('');
     setLoading(true);
-    api(`/forms/list?path=${enc(path)}&page=${page}${q}`)
+    screenApi(path).list(`&page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
       .catch((e) => setError({ data: { message: e.message } }))
       .finally(() => setLoading(false));
@@ -201,7 +201,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
   async function pickColumn(name) {
     const c = spec.searchColumns.find((x) => x.name === name);
     setSearch({ column: name, op: c?.operators[0]?.[0] ?? '', value: '' });
-    setValues(name ? await api(`/forms/distinct?path=${enc(path)}&column=${enc(name)}`).catch(() => []) : []);
+    setValues(name ? await screenApi(path).distinct(name).catch(() => []) : []);
   }
   const run = (e) => {
     e?.preventDefault();
@@ -267,7 +267,6 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
       leading={leading}
       empty={applied ? 'No records match this search.' : 'No records yet.'}
       onRowClick={(r) => data.keys[r.id] && onOpen(data.keys[r.id])}
-      selectable
       exportName={spec.title?.replaceAll(' ', '-').toLowerCase() || 'records'}
       pagination={data && { meta: { page: page + 1, pageSize: data.pageSize, total: data.count, totalPages }, onPage: (p) => setPage(p - 1) }}
     />
@@ -303,7 +302,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
     setBusy(true);
     setError('');
     try {
-      const r = await api('/forms/print', { method: 'POST', body: { path, values, printer } });
+      const r = await screenApi(path).print({ values, printer })
       if (r.alert) setError(r.alert);
       else toast.success('Sent to printer');
     } catch (e) {
@@ -317,7 +316,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
     setBusy(true);
     setError('');
     try {
-      const r = await api(`/forms/${kind}`, { method: 'POST', body: { path, values, viewState, ui: uiOf(controls), ...extra } });
+      const r = await screenApi(path).write(kind, { values, viewState, ui: uiOf(controls), ...extra })
       // a page's own Save handler: it signed the user out (password changed) / reported failure
       if (r.logout) return void window.location.assign('/login');
       if (r.ok === false) return void setError(r.message);
@@ -474,7 +473,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
         )}
         <div className="ml-auto flex flex-wrap gap-2">
           {buttons.post && events.includes('TitleControl:post') && <Button size="sm" icon={Send} loading={busy} onClick={() => fire('TitleControl:post', values)}>Post</Button>}
-          {mode === 'edit' && !cancelled && buttons.delete && (
+          {false && mode === 'edit' && !cancelled && buttons.delete && (
             <Button variant="outline" size="sm" icon={Trash2} className="text-rose-700 dark:text-rose-300! hover:border-rose-300!" onClick={() => setDeleting('')}>Delete</Button>
           )}
           {mode === 'new' && buttons.add && <Button type="submit" size="sm" icon={Save} loading={busy}>Save</Button>}
@@ -565,7 +564,7 @@ export default function ModelToModelTransfer() {
 
   useEffect(() => {
     setSpec(null);
-    api(`/forms/spec?path=${enc(path)}`)
+    screenApi (path).spec()
       .then((s) => {
         setSpec(s);
         show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });

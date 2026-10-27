@@ -2,10 +2,16 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { config } from './config/env.js';
-import { requestLog } from './middleware/request-log.js';
-import { securityHeaders } from './middleware/security-headers.js';
-import { errorHandler } from './middleware/error-handler.js';
-import { apiRoutes } from './routes/index.js';
+import { requestLog } from './middlewares/requestLog.js';
+import { securityHeaders } from './middlewares/securityHeaders.js';
+import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
+import authRoutes from './modules/auth/auth.routes.js';
+import formsRoutes from './modules/forms/forms.routes.js';
+import productionAssignmentsRoutes from './modules/production-assignments/production-assignments.routes.js';
+import productionOrdersRoutes from './modules/production-orders/production-orders.routes.js';
+import mastersRoutes from './modules/masters/masters.routes.js';
+import qualityRoutes from './modules/quality/quality.routes.js';
+import productionRoutes, { PRODUCTION } from './modules/production/production.routes.js';
 
 export const app = express();
 app.disable('x-powered-by');
@@ -14,7 +20,17 @@ const dist = fileURLToPath(new URL('../../client/dist', import.meta.url));
 app.use(requestLog);
 app.use(securityHeaders(`${dist}/index.html`));
 
-app.use('/api', apiRoutes);
+// screens send whole forms (grids, images, picked files) as the original pages posted them
+for (const p of ['/api/forms', '/api/masters', '/api/quality', ...Object.keys(PRODUCTION).map((n) => `/api/production/${n}`)]) app.use(p, express.json({ limit: '100mb' }));
+app.use('/api', express.json({ limit: '1mb' }));
+app.use('/api/auth', authRoutes);
+app.use('/api/forms', formsRoutes);
+app.use('/api/production/orders', productionOrdersRoutes);
+app.use('/api/production/assignments', productionAssignmentsRoutes);
+app.use('/api/masters', mastersRoutes);
+app.use('/api/quality', qualityRoutes);
+app.use('/api/production', productionRoutes); // the shop-floor screens, after orders / assignments
+app.use('/api', notFoundHandler);
 
 // ~/GuideFiles/… as on the original site
 app.use('/GuideFiles', express.static(config.guideFilesDir));

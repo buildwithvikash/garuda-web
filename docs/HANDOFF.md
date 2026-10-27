@@ -39,18 +39,27 @@ client/src
   layouts/AppLayout.jsx    menu from /api/auth/me, menu search, header
   pages/NotMigrated.jsx    picks EngineForm for any route in me.migrated.forms
   pages/forms/EngineForm.jsx (791 lines) draws EVERY screen from a server control list (ASP.NET markup -> JSON)
-server/src  (layered layout since 25 Oct; see README "Where things are")
-  data/menu/keep.js                THE keep-list of 47 screens (forms routes + menu read it)
-  services/menu/menu.service.js    menu.json pruned to keep-list, per-user role filter
-  data/forms/forms.json            specs of the 47 kept screens (scripts/extract-forms.mjs regenerates, filtered by KEEP)
-  routes/forms/forms.routes.js     /spec /list /record /event /save /update /cancel /print -> controllers/forms/forms.controller.js
-  services/forms/pages.service.js  per-screen ported code-behind (PAGE_EVENTS[file][control], PAGE_LOAD, PAGE_SAVE...) ~3,600 lines
-  services/production/{wip,production,labels}.service.js, services/quality/quality.service.js, services/forms/qc.service.js
+server/src  (QMAS-style feature modules since 26 Oct; see README "Where things are")
+  modules/menu/keep.js             THE keep-list of 47 screens (forms routes + menu read it)
+  modules/menu/menu.service.js     menu.json pruned to keep-list, per-user role filter
+  modules/forms/forms.json         specs of the 47 kept screens (scripts/extract-forms.js regenerates, filtered by KEEP)
+  modules/forms/forms.routes.js    /spec /list /record /event /save /update /cancel /print (handlers inline)
+  modules/forms/screens/           per-screen ported code-behind, one file per screen (31 + 5 shared helper files),
+                                   registered in screens/registry.js (PAGE_EVENTS[file][control], PAGE_LOAD ...);
+                                   modules/forms/pages.js only loads them and re-exports the registries
+  modules/production/{wip,production,labels}.service.js, modules/quality/quality.service.js, modules/forms/qc.js
                                    ported Avatar.dll business logic (DB writes, labels)
-  services/forms/write.service.js  generic DataWrapper insert/update/cancel; state, lists, children: generic engine
-  shared/utils/sql.js              the ONLY SQL splice guards: num, digitsOrEmpty, requireDigits, lit
-  shared/utils/{net,format}.js     .NET-compatible parsing/formatting; db/connection.js pool/query, db/transaction.js
-server/scripts/parity      original-vs-new harness (PowerShell runs the original DLLs; compares screens, DB rows, labels)
+  modules/forms/write.js           generic DataWrapper insert/update/cancel; state, lists, children: generic engine
+  modules/production-orders/, modules/production-assignments/   domain APIs: .routes / .service / .repo / .validation
+  modules/forms/resource.js        a screen as a REST resource (field names = bound columns), the same page code
+  modules/masters/                 /api/masters/<name>: the 32 setup screens through resource.js (docs/API.md,
+                                   docs/MIGRATION-PLAN.md); the client still uses /api/forms for them
+  modules/quality/quality.routes.js  /api/quality/<name>: the 6 quality screens, the same way
+  modules/production/production.routes.js  /api/production/<name>: the 7 shop-floor screens, the same way
+  shared/sql.js                    the ONLY SQL splice guards: num, digitsOrEmpty, requireDigits, lit
+  shared/{net,format,values}.js    .NET-compatible parsing/formatting; db/pool.js query, db/tx.js transactions
+  shared/AppError.js + middlewares/errorHandler.js   AppError.badRequest / notFound / unprocessable -> the response
+server/scripts/parity      original-vs-new harness (.js; dev only, not deployed) (PowerShell runs the original DLLs; compares screens, DB rows, labels)
 ```
 Key behaviour: each client event posts all field values + ViewState + `ui` (visibility/enabled/text, and the items of
 any dropdown that is page-level or was refilled by an event/first load) to `/api/forms/event`; the handler returns

@@ -1,7 +1,7 @@
 // A query's first result set as the original kept DataTables: rows of cell text (null for DBNull), formatted as
 // .NET printed the values.
-import { queryTable } from './connection.js';
-import { toText } from '../shared/utils/values.js';
+import { queryTable } from './pool.js';
+import { toText } from '../shared/values.js';
 
 /** A DataTable as rows of cell text (null for DBNull), as the original keeps it in ViewState. */
 export async function dataTable(sql, params) {

@@ -32,7 +32,7 @@ import {
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { api } from "@/api.js";
+import { screenApi } from "@/lib/screenApi.js";
 import { askConfirm } from "@/app/confirm.js";
 import Grid from "@/components/shared/DataGrid.jsx";
 import DataTable from "@/components/shared/DataTable.jsx";
@@ -144,7 +144,7 @@ function panelState(controls) {
 
 // ────────────────────────────────────────────────────────────────────────────
 // 3. ENGINE
-// A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to /forms/event; the reply is applied here.
+// A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to the server (lib/screenApi.js: the engine or the screen's API); the reply is applied here.
 // ────────────────────────────────────────────────────────────────────────────
 function useEngine({
   path,
@@ -174,17 +174,13 @@ function useEngine({
   async function fire(control, next = values, arg, base = controls, index) {
     setBusy(true);
     try {
-      const r = await api("/forms/event", {
-        method: "POST",
-        body: {
-          path,
-          control,
-          values: next,
-          viewState,
-          arg,
-          index,
-          ui: uiOf(base),
-        },
+      const r = await screenApi(path).event({
+        control,
+        values: next,
+        viewState,
+        arg,
+        index,
+        ui: uiOf(base),
       });
       const p = applyPatch(base, next, r.set);
       setControls(p.controls);
@@ -283,7 +279,8 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
         .map(([k, v]) => `&f.${enc(k)}=${enc(v)}`)
         .join("");
     setLoading(true);
-    api(`/forms/list?path=${enc(path)}&page=${page}${q}`)
+    screenApi(path)
+      .list(`&page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
       .catch((e) => setError({ data: { message: e.message } }))
       .finally(() => setLoading(false));
@@ -296,9 +293,9 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     setSearch({ column: name, op: c?.operators[0]?.[0] ?? "", value: "" });
     setValues(
       name
-        ? await api(
-            `/forms/distinct?path=${enc(path)}&column=${enc(name)}`,
-          ).catch(() => [])
+        ? await screenApi(path)
+            .distinct(name)
+            .catch(() => [])
         : [],
     );
   }
@@ -434,7 +431,6 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
       leading={leading}
       empty={applied ? "No records match this search." : "No records yet."}
       onRowClick={(r) => data.keys[r.id] && onOpen(data.keys[r.id])}
-      selectable
       exportName={spec.title?.replaceAll(" ", "-").toLowerCase() || "records"}
       pagination={
         data && {
@@ -553,10 +549,7 @@ function RecordForm({
     setBusy(true);
     setError("");
     try {
-      const r = await api("/forms/print", {
-        method: "POST",
-        body: { path, values, printer },
-      });
+      const r = await screenApi(path).print({ values, printer });
       if (r.alert) setError(r.alert);
       else toast.success("Sent to printer");
     } catch (e) {
@@ -570,9 +563,11 @@ function RecordForm({
     setBusy(true);
     setError("");
     try {
-      const r = await api(`/forms/${kind}`, {
-        method: "POST",
-        body: { path, values, viewState, ui: uiOf(controls), ...extra },
+      const r = await screenApi(path).write(kind, {
+        values,
+        viewState,
+        ui: uiOf(controls),
+        ...extra,
       });
       // a page's own Save handler: it signed the user out (password changed) / reported failure
       if (r.logout) return void window.location.assign("/login");
@@ -991,7 +986,7 @@ function RecordForm({
               Post
             </Button>
           )}
-          {mode === "edit" && !cancelled && buttons.delete && (
+          {false && mode === "edit" && !cancelled && buttons.delete && (
             <Button
               variant="outline"
               size="sm"
@@ -1162,7 +1157,8 @@ export default function GenericPage() {
 
   useEffect(() => {
     setSpec(null);
-    api(`/forms/spec?path=${enc(path)}`)
+    screenApi(path)
+      .spec()
       .then((s) => {
         setSpec(s);
         show(
@@ -1177,20 +1173,26 @@ export default function GenericPage() {
   const run = (p) => p.catch((e) => setError(e.message));
   const open = (key, notice) =>
     run(
-      api(`/forms/record?path=${enc(path)}&key=${enc(key)}`).then((state) =>
+      screenApi(path)
+        .record(key)
+        .then((state) =>
         show({ kind: "form", mode: "edit", state, notice }),
       ),
     );
   // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
   const fresh = (notice) =>
     run(
-      api(`/forms/spec?path=${enc(path)}`).then((state) =>
+      screenApi(path)
+        .spec()
+        .then((state) =>
         show({ kind: "form", mode: "new", state, notice }),
       ),
     );
   const copy = (key) =>
     run(
-      api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) =>
+      screenApi(path)
+        .copy(key)
+        .then((state) =>
         show({ kind: "form", mode: "new", state }),
       ),
     );

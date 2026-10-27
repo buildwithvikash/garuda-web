@@ -6,7 +6,7 @@
     "dev": "node --env-file=.env --watch src/server.js",
     "start": "node --env-file=.env src/server.js",
     "test": "node --env-file-if-exists=.env --test",
-    "extract-menu": "node scripts/extract-menu.mjs ../../source/Garuda/View/Layout.Master src/data/menu/menu.json"
+    "extract-menu": "node scripts/extract-menu.js ../../source/Garuda/View/Layout.Master src/modules/menu/menu.json"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

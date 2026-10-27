@@ -267,7 +267,6 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
       leading={leading}
       empty={applied ? 'No records match this search.' : 'No records yet.'}
       onRowClick={(r) => data.keys[r.id] && onOpen(data.keys[r.id])}
-      selectable
       exportName={spec.title?.replaceAll(' ', '-').toLowerCase() || 'records'}
       pagination={data && { meta: { page: page + 1, pageSize: data.pageSize, total: data.count, totalPages }, onPage: (p) => setPage(p - 1) }}
     />
@@ -474,7 +473,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
         )}
         <div className="ml-auto flex flex-wrap gap-2">
           {buttons.post && events.includes('TitleControl:post') && <Button size="sm" icon={Send} loading={busy} onClick={() => fire('TitleControl:post', values)}>Post</Button>}
-          {mode === 'edit' && !cancelled && buttons.delete && (
+          {false && mode === 'edit' && !cancelled && buttons.delete && (
             <Button variant="outline" size="sm" icon={Trash2} className="text-rose-700 dark:text-rose-300! hover:border-rose-300!" onClick={() => setDeleting('')}>Delete</Button>
           )}
           {mode === 'new' && buttons.add && <Button type="submit" size="sm" icon={Save} loading={busy}>Save</Button>}

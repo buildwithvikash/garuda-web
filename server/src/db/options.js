@@ -1,7 +1,7 @@
 // A dropdown's items from a query (ControlA.FillDropDownList): the "" placeholder first, then value = column 0,
 // text = column 1 (or column 0).
-import { query } from './connection.js';
-import { toText } from '../shared/utils/values.js';
+import { query } from './pool.js';
+import { toText } from '../shared/values.js';
 
 async function columnCount(sql) {
   try {

@@ -2,7 +2,7 @@
 // image/file uploads, the searchable CheckBoxList, the role TreeView and the guide-file viewer.
 import { BookOpen, Loader2, Search, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { api } from '@/api.js';
+import { screenApi } from '@/lib/screenApi.js';
 import { Button } from '@/components/ui/button.jsx';
 import Section from '@/components/shared/Section.jsx';
 import { Field } from '@/components/shared/FormField.jsx';
@@ -10,7 +10,6 @@ import { NativeSelect } from '@/components/ui/native-select.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
 
-const enc = encodeURIComponent;
 const maxLen = (c) => (c.maxLength > 0 && c.maxLength < 100000 ? c.maxLength : undefined);
 const fileCls = 'block w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/5 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10 cursor-pointer';
 
@@ -58,7 +57,8 @@ export function ComboField({ path, c, label, value, onPick }) {
   const [loading, setLoading] = useState(false);
   const load = (q) => {
     setLoading(true);
-    api(`/forms/combo?path=${enc(path)}&id=${enc(c.id)}${q == null ? '' : `&search=${enc(q)}`}`)
+    screenApi(path)
+      .combo(c.id, q)
       .then((d) => (setData(d), setErr('')))
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
