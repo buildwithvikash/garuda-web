@@ -15,48 +15,28 @@
 //    6. PAGE        loads the screen and switches between list and form
 // ════════════════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
-import {
-  ArrowLeft,
-  Copy,
-  Plus,
-  Printer,
-  RotateCcw,
-  Save,
-  Search,
-  Send,
-  Trash2,
-} from "lucide-react";
-import toast from "react-hot-toast";
-import { api } from "@/api.js";
-import { askConfirm } from "@/app/confirm.js";
-import Grid from "@/components/shared/DataGrid.jsx";
-import DataTable from "@/components/shared/DataTable.jsx";
-import {
-  CheckList,
-  ComboField,
-  EngineField,
-  FileField,
-  GuideView,
-  ImageField,
-  Panel,
-  RoleTree,
-} from "@/components/shared/FormControls.jsx";
-import { FormError } from "@/components/shared/FormField.jsx";
-import Loader from "@/components/shared/Loader.jsx";
-import Modal, { ModalFooter } from "@/components/shared/Modal.jsx";
-import Page from "@/components/shared/Page.jsx";
-import QCPanel from "@/components/shared/QCPanel.jsx";
-import Section from "@/components/shared/Section.jsx";
-import Toolbar from "@/components/shared/Toolbar.jsx";
-import { ScanBox } from "@/components/shopfloor";
-import { Badge } from "@/components/ui/badge.jsx";
-import { Button } from "@/components/ui/button.jsx";
-import { Input } from "@/components/ui/input.jsx";
-import { NativeSelect } from "@/components/ui/native-select.jsx";
-import { useMe } from "@/layouts/AppLayout.jsx";
-import { screenOf } from "@/layouts/Sidebar.jsx";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { RotateCw, ArrowLeft, Copy, Plus, Printer, RotateCcw, Save, Search, Send, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { api } from '@/api.js';
+import { askConfirm } from '@/app/confirm.js';
+import Grid from '@/components/shared/DataGrid.jsx';
+import DataTable from '@/components/shared/DataTable.jsx';
+import { CheckList, ComboField, EngineField, FileField, GuideView, ImageField, Panel, RoleTree } from '@/components/shared/FormControls.jsx';
+import Loader from '@/components/shared/Loader.jsx';
+import Modal, { ModalFooter } from '@/components/shared/Modal.jsx';
+import Page from '@/components/shared/Page.jsx';
+import QCPanel from '@/components/shared/QCPanel.jsx';
+import Section from '@/components/shared/Section.jsx';
+import Toolbar from '@/components/shared/Toolbar.jsx';
+import { ScanBox } from '@/components/shopfloor';
+import { Badge } from '@/components/ui/badge.jsx';
+import { Button } from '@/components/ui/button.jsx';
+import { Input } from '@/components/ui/input.jsx';
+import { NativeSelect } from '@/components/ui/native-select.jsx';
+import { useMe } from '@/layouts/AppLayout.jsx';
+import { screenOf } from '@/layouts/Sidebar.jsx';
 
 // ────────────────────────────────────────────────────────────────────────────
 // 1. SETTINGS
@@ -159,7 +139,17 @@ function useEngine({
   const [viewState, setViewState] = useState(state.viewState ?? {});
   const [buttonPatch, setButtonPatch] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(initialError ?? state.statusMessage ?? "");
+  // Errors are never drawn on the page: they pop up as toasts.
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
+  useEffect(() => {
+    const first = initialError ?? state.statusMessage;
+    if (first) setError(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const report = (r) => {
     if (r.alert) setError(r.alert);
@@ -284,7 +274,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     setLoading(true);
     api(`/forms/list?path=${enc(path)}&page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
-      .catch((e) => setError({ data: { message: e.message } }))
+      .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
       .finally(() => setLoading(false));
   }, [path, page, applied, filter]);
   useEffect(load, [load]);
@@ -871,23 +861,9 @@ function RecordForm({
         <Section key={x.title} icon={Icon} title={x.title}>
           <div className="space-y-4">
             {scan && (
-              <ScanBox
-                label={x.scan.label}
-                placeholder={x.scan.placeholder}
-                value={values[x.scan.box]}
-                onChange={(v) => change(x.scan.box, v)}
-                onScan={() => fire(x.scan.go, values)}
-                locked={ctl(x.scan.go)?.text === "Clr"}
-                onClear={() => fire(x.scan.go, values)}
-                busy={busy}
-                disabled={cancelled}
-              />
+              <ScanBox size="md" label={x.scan.label} placeholder={x.scan.placeholder} value={values[x.scan.box]} onChange={(v) => change(x.scan.box, v)} onScan={() => fire(x.scan.go, values)} locked={ctl(x.scan.go)?.text === 'Clr'} onClear={() => fire(x.scan.go, values)} busy={busy} disabled={cancelled} />
             )}
-            {items.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {items.map((i) => one(ctl(i.id), i.label))}
-              </div>
-            )}
+            {items.length > 0 && <div className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fill,minmax(16rem,22rem))]">{items.map((i) => one(ctl(i.id), i.label))}</div>}
           </div>
         </Section>
       );
@@ -1013,12 +989,11 @@ function RecordForm({
         </div>
       </Toolbar>
 
-      <FormError message={error} />
 
       <fieldset disabled={cancelled} className="space-y-4">
         {!layout && fields.length > 0 && (
           <Panel>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fill,minmax(16rem,22rem))]">
               {fields.map(({ c, label: l }) =>
                 c.type === "ComboBox" ? (
                   <ComboField
@@ -1148,8 +1123,12 @@ export default function ProductionPlanUpload() {
   const path = route;
   const screen = me ? screenOf(me.menu, pathname) : null;
   const [spec, setSpec] = useState(null);
-  const [view, setView] = useState({ kind: "list" });
-  const [error, setError] = useState("");
+  const [view, setView] = useState({ kind: 'list' });
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
   const [seq, setSeq] = useState(0);
   const [listFilter, setListFilter] = useState({});
   const show = (v) => {
@@ -1213,33 +1192,32 @@ export default function ProductionPlanUpload() {
         )
       }
     >
-      <FormError message={error} />
-      {!spec ? (
-        !error && <Loader />
-      ) : view.kind === "list" ? (
-        <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
-      ) : (
-        <RecordForm
-          key={seq}
-          path={path}
-          state={view.state}
-          mode={view.mode}
-          notice={view.notice}
-          buttons={spec.buttons}
-          callNewOnSave={spec.callNewOnSave}
-          copyOptions={spec.copyOptions}
-          print={spec.print}
-          printers={spec.printers}
-          onReload={(key, notice) => open(key, notice)}
-          events={spec.events ?? []}
-          onCopy={copy}
-          onBack={() => show({ kind: "list" })}
-          onDone={(notice) => fresh(notice)}
-          onListFilter={setListFilter}
-          layout={layout}
-          page={page}
-        />
-      )}
+        {!spec ? (
+          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
+        ) : view.kind === 'list' ? (
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+        ) : (
+          <RecordForm
+            key={seq}
+            path={path}
+            state={view.state}
+            mode={view.mode}
+            notice={view.notice}
+            buttons={spec.buttons}
+            callNewOnSave={spec.callNewOnSave}
+            copyOptions={spec.copyOptions}
+            print={spec.print}
+            printers={spec.printers}
+            onReload={(key, notice) => open(key, notice)}
+            events={spec.events ?? []}
+            onCopy={copy}
+            onBack={() => show({ kind: 'list' })}
+            onDone={(notice) => fresh(notice)}
+            onListFilter={setListFilter}
+            layout={layout}
+            page={page}
+          />
+        )}
     </Page>
   );
 }

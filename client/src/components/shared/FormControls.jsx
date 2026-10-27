@@ -9,6 +9,7 @@ import { Field } from '@/components/shared/FormField.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
+import toast from 'react-hot-toast';
 
 const maxLen = (c) => (c.maxLength > 0 && c.maxLength < 100000 ? c.maxLength : undefined);
 const fileCls = 'block w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/5 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10 cursor-pointer';
@@ -53,14 +54,13 @@ export function ComboField({ path, c, label, value, onPick }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [data, setData] = useState(null);
-  const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
   const load = (q) => {
     setLoading(true);
     screenApi(path)
       .combo(c.id, q)
-      .then((d) => (setData(d), setErr('')))
-      .catch((e) => setErr(e.message))
+      .then((d) => setData(d))
+      .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
       .finally(() => setLoading(false));
   };
   const current = c.options?.find((o) => o.value === value);
@@ -73,14 +73,13 @@ export function ComboField({ path, c, label, value, onPick }) {
         <Button variant="outline" disabled={!c.enabled} onClick={() => (open ? setOpen(false) : (setOpen(true), setSearch(''), setData(null), load(null)))}>Choose</Button>
       </div>
       {open && (
-        <div className="animate-in fade-in-0 zoom-in-95 relative z-10 mt-2 rounded-xl border bg-card text-card-foreground shadow-sm shadow-lg p-3">
+        <div className="animate-in fade-in-0 zoom-in-95 relative z-10 mt-2 rounded-xl border bg-card text-card-foreground shadow-sm p-3">
           {/* No <form>: this renders inside RecordForm's form, and a nested form would submit the record instead. */}
           <div className="mb-2 flex gap-2">
             <Input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), load(search))} autoFocus />
             <Button variant="outline" icon={Search} aria-label="Search" onClick={() => load(search)} />
             <Button variant="ghost" icon={X} aria-label="Close" onClick={() => setOpen(false)} />
           </div>
-          {err && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{err}</p>}
           {loading ? (
             <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading…</div>
           ) : (

@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  ArrowLeft,
+  RotateCw, ArrowLeft,
   Copy,
   Plus,
   Printer,
@@ -46,7 +46,6 @@ import {
   Panel,
   RoleTree,
 } from "@/components/shared/FormControls.jsx";
-import { FormError } from "@/components/shared/FormField.jsx";
 import Loader from "@/components/shared/Loader.jsx";
 import Modal, { ModalFooter } from "@/components/shared/Modal.jsx";
 import Page from "@/components/shared/Page.jsx";
@@ -160,7 +159,17 @@ function useEngine({
   const [viewState, setViewState] = useState(state.viewState ?? {});
   const [buttonPatch, setButtonPatch] = useState({});
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(initialError ?? state.statusMessage ?? "");
+  // Errors are never drawn on the page: they pop up as toasts.
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
+  useEffect(() => {
+    const first = initialError ?? state.statusMessage;
+    if (first) setError(first);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const report = (r) => {
     if (r.alert) setError(r.alert);
@@ -282,7 +291,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     screenApi(path)
       .list(`&page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
-      .catch((e) => setError({ data: { message: e.message } }))
+      .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
       .finally(() => setLoading(false));
   }, [path, page, applied, filter]);
   useEffect(load, [load]);
@@ -869,6 +878,7 @@ function RecordForm({
           <div className="space-y-4">
             {scan && (
               <ScanBox
+                size="md"
                 label={x.scan.label}
                 placeholder={x.scan.placeholder}
                 value={values[x.scan.box]}
@@ -881,7 +891,7 @@ function RecordForm({
               />
             )}
             {items.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fill,minmax(16rem,22rem))]">
                 {items.map((i) => one(ctl(i.id), i.label))}
               </div>
             )}
@@ -1010,12 +1020,11 @@ function RecordForm({
         </div>
       </Toolbar>
 
-      <FormError message={error} />
 
       <fieldset disabled={cancelled} className="space-y-4">
         {!layout && fields.length > 0 && (
           <Panel>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-x-6 gap-y-4 [grid-template-columns:repeat(auto-fill,minmax(16rem,22rem))]">
               {fields.map(({ c, label: l }) =>
                 c.type === "ComboBox" ? (
                   <ComboField
@@ -1146,7 +1155,11 @@ export default function GenericPage() {
   const screen = me ? screenOf(me.menu, pathname) : null;
   const [spec, setSpec] = useState(null);
   const [view, setView] = useState({ kind: "list" });
-  const [error, setError] = useState("");
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
   const [seq, setSeq] = useState(0);
   const [listFilter, setListFilter] = useState({});
   const show = (v) => {
@@ -1217,9 +1230,8 @@ export default function GenericPage() {
         )
       }
     >
-      <FormError message={error} />
       {!spec ? (
-        !error && <Loader />
+        (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
       ) : view.kind === "list" ? (
         <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
       ) : (
