@@ -36,7 +36,7 @@ export default function PageHeader({ icon: Icon, title, subtitle, children }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex min-w-0 items-center gap-3">
           {Icon && (
-            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-md shadow-primary/25">
               <Icon className="size-5" />
             </span>
           )}

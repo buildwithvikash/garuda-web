@@ -11,4 +11,5 @@ export { default as PopMenu } from './PopMenu.jsx';
 export { default as Section } from './Section.jsx';
 export { ActiveBadge } from './StatusBadge.jsx';
 export { default as StatCard } from './StatCard.jsx';
+export { default as StatChip } from './StatChip.jsx';
 export { default as Toolbar } from './Toolbar.jsx';
