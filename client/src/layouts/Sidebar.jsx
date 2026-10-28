@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { SIDEBAR_ORDER, TONES } from '@/lib/tones.js';
 
 /* ───────────────────────────── Config ───────────────────────────── */
 
@@ -86,17 +87,11 @@ export const QUICK = [
 ];
 
 // Full class names so Tailwind can see them at build time.
-// One neutral look for every group (shadcn sidebar tokens). The brand colour only marks the active group and page.
-const GROUP_LOOK = {
-  iconBg: "bg-muted",
-  iconText: "text-muted-foreground",
-  activeIconBg: "bg-primary",
-  activeBg: "bg-sidebar-accent",
-  activeText: "text-sidebar-accent-foreground",
-  dot: "bg-primary",
-  border: "border-l-primary",
-};
-const PALETTE = [GROUP_LOOK];
+// Every group has its own colour (see @/lib/tones.js): a tinted icon tile, and a solid one for the group you are in.
+const PALETTE = SIDEBAR_ORDER.map((name) => {
+  const t = TONES[name];
+  return { iconBg: t.soft, iconText: t.text, activeIconBg: t.solid, activeBg: t.soft, activeText: t.text, dot: t.bar, border: t.borderL };
+});
 
 const HEADER_MODULE_ID = 10000; // hidden top-level group
 const HIDDEN_ITEM_ID = 10001; // hidden leaf screen
@@ -213,7 +208,7 @@ const Section = memo(function Section({
         showLabels ? "h-7 w-7" : "h-8 w-8"
       } ${
         isActive
-          ? `${color.activeIconBg} text-primary-foreground shadow-sm`
+          ? `${color.activeIconBg} text-white shadow-sm`
           : `${color.iconBg} ${color.iconText}`
       }`}
     >
@@ -413,7 +408,7 @@ export default function Sidebar({ menu, expanded, onToggle, isMobile }) {
           }`}
         >
           {showLabels && (
-            <span className="px-1 text-xs font-medium text-muted-foreground">
+            <span className="px-1 text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
               Navigation
             </span>
           )}

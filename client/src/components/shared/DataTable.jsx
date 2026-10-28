@@ -263,7 +263,7 @@ export default function DataTable({
                         : undefined
                     }
                     className={cn(
-                      "text-xs font-semibold",
+                      "text-[11px] font-semibold tracking-wider text-muted-foreground uppercase",
                       alignClass(c.align),
                       c.headerClassName,
                     )}
@@ -302,7 +302,7 @@ export default function DataTable({
               {hasActions && (
                 <TableHead
                   scope="col"
-                  className="w-28 text-center text-xs font-semibold"
+                  className="w-28 text-center text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
                 >
                   Action
                 </TableHead>
