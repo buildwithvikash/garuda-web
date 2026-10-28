@@ -51,10 +51,6 @@ export const KEEP = new Set([
   '/settings/materialtagform',
   '/production/fgscrapform',
   '/production/wrlimagedisply',
-  // other QC actions
-  '/quality/qualityinspectionform',
-  '/quality/ncmrconfirmation',
-  '/quality/repairconfirmation',
-  '/quality/finishingconfirmation',
-  '/ceat/ceatinselfinspectionform',
+  // other QC actions: Final Inspection, NCMR, Repair and Finishing Confirmation and Self Inspection taken off
+  // (owner, 28 Oct 2026; their code stays: add the routes back here and in quality.routes.js to restore them)
 ]);

@@ -130,3 +130,14 @@ boxes. Now it alerts "The new serial does not match the serial format of this ma
 they are (`screens/production/rm-replacement-form.js`, btnNewScan). Events: 9/10 identical through the API, the one
 difference being this case ([Go, btnexistScan, btnNewScan] with BADFORMAT); the production-writes replacement is
 identical.
+
+# Intended difference: a material's routing, picked by Production Assignment (owner, 28 Oct 2026)
+
+As already done on LIVE: the Material screen has a Routing dropdown (control `DDLRoute`, API field `route`, saved to
+`Material.Route`; the list is Production Assignment's, `RoutingHeader` with Type 1 and Status 1). The original page
+had no such control; it is added to the extracted spec in `server/src/modules/forms/specs.js` (`ADDED`). On
+Production Assignment, choosing an order now selects its material's routing (and so its first stage and stations)
+when that routing is in the list (`screens/production/production-assignment-form.js`, DDlProdOrder), so the user no
+longer picks one before printing; a material without a routing keeps the original rule (selected only when there is
+a single routing). Checked on TEST: three open orders whose material has a routing got it; two without kept none.
+The forms / events parity of these two screens against the original is expected to differ by exactly this.

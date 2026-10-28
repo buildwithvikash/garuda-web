@@ -46,12 +46,7 @@ export const API_SCREENS = {
   "/businesssetup/companyform": "/masters/company",
   "/authorization/resetpasswordform": "/masters/reset-password",
   "/authorization/changepasswordform": "/masters/change-password",
-  "/quality/qualityinspectionform": "/quality/final-inspections",
-  "/quality/ncmrconfirmation": "/quality/ncmr-confirmations",
-  "/quality/repairconfirmation": "/quality/repair-confirmations",
-  "/quality/finishingconfirmation": "/quality/finishing-confirmations",
   "/quality/reworkconfirmationnew": "/quality/rework-confirmations",
-  "/ceat/ceatinselfinspectionform": "/quality/self-inspections",
 };
 
 const enc = encodeURIComponent;

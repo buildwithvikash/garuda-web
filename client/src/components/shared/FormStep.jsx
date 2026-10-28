@@ -11,10 +11,27 @@ const TONES = {
   emerald: { n: 'bg-emerald-600', bar: 'bg-emerald-50/70 dark:bg-emerald-950/20', title: 'text-emerald-700 dark:text-emerald-300' },
   violet: { n: 'bg-violet-600', bar: 'bg-violet-50/70 dark:bg-violet-950/20', title: 'text-violet-700 dark:text-violet-300' },
   amber: { n: 'bg-amber-600', bar: 'bg-amber-50/70 dark:bg-amber-950/20', title: 'text-amber-700 dark:text-amber-300' },
+  orange: { n: 'bg-orange-500', bar: 'bg-orange-50/70 dark:bg-orange-950/20', title: 'text-orange-700 dark:text-orange-300' },
+  rose: { n: 'bg-rose-600', bar: 'bg-rose-50/70 dark:bg-rose-950/20', title: 'text-rose-700 dark:text-rose-300' },
   slate: { n: 'bg-slate-600', bar: 'bg-muted/50', title: 'text-foreground' },
 };
 /** the colours steps take in turn when a layout does not name one */
 export const TONE_CYCLE = ['blue', 'emerald', 'violet', 'amber'];
+
+/** a step's width on wide screens, in tenths of the form (`width: 3` = 30 %; none = the whole row). Written out so
+ *  Tailwind sees each class. */
+export const STEP_SPAN = {
+  1: 'lg:col-span-1', 2: 'lg:col-span-2', 3: 'lg:col-span-3', 4: 'lg:col-span-4', 5: 'lg:col-span-5',
+  6: 'lg:col-span-6', 7: 'lg:col-span-7', 8: 'lg:col-span-8', 9: 'lg:col-span-9', 10: 'lg:col-span-10',
+};
+
+/** a step's `cols`: how many fields side by side on wide screens */
+export const STEP_COLS = {
+  1: 'grid gap-4',
+  2: 'grid gap-x-5 gap-y-4 sm:grid-cols-2',
+  3: 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4',
+};
 
 /** one numbered step: number, icon, title and subtitle, actions on the right, then its fields */
 export function Step({ n, tone = 'slate', icon: Icon, title, subtitle, actions, children }) {
@@ -47,7 +64,8 @@ export function LockedField({ c, label, value }) {
     <Field label={label} id={id} className="min-w-0">
       <div className="relative">
         <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        <Input id={id} readOnly value={value ?? ''} className="bg-muted/60 pl-9 text-muted-foreground" />
+        {/* a new record's key is 0 until it is saved (the server gives it the next number) */}
+        <Input id={id} readOnly value={c.id === 'PrimaryKey' && /^0?$/.test(String(value ?? '').trim()) ? '' : (value ?? '')} placeholder={c.id === 'PrimaryKey' ? 'Auto-generated' : undefined} className="bg-muted/60 pl-9 text-muted-foreground" />
       </div>
     </Field>
   );

@@ -118,7 +118,7 @@ Events: `isInspectionReq`.
 
 ### Material — `/api/masters/materials`
 
-Original: `View/MaterialSetup/MaterialForm.aspx`. Fields: `matCode`, `status`, `type`, `category`, `model`, `ledger`, `name`, `altName`, `alias`, `baseUom`, `hsnCode`, `barcode`, `tagCode`, `sRetailRate`, `batch`, `supBatch`, `manDate`, `expiry`, `exipiryMonths`, `serial`, `assetTagType`, `track`, `trackNoType`, `isPacket`, `grossWeight`, `alterUOM`, `convVal`, `classification`, `isFIFO`, `fifoAge`, `reorderLevel`, `reorderQty`, `depreciationMethod`, `isInspectionReq`, `inspectionType`, `inspectionCheckList`, `retestIn`, `certificateControl`, `materialImage`, `purchaseTax`, `purchaseRate`, `purchaseUnit`, `pConvQty`, `salesTax`, `wholesaleRate`, `salesUnit`, `sConvQty`, `ddlGroup`, `ddlName`, `tbNewValue`, `materialVariant`, `ddlVendor`, `dDlSerialLogic`, `materialLedgerMap`, `ddlValue`, `tbVendorMat`.
+Original: `View/MaterialSetup/MaterialForm.aspx`. Fields: `matCode`, `status`, `type`, `category`, `model`, `ledger`, `name`, `altName`, `alias`, `baseUom`, `hsnCode`, `barcode`, `tagCode`, `sRetailRate`, `batch`, `supBatch`, `manDate`, `expiry`, `exipiryMonths`, `serial`, `assetTagType`, `track`, `trackNoType`, `isPacket`, `grossWeight`, `alterUOM`, `convVal`, `classification`, `isFIFO`, `fifoAge`, `reorderLevel`, `reorderQty`, `depreciationMethod`, `isInspectionReq`, `inspectionType`, `inspectionCheckList`, `retestIn`, `certificateControl`, `materialImage`, `purchaseTax`, `purchaseRate`, `purchaseUnit`, `pConvQty`, `salesTax`, `wholesaleRate`, `salesUnit`, `sConvQty`, `ddlGroup`, `ddlName`, `tbNewValue`, `materialVariant`, `ddlVendor`, `dDlSerialLogic`, `materialLedgerMap`, `route`, `ddlValue`, `tbVendorMat`.
 
 Events: `baseUom`, `type`, `isInspectionReq`, `category`, `model`, `ddlName`, `ddlGroup`, `btnAdd`, `gvTransDataDelete`, `btnLedgerMap`, `gvLedgerCodeDelete`.
 
@@ -218,41 +218,11 @@ Original: `View/Settings/ShiftMasterForm.aspx`. Fields: `shiftCode`, `businessUn
 
 Events: `btnAdd`, `gvTransDataDelete`.
 
-### PDI - Final Inspection — `/api/quality/final-inspections`
-
-Original: `View/Quality/QualityInspectionForm.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `department`, `businessUnit`, `serial`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `gvSelfInspection`, `qty`, `uom`, `status`, `nextAction`, `ddlDefectCodes`, `inspectionDefect`, `remark`, `qc`.
-
-Events: `department`, `nextAction`, `status`, `go`, `btnUD`, `btnAdd`, `gvTransDataDelete`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`.
-
-### NCMR Confirmation — `/api/quality/ncmr-confirmations`
-
-Original: `View/Quality/NCMRConfirmation.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `department`, `businessUnit`, `tbBarcode`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `qty`, `uom`, `status`, `nextAction`, `inspectionDefect`, `ddlApproverAction`, `tbApproverRemark`, `ddlApproverStatus`, `footer`, `qc`.
-
-Events: `department`, `go`, `ddlApproverStatus`, `btnUD`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`, `footerSave`.
-
-### Repair Confirmation — `/api/quality/repair-confirmations`
-
-Original: `View/Quality/RepairConfirmation.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `department`, `businessUnit`, `tbBarcode`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `qty`, `uom`, `status`, `nextAction`, `gvSelfInspection`, `inspectionDefect`, `remark`, `tbApproverRemark`, `ddlApproverStatus`, `footer`, `qc`.
-
-Events: `department`, `ddlApproverStatus`, `go`, `btnUD`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`, `footerSave`.
-
 ### Rework Confirmation — `/api/quality/rework-confirmations`
 
 Original: `View/Quality/ReworkConfirmationNew.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `businessUnit`, `department`, `tbBarcode`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `status`, `ddlNextAction`, `gvSelfInspection`, `inspectionDefect`, `ddlRootCause`, `sslActionTaken`, `qty`, `uom`, `tbApproverRemark`, `ddlNewAction`, `gvReworkHistory`, `ddlApproverStatus`, `ddlPrinter`, `qc`.
 
 Events: `department`, `ddlApproverStatus`, `go`, `btnUD`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`.
-
-### Finishing Confirmation — `/api/quality/finishing-confirmations`
-
-Original: `View/Quality/FinishingConfirmation.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `department`, `businessUnit`, `tbBarcode`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `qty`, `uom`, `status`, `nextAction`, `gvSelfInspection`, `inspectionDefect`, `remark`, `tbApproverRemark`, `ddlApproverStatus`, `qc`.
-
-Events: `department`, `ddlApproverStatus`, `go`, `btnUD`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`.
-
-### FID - Self Inspection — `/api/quality/self-inspections`
-
-Original: `View/CEAT/CEATINSelfInspectionForm.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `department`, `businessUnit`, `serial`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `qty`, `uom`, `status`, `nextAction`, `ddlDefectCat`, `ddlDefectCodes`, `inspectionDefect`, `remark`, `qc`.
-
-Events: `department`, `nextAction`, `status`, `btnUD`, `go`, `btnAdd`, `gvTransDataDelete`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`.
 
 ### Production Capture — `/api/production/wip-capture`
 
@@ -296,11 +266,17 @@ Original: `View/Production/WRLImageDisply.aspx`. Fields: `primaryKey`, `imgGuide
 
 Events: `btnGo`.
 
+Material also has its artwork, unit frame and basket images (`:kind` = `artwork`, `unitframe` or `basket`; table MaterialImages), each stored on its own as soon as it is uploaded, apart from the record's Save / Update: `GET /api/masters/materials/:code/images` (which ones it has: `kind`, `fileName`, `mimeType`, `size`, `updatedOn`), `GET …/images/:kind` (the file itself), `PUT …/images/:kind` with `{ fileName, data }` (base64; PNG, JPEG, WebP or PDF, told by the file's bytes, up to 10 MB; 404 for a material that does not exist) and `DELETE …/images/:kind`. Same access as the Material screen. The original screen had only the one image (`materialImage`); added by the owner, 28 Oct 2026.
+
+Material's `route` is the material's routing (`Material.Route`): Production Assignment selects it when an order of that material is chosen. The original screen had no such field; added by the owner, 28 Oct 2026, as on LIVE.
+
 WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and cabinet details of the scanned unit (`{ route, cabinet }`, each null when its lookup fails).
 
-RM Replacement also has `GET /api/production/rm-replacements/history?page=`: the components replaced in units of the user's business unit, newest first, read only (replaced on, unit serial, component, process, old serial, new serial, operator; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
+RM Replacement also has `GET /api/production/rm-replacements/history?page=&start=&end=`: the components replaced in units of the user's business unit, newest first, read only (replaced on, unit serial, component, process, old serial, new serial, operator; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
 
-FG Scrap also has `GET /api/production/fg-scrap/history?page=`: the units / items scrapped on job cards of the user's business unit, newest first, read only (scrapped on, serial, material, scrap category, last station, remark, scrapped by; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
+FG Scrap also has `GET /api/production/fg-scrap/history?page=&start=&end=`: the units / items scrapped on job cards of the user's business unit, newest first, read only (scrapped on, serial, material, scrap category, last station, remark, scrapped by; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
+
+Both histories take an optional time range: `start` and `end` as `YYYY-MM-DDTHH:mm` (what a date-time box holds), each limit included. A value that is not a date and time, or a start after the end, answers 400.
 
 ## Screen engine — /api/forms
 

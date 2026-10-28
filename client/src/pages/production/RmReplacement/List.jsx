@@ -43,7 +43,7 @@ function RecordList({ path }) {
       rows={rows}
       loading={loading}
       error={error}
-      empty="No component has been replaced yet."
+      empty={range.start || range.end ? 'No component was replaced in this time range.' : 'No component has been replaced yet.'}
       exportName="rm-replacement-history"
       pagination={data && { meta: { page: page + 1, pageSize: data.pageSize, total: data.count, totalPages }, onPage: (p) => setPage(p - 1) }}
     />

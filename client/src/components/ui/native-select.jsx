@@ -1,11 +1,44 @@
+import { Children, isValidElement } from 'react';
 import { ChevronDown } from 'lucide-react';
+import TypeSelect from '@/components/shared/TypeSelect.jsx';
 import { cn } from '@/lib/utils';
+
+/** a list longer than this is searched by typing (TypeSelect) instead of scrolled */
+export const BIG_LIST = 15;
+
+const textOf = (node) => Children.toArray(node).map((x) => (isValidElement(x) ? textOf(x.props.children) : String(x))).join('');
+/** the <option>s among the children, as { value, text } */
+const optionsOf = (children) =>
+  Children.toArray(children)
+    .filter((x) => isValidElement(x) && x.type === 'option')
+    .map((x) => ({ value: String(x.props.value ?? textOf(x.props.children)), text: textOf(x.props.children) }));
 
 /**
  * A native <select> in the shadcn look. Use it for form dropdowns: it is reliable on tablets and with a keyboard, and
  * accepts an empty value (which the Radix Select does not). `<NativeSelect><option value="1">One</option></NativeSelect>`
+ * A single-choice list of more than BIG_LIST options is drawn as a type-to-search box instead (debounced); onChange
+ * still gets `{ target: { value } }`.
  */
 function NativeSelect({ className, children, ...props }) {
+  const options = !props.multiple && !(props.size > 1) ? optionsOf(children) : [];
+  if (options.length > BIG_LIST) {
+    const { value, onChange, disabled, id, placeholder, required, name } = props;
+    const aria = Object.fromEntries(Object.entries(props).filter(([k]) => k.startsWith('aria-') || k === 'title'));
+    return (
+      <TypeSelect
+        id={id}
+        options={options}
+        value={value}
+        disabled={disabled}
+        placeholder={placeholder}
+        required={required}
+        name={name}
+        className={cn(className, 'cursor-text')}
+        onPick={(v) => onChange?.({ target: { value: v, name }, currentTarget: { value: v, name } })}
+        {...aria}
+      />
+    );
+  }
   return (
     <div className="relative" data-slot="native-select-wrapper">
       <select

@@ -21,7 +21,7 @@ import { MASTERS } from '../../src/modules/masters/masters.routes.js';
 import { QUALITY } from '../../src/modules/quality/quality.routes.js';
 import { validateBody } from '../../src/modules/forms/resource.validation.js';
 import { screenResource } from '../../src/modules/forms/resource.js';
-import { apiEvent, apiSave } from './api.js';
+import { apiEvent, apiOf, apiSave } from './api.js'; // a screen with no API (taken off the app) runs its page code
 
 const [bin, ...args] = process.argv.slice(2);
 const viaApi = args.includes('--api');
@@ -257,7 +257,7 @@ const results = [];
       let vs = { ...state.viewState, PendingQty: '0' };
       const ev = async (nm, patch) => {
         Object.assign(v, patch);
-        const r = viaApi ? await apiEvent(spec, ctx, nm, v, { viewState: vs }) : await PAGE_EVENTS[spec.file][nm](v, eventHelpers(spec, ctx, v, { viewState: vs }));
+        const r = viaApi && apiOf(spec) ? await apiEvent(spec, ctx, nm, v, { viewState: vs }) : await PAGE_EVENTS[spec.file][nm](v, eventHelpers(spec, ctx, v, { viewState: vs }));
         for (const [k, p] of Object.entries(r.set ?? {})) {
           if ('value' in p) v[k] = p.value;
           if ('index' in p) v[k] = (p.options ?? state.controls.find((x) => x.id === k)?.options ?? [])[p.index]?.value ?? '';
@@ -269,7 +269,7 @@ const results = [];
       await ev('Go', { TBBarcode: c.Serial });
       await ev('DDLStatus', { DDLStatus: '12' });
       Object.assign(v, vals);
-      const n = viaApi ? await apiSave(spec, ctx, v, { viewState: vs }) : await PAGE_SAVE[spec.file](v, { ...eventHelpers(spec, ctx, v, { viewState: vs }), raw: v });
+      const n = viaApi && apiOf(spec) ? await apiSave(spec, ctx, v, { viewState: vs }) : await PAGE_SAVE[spec.file](v, { ...eventHelpers(spec, ctx, v, { viewState: vs }), raw: v });
       const afterN = await snap();
       const problems = [];
       if (!o.ok) problems.push(`original ERROR ${o.error}`);
@@ -323,7 +323,7 @@ const results = [];
         let vs = { ...state.viewState };
         const ev = async (nm, patch) => {
           Object.assign(v, patch);
-          const r = viaApi ? await apiEvent(spec, ctx, nm, v, { viewState: vs }) : await PAGE_EVENTS[spec.file][nm](v, eventHelpers(spec, ctx, v, { viewState: vs }));
+          const r = viaApi && apiOf(spec) ? await apiEvent(spec, ctx, nm, v, { viewState: vs }) : await PAGE_EVENTS[spec.file][nm](v, eventHelpers(spec, ctx, v, { viewState: vs }));
           for (const [k, p] of Object.entries(r.set ?? {})) if ('value' in p) v[k] = p.value;
           if (r.viewState) vs = r.viewState;
           return r;

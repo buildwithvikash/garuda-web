@@ -17,9 +17,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { openedRecord, useRememberView } from '@/lib/recordParam.js';
 import { RotateCw, ArrowLeft, Copy, Plus, Printer, RotateCcw, Save, Search, Send, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '@/api.js';
+import { screenApi } from '@/lib/screenApi.js';
 import { askConfirm } from '@/app/confirm.js';
 import Grid from '@/components/shared/DataGrid.jsx';
 import DataTable from '@/components/shared/DataTable.jsx';
@@ -102,7 +103,7 @@ function panelState(controls) {
 
 // ────────────────────────────────────────────────────────────────────────────
 // 3. ENGINE
-// A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to /forms/event; the reply is applied here.
+// A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to the server (lib/screenApi.js: the engine or the screen's API); the reply is applied here.
 // ────────────────────────────────────────────────────────────────────────────
 function useEngine({ path, state, events, onDone, onListFilter, onResult, initialError }) {
   const [controls, setControls] = useState(state.controls);
@@ -133,7 +134,7 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
   async function fire(control, next = values, arg, base = controls, index) {
     setBusy(true);
     try {
-      const r = await api('/forms/event', { method: 'POST', body: { path, control, values: next, viewState, arg, index, ui: uiOf(base) } });
+      const r = await screenApi(path).event({ control, values: next, viewState, arg, index, ui: uiOf(base) });
       const p = applyPatch(base, next, r.set);
       setControls(p.controls);
       setValues(p.values);
@@ -199,7 +200,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     // filter: what the page's own code put in the list's Tag (e.g. the area chosen on the form)
     const q = (applied ? `&column=${enc(applied.column)}&op=${enc(applied.op)}&value=${enc(applied.value)}` : '') + Object.entries(filter).map(([k, v]) => `&f.${enc(k)}=${enc(v)}`).join('');
     setLoading(true);
-    api(`/forms/list?path=${enc(path)}&page=${page}${q}`)
+    screenApi(path).list(`&page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
       .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
       .finally(() => setLoading(false));
@@ -210,7 +211,7 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
   async function pickColumn(name) {
     const c = spec.searchColumns.find((x) => x.name === name);
     setSearch({ column: name, op: c?.operators[0]?.[0] ?? '', value: '' });
-    setValues(name ? await api(`/forms/distinct?path=${enc(path)}&column=${enc(name)}`).catch(() => []) : []);
+    setValues(name ? await screenApi(path).distinct(name).catch(() => []) : []);
   }
   const run = (e) => {
     e?.preventDefault();
@@ -312,7 +313,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
     setBusy(true);
     setError('');
     try {
-      const r = await api('/forms/print', { method: 'POST', body: { path, values, printer } });
+      const r = await screenApi(path).print({ values, printer });
       if (r.alert) setError(r.alert);
       else toast.success('Sent to printer');
     } catch (e) {
@@ -326,7 +327,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
     setBusy(true);
     setError('');
     try {
-      const r = await api(`/forms/${kind}`, { method: 'POST', body: { path, values, viewState, ui: uiOf(controls), ...extra } });
+      const r = await screenApi(path).write(kind, { values, viewState, ui: uiOf(controls), ...extra });
       // a page's own Save handler: it signed the user out (password changed) / reported failure
       if (r.logout) return void window.location.assign('/login');
       if (r.ok === false) return void setError(r.message);
@@ -561,35 +562,41 @@ export default function __NAME__() {
   const path = route;
   const screen = me ? screenOf(me.menu, pathname) : null;
   const [spec, setSpec] = useState(null);
-  const [view, setView] = useState({ kind: 'list' });
+  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
   const [error, setErrorState] = useState('');
   const setError = (message) => {
     setErrorState(message);
     if (message) toast.error(message, { id: message, duration: 6000 });
   };
   const [seq, setSeq] = useState(0);
+  const remember = useRememberView();
   const [listFilter, setListFilter] = useState({});
   const show = (v) => {
     setError('');
     setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
     setView(v);
+    remember(v); // ?record=<key> | new: a refresh reopens this form
   };
 
   useEffect(() => {
     setSpec(null);
-    api(`/forms/spec?path=${enc(path)}`)
+    screenApi(path).spec()
       .then((s) => {
         setSpec(s);
-        show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
+        // the form the URL names (a refresh), else where the screen starts
+        const want = openedRecord();
+        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
+        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
+        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
       })
       .catch((e) => setError(e.message));
   }, [path]);
 
   const run = (p) => p.catch((e) => setError(e.message));
-  const open = (key, notice) => run(api(`/forms/record?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'edit', state, notice })));
+  const open = (key, notice) => run(screenApi(path).record(key).then((state) => show({ kind: 'form', mode: 'edit', key, state, notice })));
   // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
-  const fresh = (notice) => run(api(`/forms/spec?path=${enc(path)}`).then((state) => show({ kind: 'form', mode: 'new', state, notice })));
-  const copy = (key) => run(api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'new', state })));
+  const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
+  const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
   const title = spec?.title || screen?.caption || 'Screen';
   return (
@@ -599,7 +606,7 @@ export default function __NAME__() {
       subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
       actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
     >
-        {!spec ? (
+        {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
           <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />

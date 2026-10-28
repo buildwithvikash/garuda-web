@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { splitPage } from './split-page.mjs';
 import { designForm } from './form-design.mjs';
+import { useScreenApi } from './screen-api-calls.mjs';
 
 const PAGES = path.resolve('src/pages');
 const HIDDEN_GROUP = 10000; // not shown in the sidebar
@@ -64,7 +65,9 @@ function create({ route, caption, groupCaption }, known) {
   for (let i = 2; fs.existsSync(file); i++) file = path.join(dir, `${name}${i}.jsx`);
   const comp = path.basename(file, '.jsx');
   fs.writeFileSync(file, template(comp, caption, groupCaption ?? pascal(group), route));
-  designForm(splitPage(file).form); // the template is one file: kept as page + List + Form, in the shared form design
+  const split = splitPage(file); // the template is one file: kept as page + List + Form, in the shared form design
+  designForm(split.form);
+  for (const f of [split.page, split.list, split.form]) useScreenApi(f); // calls through lib/screenApi.js
   known.set(route, path.relative(PAGES, file));
   return { status: 'created', file: path.relative(PAGES, file) };
 }

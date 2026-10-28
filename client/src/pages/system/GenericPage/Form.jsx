@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button.jsx";
 import { Input } from "@/components/ui/input.jsx";
 import { NativeSelect } from "@/components/ui/native-select.jsx";
 import { createPortal } from "react-dom";
-import { LockedField, Step, TONE_CYCLE } from "@/components/shared/FormStep.jsx";
+import { LockedField, STEP_COLS, STEP_SPAN, Step, TONE_CYCLE } from "@/components/shared/FormStep.jsx";
 import { prettyHeader } from "@/components/shared/DataTable.jsx";
 import { cn } from "@/lib/utils";
 
@@ -641,41 +641,60 @@ function RecordForm({
         const scans = [...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].filter((s) => vis(s.box));
         if (!items.length && !acts.length && !scans.length) return null;
         n += 1;
-        return (
-          <Step key={x.title} n={n} tone={x.tone ?? TONE_CYCLE[(n - 1) % TONE_CYCLE.length]} icon={x.icon ?? Boxes} title={x.title} subtitle={x.subtitle} actions={acts.length > 0 && acts.map((i) => <div key={i.id} className="min-w-48">{one(ctl(i.id), i.label)}</div>)}>
-            {/* `side`: the scans on the left, the step's fields / list on the right (wide screens) */}
-            <div className={x.side ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]' : 'space-y-4'}>
-              {scans.length > 0 && (
-                <div className={cn('grid gap-4', scans.length > 1 && !x.side && 'sm:grid-cols-2')}>
-                  {scans.map((s) => (
-                    <ScanBox key={s.box} size="md" label={s.label} placeholder={s.placeholder} value={values[s.box]} onChange={(v) => change(s.box, v)} onScan={() => fire(s.go, values)} locked={ctl(s.go)?.text === 'Clr'} onClear={() => fire(s.go, values)} busy={busy} disabled={cancelled} />
-                  ))}
-                </div>
-              )}
-              {items.length > 0 && (
-                <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {items.map((i) => {
-                    const c = shownColumns(ctl(i.id), i.columns);
-                    return (
-                      <div key={i.id} className={cn('min-w-0', (WIDE.includes(c.type) || i.wide) && 'col-span-full', i.span === 2 && 'sm:col-span-2')}>
-                        {/* a grid / list a layout names gets its name above it */}
-                        {WIDE.includes(c.type) && i.label && <h4 className="mb-2 text-sm font-semibold text-foreground">{i.label}</h4>}
-                        {one(c, i.label)}
-                        {i.count && c.maxLength > 0 && (
-                          <p className="tabular mt-1 text-right text-[11px] text-muted-foreground">
-                            {String(values[c.id] ?? '').length}/{c.maxLength}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+        // a step's scans, and a grid of its items (fields, or grids / lists, which take a whole row)
+        const scanList = () =>
+          scans.length > 0 && (
+            <div className={cn('grid gap-4', scans.length > 1 && !x.side && 'sm:grid-cols-2')}>
+              {scans.map((s) => (
+                <ScanBox key={s.box} size="md" label={s.label} placeholder={s.placeholder} value={values[s.box]} onChange={(v) => change(s.box, v)} onScan={() => fire(s.go, values)} locked={ctl(s.go)?.text === 'Clr'} onClear={() => fire(s.go, values)} busy={busy} disabled={cancelled} />
+              ))}
             </div>
+          );
+        const fieldGrid = (list, cls) =>
+          list.length > 0 && (
+            <div className={cls}>
+              {list.map((i) => {
+                const c = shownColumns(ctl(i.id), i.columns);
+                return (
+                  <div key={i.id} className={cn('min-w-0', (WIDE.includes(c.type) || i.wide) && 'col-span-full', i.span === 2 && 'sm:col-span-2')}>
+                    {/* a grid / list a layout names gets its name above it */}
+                    {WIDE.includes(c.type) && i.label && <h4 className="mb-2 text-sm font-semibold text-foreground">{i.label}</h4>}
+                    {one(c, i.label)}
+                    {i.count && c.maxLength > 0 && (
+                      <p className="tabular mt-1 text-right text-[11px] text-muted-foreground">
+                        {String(values[c.id] ?? '').length}/{c.maxLength}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        const wide = (i) => WIDE.includes(ctl(i.id)?.type);
+        return (
+          // a step's `width` in tenths of the row on wide screens (e.g. 3 and 7 side by side); none: the whole row
+          <div key={x.title} className={cn('min-w-0', STEP_SPAN[x.width ?? 10])}>
+          <Step n={n} tone={x.tone ?? TONE_CYCLE[(n - 1) % TONE_CYCLE.length]} icon={x.icon ?? Boxes} title={x.title} subtitle={x.subtitle} actions={acts.length > 0 && acts.map((i) => <div key={i.id} className="min-w-48">{one(ctl(i.id), i.label)}</div>)}>
+            {/* `side`: the scans and fields on the left, the step's grids / lists on the right (wide screens) */}
+            {x.side ? (
+              <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                <div className="space-y-4">
+                  {scanList()}
+                  {fieldGrid(items.filter((i) => !wide(i)), 'grid gap-x-5 gap-y-4 sm:grid-cols-2')}
+                </div>
+                {fieldGrid(items.filter(wide), 'grid gap-4')}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {scanList()}
+                {fieldGrid(items, x.cols ? STEP_COLS[x.cols] : (x.width ?? 10) <= 4 ? 'grid gap-4' : (x.width ?? 10) < 10 ? 'grid gap-x-5 gap-y-4 sm:grid-cols-2' : 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4')}
+              </div>
+            )}
           </Step>
+          </div>
         );
       }),
-      ...(L.tail ?? []).map((c) => block(c)),
+      ...(L.tail ?? []).map((c) => <div key={c.id} className="min-w-0 lg:col-span-10">{block(c)}</div>),
     ];
   }
 
@@ -734,7 +753,7 @@ function RecordForm({
       {slot ? createPortal(bar, slot) : <Toolbar>{bar}</Toolbar>}
 
       <fieldset disabled={cancelled} className="space-y-4">
-        {sections()}
+        <div className="grid items-start gap-4 lg:grid-cols-10">{sections()}</div>
       </fieldset>
 
       {deleting !== null && (

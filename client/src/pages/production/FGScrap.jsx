@@ -17,6 +17,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import { openedRecord, useRememberView } from '@/lib/recordParam.js';
 import { RotateCw, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '@/api.js';
@@ -52,18 +53,20 @@ export default function FGScrap() {
   const path = route;
   const screen = me ? screenOf(me.menu, pathname) : null;
   const [spec, setSpec] = useState(null);
-  const [view, setView] = useState({ kind: 'list' });
+  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
   const [error, setErrorState] = useState('');
   const setError = (message) => {
     setErrorState(message);
     if (message) toast.error(message, { id: message, duration: 6000 });
   };
   const [seq, setSeq] = useState(0);
+  const remember = useRememberView();
   const [listFilter, setListFilter] = useState({});
   const show = (v) => {
     setError('');
     setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
     setView(v);
+    remember(v); // ?record=<key> | new: a refresh reopens this form
   };
 
   useEffect(() => {
@@ -71,13 +74,17 @@ export default function FGScrap() {
     api(`/forms/spec?path=${enc(path)}`)
       .then((s) => {
         setSpec(s);
-        show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
+        // the form the URL names (a refresh), else where the screen starts
+        const want = openedRecord();
+        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
+        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
+        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
       })
       .catch((e) => setError(e.message));
   }, [path]);
 
   const run = (p) => p.catch((e) => setError(e.message));
-  const open = (key, notice) => run(api(`/forms/record?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'edit', state, notice })));
+  const open = (key, notice) => run(api(`/forms/record?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'edit', key, state, notice })));
   // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
   const fresh = (notice) => run(api(`/forms/spec?path=${enc(path)}`).then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'new', state })));
@@ -90,7 +97,7 @@ export default function FGScrap() {
       subtitle={view.kind === 'list' && spec ? 'Units and items scrapped, newest first' : layout?.subtitle}
       actions={spec && view.kind === 'list' && <Button size="sm" icon={Plus} onClick={() => fresh()}>Scrap a unit</Button>}
     >
-        {!spec ? (
+        {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
           <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />

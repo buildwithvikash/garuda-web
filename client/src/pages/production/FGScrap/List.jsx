@@ -43,7 +43,7 @@ function RecordList({ path }) {
       rows={rows}
       loading={loading}
       error={error}
-      empty="Nothing has been scrapped yet."
+      empty={range.start || range.end ? 'Nothing was scrapped in this time range.' : 'Nothing has been scrapped yet.'}
       exportName="fg-scrap-history"
       pagination={data && { meta: { page: page + 1, pageSize: data.pageSize, total: data.count, totalPages }, onPage: (p) => setPage(p - 1) }}
     />

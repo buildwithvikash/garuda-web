@@ -121,8 +121,12 @@ Object.assign(PAGE_EVENTS, {
         out.set.DDLMaterial.enabled = mats.length !== 2;
         out.set.TBQty.enabled = true;
         const routes = await h.options('DDLRouting');
-        if (routes.length === 2) {
-          out.set.DDLRouting = { value: routes[1].value };
+        // the material's own routing (Material.Route, set on the Material screen), as on LIVE (owner, 28 Oct 2026); else
+        // the original's rule: the only routing there is
+        const own = netString(await scalar('Select Route from Material where MatCode=@m', { m: netLong(dt.Material) }));
+        const pick = routes.find((r) => r.value !== '' && r.value === own)?.value ?? (routes.length === 2 ? routes[1].value : null);
+        if (pick) {
+          out.set.DDLRouting = { value: pick };
           await assignRouting({ ...v, DDLBom: netString(dt.BOMCode), TBTotalQty: total }, h, out);
         }
       });

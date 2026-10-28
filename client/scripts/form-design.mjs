@@ -16,7 +16,7 @@ const ADD = {
   react: ['useEffect', 'useId', 'useState'],
   'react-dom': ['createPortal'],
   'lucide-react': ['ArrowLeft', 'Boxes', 'ClipboardCheck', 'ClipboardList', 'Copy', 'Printer', 'Save', 'Send', 'SlidersHorizontal', 'Trash2'],
-  '@/components/shared/FormStep.jsx': ['LockedField', 'Step', 'TONE_CYCLE'],
+  '@/components/shared/FormStep.jsx': ['LockedField', 'STEP_COLS', 'STEP_SPAN', 'Step', 'TONE_CYCLE'],
   '@/components/shared/DataTable.jsx': ['prettyHeader'],
   '@/lib/utils': ['cn'],
 };
