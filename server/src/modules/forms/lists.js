@@ -7,7 +7,9 @@ import { netString, netInt } from '../../shared/net.js';
 import { tableSchema, engineType } from './schema.js';
 import { toGrid } from '../../shared/format.js';
 
-export const PAGE_SIZE = 10; // GridView default (ViewControl.ascx sets none)
+// Rows per list request. The original's GridView showed 10 a page (its default; ViewControl.ascx sets none); the lists
+// here scroll on without pages (DataTable), so each request brings 1000 (owner, 28 Oct 2026).
+export const PAGE_SIZE = 1000;
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const pad = (n) => String(n).padStart(2, '0');
 const dMMMyyyy = (d) => `${pad(d.getDate())}-${MON[d.getMonth()]}-${d.getFullYear()}`;
@@ -85,7 +87,7 @@ export async function listQuery(spec, ctx) {
   return { count, sql };
 }
 
-/** One page of the list (RecNo between page*10+1 and page*10+10). The grid hides its last column (RowDataBound). */
+/** One page of the list (RecNo between page*PAGE_SIZE+1 and page*PAGE_SIZE+PAGE_SIZE). The grid hides its last column (RowDataBound). */
 export async function listPage(spec, ctx, page = 0, search = null) {
   let count;
   let sql;

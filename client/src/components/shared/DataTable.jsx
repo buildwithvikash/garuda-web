@@ -1,20 +1,28 @@
 import {
   ArrowDown,
   ArrowUp,
+  CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
   Columns3,
   Download,
   Eye,
+  FileText,
+  Filter,
   Inbox,
   Info,
   MoreVertical,
+  Pencil,
+  Search,
+  Table2,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button.jsx";
 import { Checkbox } from "@/components/ui/checkbox.jsx";
+import { Input } from "@/components/ui/input.jsx";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -34,6 +42,7 @@ import {
   TableRow,
 } from "@/components/ui/table.jsx";
 import { cn } from "@/lib/utils";
+import { alignOf, formatCell } from "@/components/shared/cellFormat.jsx";
 import { downloadCsv } from "@/utils/csv.js";
 import { loadPref, savePref } from "@/utils/prefs.js";
 
@@ -53,6 +62,47 @@ function useHiddenColumns(tableId) {
   return [hidden, toggle];
 }
 
+// ── Column headers as people read them (display only: export and search keep the list's own names) ──
+const ACRONYMS = new Set(["QC", "BU", "UOM", "SO", "ID", "IP", "FG", "HSN", "ERP", "BOM", "RM", "PO", "NCMR", "SR"]);
+const WHOLE = new Set(["BARCODE", "PASSCODE", "ZIPCODE"]); // words that only look like name + ending
+const SUFFIXES = ["STATUS", "NAME", "CODE", "DATE", "TIME", "TYPE", "DESC", "QTY", "NO", "ID"];
+/** one ALL-CAPS word split before a known ending: ORDERDATE -> ORDER DATE, CREATEDON -> CREATED ON */
+function splitWord(w) {
+  if (/^[A-Z]+ED(ON|BY)$/.test(w)) return [w.slice(0, -2), w.slice(-2)];
+  if (WHOLE.has(w)) return [w];
+  for (const s of SUFFIXES) {
+    const rest = w.slice(0, -s.length);
+    if (w.endsWith(s) && !ACRONYMS.has(w) && (rest.length >= 3 || ACRONYMS.has(rest))) return [...splitWord(rest), s];
+  }
+  return [w];
+}
+const word = (w) => (ACRONYMS.has(w.toUpperCase()) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+/** "ORDERDATE" -> "Order Date", "PlanMaterial" -> "Plan Material", "QCSTATUS" -> "QC Status" */
+export function prettyHeader(h) {
+  const t = String(h ?? "").trim();
+  if (!t) return t;
+  const parts = /[a-z]/.test(t)
+    ? t.replace(/_/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").split(/\s+/)
+    : t.split(/[\s_]+/).flatMap(splitWord);
+  return parts.filter(Boolean).map(word).join(" ");
+}
+
+/** sortable form of a cell's text: numbers as numbers, dd-mm-yyyy [time] as yyyy-mm-dd time, else the text */
+function sortKey(t) {
+  const s = String(t ?? "").trim();
+  if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
+  const d = /^(\d{2})-(\d{2})-(\d{4})(.*)$/.exec(s);
+  if (d) {
+    const tm = /(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i.exec(d[4]);
+    let hh = tm ? Number(tm[1]) % 12 : 0;
+    if (tm?.[4]?.toUpperCase() === "PM") hh += 12;
+    if (tm && !tm[4]) hh = Number(tm[1]);
+    return `${d[3]}-${d[2]}-${d[1]} ${String(hh).padStart(2, "0")}:${tm?.[2] ?? "00"}:${tm?.[3] ?? "00"}`;
+  }
+  return s.toLowerCase();
+}
+const compare = (a, b) => (typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b), undefined, { numeric: true }));
+
 function ColumnPicker({ columns, hidden, onToggle }) {
   const choosable = columns
     .slice(1)
@@ -64,7 +114,7 @@ function ColumnPicker({ columns, hidden, onToggle }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="h-9">
           <Columns3 />
           Columns
           {hidden.size ? (
@@ -72,6 +122,7 @@ function ColumnPicker({ columns, hidden, onToggle }) {
               {shown}/{choosable.length}
             </span>
           ) : null}
+          <ChevronDown className="text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-80 w-56">
@@ -82,7 +133,7 @@ function ColumnPicker({ columns, hidden, onToggle }) {
             onCheckedChange={() => onToggle(c.key)}
             onSelect={(e) => e.preventDefault()}
           >
-            {c.header}
+            {prettyHeader(c.header)}
           </DropdownMenuCheckboxItem>
         ))}
       </DropdownMenuContent>
@@ -90,16 +141,35 @@ function ColumnPicker({ columns, hidden, onToggle }) {
   );
 }
 
+/** The filter card: a page's own filter fields (`toolbar`) - small uppercase captions, tall inputs, a dark search
+ *  button - without each page restyling its fields. */
+const FILTER_CARD = cn(
+  "space-y-3 rounded-2xl border bg-card p-4 text-card-foreground shadow-sm",
+  "[&_label>span:first-child]:text-[11px] [&_label>span:first-child]:font-semibold [&_label>span:first-child]:tracking-wider [&_label>span:first-child]:uppercase",
+  "[&_select]:h-10 [&_select]:min-w-56 [&_input]:h-10 [&_input]:min-w-56 [&_button]:h-10",
+  "[&_button[type=submit]]:bg-slate-900 [&_button[type=submit]]:px-5 [&_button[type=submit]]:text-white [&_button[type=submit]:hover]:bg-slate-800 dark:[&_button[type=submit]]:bg-slate-100 dark:[&_button[type=submit]]:text-slate-900",
+);
+/** The Filter strip under the title bar: the page's search over all records (`leading`: column, condition, value). */
+const FILTER_STRIP = cn(
+  "border-b bg-muted/30 px-4 py-3",
+  "[&_select]:h-9 [&_select]:min-w-52 [&_input]:h-9 [&_input]:min-w-52 [&_button]:h-9",
+);
+
 const alignClass = (a) =>
   a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 
 /**
- * The common list table: one card with the filter bar, the table and the page controls.
+ * The common list table: one card whose title bar shows `title`, the record count, a search over the loaded rows,
+ * Filter (the page's own search over all records, `leading`), Export (CSV) and the column chooser; above it an
+ * optional filter card (`toolbar`).
  *   columns: [{ key, header, hint? (ⓘ tooltip on the header), render?(row), text?(row) (for export), sortable?, className?, align?, hideable?, export? }]
- *   Filter bar: `leading` (search fields), `toolbar` (filter chips) and the column chooser (`tableId`).
- *   Rows: `onRowClick`, `onPreview(row)` (eye button), `rowMenu(row)` → [{ label, icon, onClick, danger }]
- *   (⋮ menu), `activeKey` (the row shown in a preview), `selectable` + `exportName` (tick rows and
- *   export them as CSV), `pagination` = { meta, onPage, onPageSize } (numbered pages in the card).
+ *   Headers read as words ("ORDERDATE" -> "Order Date"); a click sorts the loaded rows (`onSort` instead: the server
+ *   sorts, with `sort` = { sort, order }). A list's own row number (RECNO) shows as "#".
+ *   Rows: `onRowClick` (the row, its name column and the edit button open it), `onPreview(row)` (eye button),
+ *   `rowMenu(row)` → [{ label, icon, onClick, danger }] (⋮ menu), `activeKey` (the row shown in a preview),
+ *   `selectable` + `exportName` (tick rows and export them as CSV), `pagination` = { meta, onPage, onPageSize }:
+ *   with onPage the list scrolls on without end (each page is added under the last when its end comes into view),
+ *   without it numbered pages in the card.
  * `tabs` = [{ key, label, count?, active, onClick }] shows a tab strip above the rows.
  */
 export default function DataTable({
@@ -123,17 +193,63 @@ export default function DataTable({
   exportName = "export",
   pagination,
   tabs,
+  title = "Records",
 }) {
   const [hidden, toggle] = useHiddenColumns(tableId);
   const [selected, setSelected] = useState(() => new Set());
+  const [filterOpen, setFilterOpen] = useState(false);
+  // Infinite scroll: a list that pages (pagination.onPage) shows its pages one under another. Each page keeps the row
+  // click it came with (the page's own data, e.g. its keys), and page 1 starts the list again (first open, a search).
+  const infinite = !!pagination?.onPage;
+  const pageNo = pagination?.meta?.page ?? 1;
+  const acc = useRef({ rows: null, pages: [] });
+  if (infinite && acc.current.rows !== rows) {
+    const kept = pageNo === 1 ? [] : acc.current.pages.filter((p) => p.page < pageNo);
+    acc.current = { rows, pages: [...kept, { page: pageNo, rows, click: onRowClick }] };
+  }
+  const shown = infinite
+    ? acc.current.pages.flatMap((p) => p.rows.map((row) => ({ row, key: `${p.page}:${row[rowKey]}`, click: p.click })))
+    : rows.map((row) => ({ row, key: row[rowKey], click: onRowClick }));
+  const hasMore = infinite && pageNo < (pagination.meta?.totalPages ?? 1);
+  // a marker under the last row: when it scrolls into view, ask for the next page
+  const end = useRef(null);
+  useEffect(() => {
+    if (!hasMore || loading || !end.current) return;
+    const o = new IntersectionObserver(([e]) => e.isIntersecting && pagination.onPage(pageNo + 1), { rootMargin: "200px" });
+    o.observe(end.current);
+    return () => o.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, loading, pageNo, shown.length]);
   const cols = columns.filter((c, i) => i === 0 || !hidden.has(c.key));
-  const firstLoad = loading && rows.length === 0;
-  const showToolbar = leading || toolbar || tableId;
-  const hasActions = !!(onPreview || rowMenu);
-  const pageKeys = rows.map((r) => r[rowKey]);
+  // a list's own row number (RECNO) is shown as "#", muted; the column after it is the record's name
+  const indexCol = /^rec\s*no$/i.test(String(cols[0]?.header ?? ""));
+  const strong = indexCol ? 1 : 0;
+  const named = cols.filter((c, i) => !(i === 0 && indexCol) && c.header);
+  // the search box: the rows already here, by any shown column's text
+  const [q, setQ] = useState("");
+  const needle = q.trim().toLowerCase();
+  const cellText = (c, row) => String((c.text ? c.text(row) : row[c.key]) ?? "");
+  const found = needle ? shown.filter((x) => cols.some((c) => cellText(c, x.row).toLowerCase().includes(needle))) : shown;
+  // a header click sorts the loaded rows: ascending, descending, then back to the list's own order
+  const [order, setOrder] = useState(null); // { key, dir }
+  const sortCol = order && cols.find((c) => c.key === order.key);
+  const visible = sortCol
+    ? [...found].sort((a, b) => compare(sortKey(cellText(sortCol, a.row)), sortKey(cellText(sortCol, b.row))) * (order.dir === "desc" ? -1 : 1))
+    : found;
+  const sortBy = (key) =>
+    setOrder((o) => (o?.key !== key ? { key, dir: "asc" } : o.dir === "asc" ? { key, dir: "desc" } : null));
+  // a column's alignment (its own, else quantities right) and a cell's content (plain text formatted: cellFormat.jsx)
+  const align = (c) => c.align ?? alignOf(c.header);
+  const content = (c, row) => {
+    const v = c.render ? c.render(row) : row[c.key];
+    return v == null || typeof v === "string" || typeof v === "number" ? formatCell(c.header, v) : v;
+  };
+  const firstLoad = loading && shown.length === 0;
+  const hasActions = !!(onPreview || rowMenu || onRowClick);
+  const pageKeys = shown.map((x) => x.key);
   const allOnPage =
     pageKeys.length > 0 && pageKeys.every((k) => selected.has(k));
-  const chosen = rows.filter((r) => selected.has(r[rowKey]));
+  const chosen = shown.filter((x) => selected.has(x.key)).map((x) => x.row);
   const span = cols.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0);
   const toggleRow = (k) =>
     setSelected((s) => {
@@ -148,28 +264,63 @@ export default function DataTable({
       pageKeys.forEach((k) => (allOnPage ? n.delete(k) : n.add(k)));
       return n;
     });
-  const clickRow = (row) => (e) =>
-    !e.target.closest("button, a, input, label") && onRowClick(row);
+  const clickRow = (row, click) => (e) =>
+    !e.target.closest("button, a, input, label") && click(row);
+  const placeholder = named.length ? `Search by ${named.slice(0, 3).map((c) => prettyHeader(c.header).toLowerCase()).join(", ")}…` : "Search…";
+  const cellLine = "border-r border-border/60 last:border-r-0";
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm">
-      {showToolbar && (
-        <div className="space-y-2 border-b p-3">
-          <div className="flex flex-wrap items-end gap-2">
-            {leading}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
-              {tableId && (
-                <ColumnPicker
-                  columns={columns}
-                  hidden={hidden}
-                  onToggle={toggle}
-                />
+    <div className="space-y-4">
+      {toolbar && <div className={FILTER_CARD}>{toolbar}</div>}
+    <div className="overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-sm">
+      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
+        <span className="grid size-8 place-items-center rounded-lg border bg-muted/40">
+          <Table2 className="size-4 text-muted-foreground" aria-hidden="true" />
+        </span>
+        <span className="text-base font-semibold">{title}</span>
+        <span className="tabular rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+          {(pagination?.meta?.total ?? shown.length).toLocaleString("en-IN")}
+        </span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <label className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={placeholder} aria-label="Search the loaded rows" className="h-9 w-72 pl-9 text-[13px]" />
+            {q && (
+              <button type="button" onClick={() => setQ("")} className="absolute top-1/2 right-2 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground" aria-label="Clear the search">
+                <X className="size-4" />
+              </button>
+            )}
+          </label>
+          {leading && (
+            <Button variant="outline" className={cn("h-9", filterOpen && "border-primary text-primary")} onClick={() => setFilterOpen((o) => !o)} aria-expanded={filterOpen}>
+              <Filter />
+              Filter
+              <ChevronDown className={cn("text-muted-foreground transition-transform", filterOpen && "rotate-180")} />
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="h-9 bg-emerald-600 text-white hover:bg-emerald-700" disabled={!shown.length}>
+                <Download />
+                Export
+                <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuItem onSelect={() => downloadCsv(exportName, cols, visible.map((x) => x.row))}>
+                Rows shown ({visible.length.toLocaleString("en-IN")}) as CSV
+              </DropdownMenuItem>
+              {visible.length !== shown.length && (
+                <DropdownMenuItem onSelect={() => downloadCsv(exportName, cols, shown.map((x) => x.row))}>
+                  All loaded rows ({shown.length.toLocaleString("en-IN")}) as CSV
+                </DropdownMenuItem>
               )}
-            </div>
-          </div>
-          {toolbar}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {tableId && <ColumnPicker columns={columns} hidden={hidden} onToggle={toggle} />}
         </div>
-      )}
+      </div>
+      {leading && filterOpen && <div className={FILTER_STRIP}>{leading}</div>}
 
       {tabs?.length > 0 && (
         <div role="tablist" className="flex overflow-x-auto border-b px-2">
@@ -233,10 +384,10 @@ export default function DataTable({
         )}
       >
         <Table>
-          <TableHeader className="bg-muted/50">
+          <TableHeader className="bg-muted/40">
             <TableRow className="hover:bg-transparent">
               {selectable && (
-                <TableHead className="w-10 pl-4">
+                <TableHead className={cn("w-10 pl-4", cellLine)}>
                   <Checkbox
                     aria-label="Select all on this page"
                     checked={allOnPage}
@@ -244,49 +395,43 @@ export default function DataTable({
                   />
                 </TableHead>
               )}
-              {cols.map((c) => {
-                const active = sort?.sort === c.key;
-                const SortIcon = active
-                  ? sort.order === "desc"
-                    ? ArrowDown
-                    : ArrowUp
-                  : ChevronsUpDown;
+              {cols.map((c, ci) => {
+                const isIndex = ci === 0 && indexCol;
+                const header = isIndex ? "#" : prettyHeader(c.header);
+                const server = c.sortable && onSort;
+                const active = server ? sort?.sort === c.key : order?.key === c.key;
+                const dir = server ? sort?.order : order?.dir;
+                const SortIcon = active ? (dir === "desc" ? ArrowDown : ArrowUp) : ChevronsUpDown;
+                const isDate = /date|(ed\s*on)$/i.test(String(c.header ?? ""));
                 return (
                   <TableHead
                     key={c.key}
                     scope="col"
-                    aria-sort={
-                      active
-                        ? sort.order === "desc"
-                          ? "descending"
-                          : "ascending"
-                        : undefined
-                    }
+                    aria-sort={active ? (dir === "desc" ? "descending" : "ascending") : undefined}
                     className={cn(
-                      "text-[11px] font-semibold tracking-wider text-muted-foreground uppercase",
-                      alignClass(c.align),
+                      "h-11 text-[13px] font-semibold text-foreground",
+                      isIndex && "w-12",
+                      alignClass(align(c)),
+                      cellLine,
                       c.headerClassName,
                     )}
                   >
-                    {c.sortable && onSort ? (
+                    {isIndex || !header ? (
+                      header
+                    ) : (
                       <button
                         type="button"
-                        onClick={() => onSort(c.key)}
+                        onClick={() => (server ? onSort(c.key) : sortBy(c.key))}
                         className={cn(
-                          "inline-flex cursor-pointer items-center gap-1 hover:text-foreground",
+                          "inline-flex cursor-pointer items-center gap-1.5 hover:text-primary",
+                          align(c) === "right" && "flex-row-reverse",
                           active && "text-primary",
                         )}
                       >
-                        {c.header}
-                        <SortIcon
-                          className={cn(
-                            "size-3.5",
-                            active ? "text-primary" : "text-muted-foreground",
-                          )}
-                        />
+                        {isDate && <CalendarDays className="size-4 text-muted-foreground" aria-hidden="true" />}
+                        {header}
+                        <SortIcon className={cn("size-3.5", active ? "text-primary" : "text-muted-foreground/70")} />
                       </button>
-                    ) : (
-                      c.header
                     )}
                     {c.hint && (
                       <span
@@ -300,15 +445,9 @@ export default function DataTable({
                 );
               })}
               {hasActions && (
-                <TableHead
-                  scope="col"
-                  className="w-28 text-center text-[11px] font-semibold tracking-wider text-muted-foreground uppercase"
-                >
-                  Action
+                <TableHead scope="col" className="w-24 text-center text-[13px] font-semibold text-foreground">
+                  Actions
                 </TableHead>
-              )}
-              {!hasActions && onRowClick && (
-                <TableHead aria-hidden="true" className="w-8" />
               )}
             </TableRow>
           </TableHeader>
@@ -318,42 +457,41 @@ export default function DataTable({
                 <TableRow key={`sk${i}`} className="hover:bg-transparent">
                   {selectable && <TableCell />}
                   {cols.map((c, j) => (
-                    <TableCell key={c.key}>
+                    <TableCell key={c.key} className={cellLine}>
                       <Skeleton
                         className="h-3.5"
                         style={{ width: `${45 + ((i * 7 + j * 13) % 45)}%` }}
                       />
                     </TableCell>
                   ))}
-                  {(hasActions || onRowClick) && <TableCell />}
+                  {hasActions && <TableCell />}
                 </TableRow>
               ))}
-            {rows.map((row) => {
-              const k = row[rowKey];
-              const on = activeKey !== undefined && activeKey === k;
+            {visible.map(({ row, key: k, click }) => {
+              const on = activeKey !== undefined && activeKey === row[rowKey];
               const picked = selected.has(k);
               return (
                 <TableRow
                   key={k}
                   data-state={on || picked ? "selected" : undefined}
-                  onClick={onRowClick ? clickRow(row) : undefined}
+                  onClick={click ? clickRow(row, click) : undefined}
                   onKeyDown={
-                    onRowClick
+                    click
                       ? (e) =>
                           e.key === "Enter" &&
                           e.target === e.currentTarget &&
-                          onRowClick(row)
+                          click(row)
                       : undefined
                   }
-                  tabIndex={onRowClick ? 0 : undefined}
+                  tabIndex={click ? 0 : undefined}
                   className={cn(
                     "group",
-                    onRowClick &&
+                    click &&
                       "cursor-pointer focus-visible:bg-muted focus-visible:outline-none",
                   )}
                 >
                   {selectable && (
-                    <TableCell className="relative pl-4">
+                    <TableCell className={cn("relative pl-4", cellLine)}>
                       {on && (
                         <span
                           className="absolute inset-y-0 left-0 w-1 bg-primary"
@@ -371,27 +509,32 @@ export default function DataTable({
                     <TableCell
                       key={c.key}
                       className={cn(
+                        cellLine,
                         i === 0 && !selectable && "relative",
-                        c.align === "right"
+                        i === 0 && indexCol && "tabular w-12 text-muted-foreground",
+                        align(c) === "right"
                           ? "tabular text-right"
-                          : c.align === "center"
+                          : align(c) === "center"
                             ? "text-center"
                             : "",
                         c.className,
                       )}
                     >
-                      {i === 0 && !selectable && (on || onRowClick) && (
-                        <span
-                          className={cn(
-                            "absolute inset-y-0 left-0 w-1 bg-primary transition-opacity",
-                            on
-                              ? "opacity-100"
-                              : "opacity-0 group-hover:opacity-60",
-                          )}
-                          aria-hidden="true"
-                        />
+                      {i === 0 && !selectable && on && (
+                        <span className="absolute inset-y-0 left-0 w-1 bg-primary" aria-hidden="true" />
                       )}
-                      {c.render ? c.render(row) : (row[c.key] ?? "—")}
+                      {i === 0 && indexCol ? (
+                        row[c.key]
+                      ) : i === strong && click ? (
+                        <span className="inline-flex items-center gap-2 font-semibold text-primary group-hover:underline">
+                          <FileText className="size-4 shrink-0 text-primary/70" aria-hidden="true" />
+                          {content(c, row)}
+                        </span>
+                      ) : i === strong ? (
+                        <span className="font-semibold text-foreground">{content(c, row)}</span>
+                      ) : (
+                        content(c, row)
+                      )}
                     </TableCell>
                   ))}
                   {hasActions && (
@@ -407,25 +550,20 @@ export default function DataTable({
                             icon={Eye}
                           />
                         )}
+                        {click && !onPreview && !rowMenu && (
+                          <Button variant="outline" size="icon-sm" onClick={() => click(row)} title="Open" aria-label="Open" icon={Pencil} className="text-primary" />
+                        )}
                         {rowMenu && <RowMenu items={rowMenu(row)} />}
                       </div>
-                    </TableCell>
-                  )}
-                  {!hasActions && onRowClick && (
-                    <TableCell className="pr-3 text-right">
-                      <ChevronRight className="inline size-4 -translate-x-1 text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100 group-focus:opacity-100" />
                     </TableCell>
                   )}
                 </TableRow>
               );
             })}
-            {!loading && rows.length === 0 && (
+            {!loading && visible.length === 0 && (
               <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={span + (!hasActions && onRowClick ? 1 : 0)}
-                  className="whitespace-normal"
-                >
-                  <EmptyRows error={error} empty={empty} action={emptyAction} />
+                <TableCell colSpan={span} className="whitespace-normal">
+                  <EmptyRows error={error} empty={needle && shown.length ? "No loaded rows match this search." : empty} action={emptyAction} />
                 </TableCell>
               </TableRow>
             )}
@@ -433,7 +571,17 @@ export default function DataTable({
         </Table>
       </div>
 
-      {pagination && <Pagination {...pagination} inCard />}
+      {infinite && shown.length > 0 && (
+        <div ref={end} className="border-t py-3 text-center text-xs text-muted-foreground">
+          {loading
+            ? "Loading more…"
+            : hasMore
+              ? `${shown.length.toLocaleString("en-IN")} of ${pagination.meta?.total?.toLocaleString("en-IN") ?? "?"} — scroll for more`
+              : `All ${shown.length.toLocaleString("en-IN")} records shown`}
+        </div>
+      )}
+      {pagination && !infinite && <Pagination {...pagination} inCard />}
+    </div>
     </div>
   );
 }

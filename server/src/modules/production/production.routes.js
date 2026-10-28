@@ -9,6 +9,7 @@ import { netString } from '../../shared/net.js';
 import { log } from '../../config/logger.js';
 import { screensRouter } from '../forms/resource.routes.js';
 import { cabinetByLabel, routeByLabel } from './wip.service.js';
+import { replacementHistory, scrapHistory } from './production.service.js';
 
 /** API name -> screen */
 export const PRODUCTION = {
@@ -30,6 +31,29 @@ router.get('/wip-capture/units/:label', requireAuth, authorizeScreen(PRODUCTION[
   const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
   for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} production/units: ${r.reason?.message}`);
   ok(res, { route: route.value ?? null, cabinet: cabinet.value ?? null });
+});
+/** a history's optional time range: ?start=&end= as a date-time box sends them (YYYY-MM-DDTHH:mm), else refused */
+function rangeOf(q) {
+  const range = {};
+  for (const [name, key] of [['start', 'startTime'], ['end', 'endTime']]) {
+    const v = netString(q[name]).trim();
+    if (v === '') continue;
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(v) || Number.isNaN(Date.parse(v))) throw AppError.badRequest(`The ${name} time is not a date and time`);
+    range[key] = v.length === 16 ? `${v}:00` : v; // SQL Server reads YYYY-MM-DDTHH:mm:ss (with the seconds)
+  }
+  if (range.startTime && range.endTime && range.startTime > range.endTime) throw AppError.badRequest('The start time is after the end time');
+  return range;
+}
+const pageOf = (q) => Math.max(0, Number(q.page) || 0);
+// RM Replacement's history (read only): the replacements done in the user's business unit, newest first
+// (?page=&start=&end=)
+router.get('/rm-replacements/history', requireAuth, authorizeScreen(PRODUCTION['rm-replacements']), async (req, res) => {
+  ok(res, await replacementHistory(req.session.businessUnit, pageOf(req.query), rangeOf(req.query)));
+});
+// FG Scrap's history (read only): the units / items scrapped in the user's business unit, newest first
+// (?page=&start=&end=)
+router.get('/fg-scrap/history', requireAuth, authorizeScreen(PRODUCTION['fg-scrap']), async (req, res) => {
+  ok(res, await scrapHistory(req.session.businessUnit, pageOf(req.query), rangeOf(req.query)));
 });
 router.use(screensRouter(PRODUCTION));
 

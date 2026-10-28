@@ -46,6 +46,8 @@ export default function PageHeader({ icon: Icon, title, subtitle, children }) {
           </div>
         </div>
         {children && <div className="ml-auto flex flex-wrap items-center gap-2">{children}</div>}
+        {/* a screen's form puts its Back / record status / Save here (FormStep design); empty otherwise */}
+        <div id="page-header-slot" className="ml-auto flex flex-wrap items-end gap-3 empty:hidden" />
       </div>
     </header>
   );

@@ -55,6 +55,8 @@ export async function specPayload(spec, ctx) {
     events: Object.keys(PAGE_EVENTS[spec.file] ?? {}),
     // TitleControl shows the list first unless the TopPanel is visible or the View button is switched off
     startOnList: !spec.topPanelVisible && !!spec.view?.tag && spec.titleBar.viewbutton !== false,
+    // the screen has a list of saved records to go back to (a list query and its View button not switched off)
+    hasList: !!spec.view?.tag && spec.titleBar.viewbutton !== false,
     searchColumns: cols.map((c) => ({ name: c.name, operators: operatorsFor(c.type).map((o) => [o, OPERATOR_TEXT[o]]) })),
   };
 }
@@ -206,7 +208,7 @@ export function screenResource(route) {
         throw e;
       }
     },
-    /** one page of records (10 a page), optionally filtered on one column; filter: the page's own list choices */
+    /** one page of records (PAGE_SIZE a page, lists.js), optionally filtered on one column; filter: the page's own list choices */
     async list(ctx, { page = 0, search = null, filter = {} } = {}) {
       const tag = PAGE_LIST_TAG[file]?.(filter, ctx);
       const r = await listPage(tag ? { ...spec, view: { ...spec.view, tag } } : spec, ctx, page, search);

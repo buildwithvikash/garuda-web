@@ -113,3 +113,20 @@ part of this translation); forms-write 11/12 (1 fails alike); page-writes 17/17;
 2/2; wip comp / qc / fg identical; upload 4/4; print 8 identical, 1 fails alike. The same as before.
 
 Switched page: Unit Of Measure (`client/src/lib/screenApi.js`, `API_SCREENS`). Its browser check is the owner's.
+
+# Intended difference: RM Replacement replaces raw material only (owner, 28 Oct 2026)
+
+The original's "Scan existing component" accepted any component in the unit's list (in-process materials too). Now
+a component that is not Raw Material is refused with "Only raw material can be replaced"
+(`screens/production/rm-replacement-form.js`, btnexistScan), and the page lets only Raw Material rows be picked
+from the list. The parity cases use a raw-material component (events 10/10 and the production-writes replacement
+identical through the API); an in-process component is now expected to differ from the original.
+
+# Intended difference: RM Replacement refuses a new serial its material's serial logic rejects (owner, 28 Oct 2026)
+
+The original's "Scan new component" ignored the result of ReplaceRMScanValidate: when the new serial failed the
+material's serial logic (e.g. its length), nothing was replaced but the page still showed success and cleared both
+boxes. Now it alerts "The new serial does not match the serial format of this material" and leaves both boxes as
+they are (`screens/production/rm-replacement-form.js`, btnNewScan). Events: 9/10 identical through the API, the one
+difference being this case ([Go, btnexistScan, btnNewScan] with BADFORMAT); the production-writes replacement is
+identical.

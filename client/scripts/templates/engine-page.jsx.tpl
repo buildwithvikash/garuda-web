@@ -618,7 +618,7 @@ export default function __NAME__() {
             onReload={(key, notice) => open(key, notice)}
             events={spec.events ?? []}
             onCopy={copy}
-            onBack={() => show({ kind: 'list' })}
+            onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}

@@ -65,8 +65,10 @@ section('rm replacement', async () => {
   const spec = SPECS['/production/rmreplacementform'];
   // a component whose material has a serial logic of fixed values / year / month / serial number, and a new serial built
   // from that logic (unused), so the replacement goes through
+  // (a raw material: the screen replaces only those, owner 28 Oct 2026; the original took any component)
   const comp = (await query(`select top 1 pb.PSNo, pb.RowID, pb.Serial, pb.ProcessCode, pb.Material from ProcessInputBOMScan pb join Material m on m.MatCode=pb.Material
-    where pb.Serial is not null and exists (select 1 from SerialGenerationLogicDetail d where d.SerialCode=m.TrackNoType)
+    join MaterialCategoryType mc on mc.ID=m.Type
+    where pb.Serial is not null and mc.Type='Raw Material' and exists (select 1 from SerialGenerationLogicDetail d where d.SerialCode=m.TrackNoType)
       and not exists (select 1 from SerialGenerationLogicDetail d where d.SerialCode=m.TrackNoType and d.VariantCode not in (1,2,9,10))
       and exists (select 1 from MaterialBarcode mb where mb.DocNo=pb.PSNo and mb.Status<>99) order by pb.RowID desc`))[0];
   const fg = (await query('select top 1 Serial, DocNo from MaterialBarcode where DocNo=@p and Status<>99 order by BarcodeNo desc', { p: comp.PSNo }))[0];

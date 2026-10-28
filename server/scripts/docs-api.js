@@ -61,7 +61,7 @@ the original's list query does.
 
 | Call | Does |
 |---|---|
-| \`GET /?page=&column=&op=&value=\` (\`f.<name>=\` a page's own list choices) | a page of records (10) |
+| \`GET /?page=&column=&op=&value=\` (\`f.<name>=\` a page's own list choices) | a page of records (1000 a request; \`total\` = all) |
 | \`GET /search-fields\`, \`GET /search-fields/:column/values\` | filterable columns, a column's values |
 | \`GET /layout\` | what a page draws the screen from (the same as \`/api/forms/spec\`), plus \`api: { fields, names, events }\` (field -> control, control -> API name, event -> control) |
 | \`GET /new\` | \`{ record, options, ui, viewState, events, printers, copyFrom }\`: a blank record as the screen opens it |
@@ -83,6 +83,8 @@ for (const [base, screens] of [['masters', MASTERS], ['quality', QUALITY], ['pro
   md.push('');
 }
 md.push('WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and cabinet details of the scanned unit (`{ route, cabinet }`, each null when its lookup fails).', '');
+md.push('RM Replacement also has `GET /api/production/rm-replacements/history?page=`: the components replaced in units of the user\'s business unit, newest first, read only (replaced on, unit serial, component, process, old serial, new serial, operator; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.', '');
+md.push('FG Scrap also has `GET /api/production/fg-scrap/history?page=`: the units / items scrapped on job cards of the user\'s business unit, newest first, read only (scrapped on, serial, material, scrap category, last station, remark, scrapped by; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.', '');
 md.push('## Screen engine — /api/forms', '', 'Every screen above also still answers through the screen engine (`spec`, `list`, `record`, `event`, `save`, `update`, `cancel`, `print`, `combo`, `unit`, `distinct`, `copy`, keyed by `?path=<route>`), which the client pages use today. Both run the same page code; a page moves to its API when that switch is approved.', '');
 writeFileSync(out, md.join('\n'));
 process.exit(0);

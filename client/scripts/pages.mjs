@@ -7,11 +7,14 @@
 // console (F12) and run:   copy(JSON.stringify((await (await fetch('/api/auth/me')).json()).menu))
 // then paste into a file named menu.json in the project root. Run the sync again whenever tabs are added.
 //
-// A page is  src/pages/<group>/<PageName>.jsx  (group = first part of the route). Existing files are never touched.
-// Each new file is COMPLETE: the page's state, server calls, list view and form view are all inside it, so you can
-// change that one page without touching any other. Only the UI components (@/components/ui, @/components/shared) are shared.
+// A page is  src/pages/<group>/<PageName>.jsx  (group = first part of the route) with its views beside it in
+// <PageName>/List.jsx (saved records) and <PageName>/Form.jsx (create / update; the state and server calls it uses).
+// Existing files are never touched. A new page is COMPLETE in those three files, so you can change it without touching
+// any other. Only the UI components (@/components/ui, @/components/shared) are shared.
 import fs from 'node:fs';
 import path from 'node:path';
+import { splitPage } from './split-page.mjs';
+import { designForm } from './form-design.mjs';
 
 const PAGES = path.resolve('src/pages');
 const HIDDEN_GROUP = 10000; // not shown in the sidebar
@@ -61,6 +64,7 @@ function create({ route, caption, groupCaption }, known) {
   for (let i = 2; fs.existsSync(file); i++) file = path.join(dir, `${name}${i}.jsx`);
   const comp = path.basename(file, '.jsx');
   fs.writeFileSync(file, template(comp, caption, groupCaption ?? pascal(group), route));
+  designForm(splitPage(file).form); // the template is one file: kept as page + List + Form, in the shared form design
   known.set(route, path.relative(PAGES, file));
   return { status: 'created', file: path.relative(PAGES, file) };
 }

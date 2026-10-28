@@ -1,0 +1,31 @@
+  return (
+    <form
+      id={formId}
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        act(mode === 'new' ? 'save' : 'update');
+      }}
+    >
+      {slot ? createPortal(bar, slot) : <Toolbar>{bar}</Toolbar>}
+
+      <fieldset disabled={cancelled} className="space-y-4">
+        {sections()}
+      </fieldset>
+
+      {deleting !== null && (
+        <Modal
+          title="Delete this record?"
+          subtitle="The record is cancelled, not erased. Give the reason; it is kept with the record."
+          size="sm"
+          onClose={() => setDeleting(null)}
+          footer={<ModalFooter onCancel={() => setDeleting(null)} onSave={() => act('cancel', { remark: deleting })} saveLabel="Delete" saveVariant="danger" saving={busy} />}
+        >
+          <label className="block">
+            <span className="text-sm leading-none font-medium">Reason for deleting</span>
+            <Input value={deleting} onChange={(e) => setDeleting(e.target.value)} autoFocus />
+          </label>
+        </Modal>
+      )}
+    </form>
+  );

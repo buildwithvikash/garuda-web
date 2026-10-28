@@ -271,8 +271,9 @@ const PLAN = [
     return [[go(fg)], [go(` ${fg} `)], [go('NOPE-1')], [go('')], [go(fg), go('')], [ev('btnSave_Click1', 'btnSave', { TBRemark: '' })]];
   }],
   ['/production/rmreplacementform', null, { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' }, async () => {
-    const fg = (await query("select top 1 mb.Serial, mb.DocNo from MaterialBarcode mb where mb.Status<>99 and exists (select 1 from ProcessInputBOMScan pb where pb.PSNo=mb.DocNo and pb.Serial is not null) order by mb.BarcodeNo desc"))[0];
-    const comp = await first(`select top 1 Serial from ProcessInputBOMScan where PSNo=${fg.DocNo} and Serial is not null`);
+    const fg = (await query("select top 1 mb.Serial, mb.DocNo from MaterialBarcode mb where mb.Status<>99 and exists (select 1 from ProcessInputBOMScan pb join Material m on m.MatCode=pb.Material join MaterialCategoryType mc on mc.ID=m.Type where pb.PSNo=mb.DocNo and pb.Serial is not null and mc.Type='Raw Material') order by mb.BarcodeNo desc"))[0];
+    // a raw material (the screen replaces only those, owner 28 Oct 2026; the original took any component)
+    const comp = await first(`select top 1 pb.Serial from ProcessInputBOMScan pb join Material m on m.MatCode=pb.Material join MaterialCategoryType mc on mc.ID=m.Type where pb.PSNo=${fg.DocNo} and pb.Serial is not null and mc.Type='Raw Material'`);
     const other = await first(`select top 1 Serial from ProcessInputBOMScan where PSNo<>${fg.DocNo} and Serial is not null order by RowID desc`);
     const scrapped = await first("select top 1 mb.Serial from MaterialBarcode mb where mb.Status=99 and exists (select 1 from ProcessInputBOMScan pb where pb.PSNo=mb.DocNo) order by mb.BarcodeNo desc");
     const go = (b) => ev('Go_Click', 'Go', { TBBarcode: b });

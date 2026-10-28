@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 import { queryTable } from '../../src/db/pool.js';
 import { loadSettings } from '../../src/modules/settings/settings.service.js';
 import { newFormState, displayState, copyState, copyOptions } from '../../src/modules/forms/state.js';
-import { listQuery, PAGE_SIZE } from '../../src/modules/forms/lists.js';
+import { listQuery } from '../../src/modules/forms/lists.js';
+// the original's list page (its GridView's 10 rows): the list query is compared on it; the app asks for more a time
+const ORIGINAL_PAGE = 10;
 import { CUSTOM_DISPLAY } from '../../src/modules/forms/pages.js';
 import { toText } from '../../src/shared/values.js';
 
@@ -87,7 +89,7 @@ for (const route of routes) {
   let firstKey = null;
   try {
     const { count, sql } = await listQuery(spec, ctx);
-    const t = await queryTable(`select * from ( ${sql}) as X where RecNo between 1 and ${PAGE_SIZE}`);
+    const t = await queryTable(`select * from ( ${sql}) as X where RecNo between 1 and ${ORIGINAL_PAGE}`);
     const key = spec.view.tag.split('|')[1].split('.').at(-1).toUpperCase();
     const keyCol = t.columns.find((c) => c.name.toUpperCase() === key);
     firstKey = keyCol && t.rows[0] ? toText(t.rows[0][keyCol.name]) : null;

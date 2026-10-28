@@ -7,6 +7,7 @@ import { netInt, netLong, netDouble, netNum, netString } from '../../shared/net.
 import { dataTable } from '../../db/tables.js';
 import { num, lit, digitsOrEmpty } from '../../shared/sql.js';
 import { printerDetail, printLabel } from './labels.service.js';
+import { PAGE_SIZE } from '../forms/lists.js';
 
 const str = (v) => (v === null || v === undefined ? '' : String(v)); // WrapperAvatar.ParseString
 const allDigits = (s) => /^\d*$/.test(s); // s.All(char.IsDigit): "" too
@@ -133,6 +134,69 @@ export async function replaceRMScan(r, ctx) {
     await execute(`Update MaterialBarcode set Serial=${lit(r.NewSerialNo)}, CreatedOn = getdate() where DocNo=${num(r.PsNo)} and Serial=${lit(r.Serial)}`, {}, tx);
   });
   return true;
+}
+
+/** RM Replacement's history (owner, 28 Oct 2026; the original had no list): the replacements logged in
+ *  ProcessInputBOMScanReplace for job cards of the business unit, newest first, a page of PAGE_SIZE at a time. Read only.
+ *  In the screen engine's list shape ({ columns: [{ name }], rows, keys, count, page, pageSize }); rows open nothing. */
+export async function replacementHistory(businessUnit, page = 0, range = {}) {
+  const from = Math.max(0, Math.floor(Number(page) || 0)) * PAGE_SIZE;
+  const params = { bu: netInt(businessUnit), from, size: PAGE_SIZE, ...range };
+  const when = timeWhere('r.ScannedOn', range);
+  const [rows, total] = await Promise.all([
+    query(
+      `select format(r.ScannedOn, 'dd-MM-yyyy hh:mm:ss tt') [Replaced On], u.Serial [Unit Serial], m.Name [Component],
+          p.Name [Process], r.Serial [Old Serial], r.NewSerialNo [New Serial], us.UserName [Operator]
+        from ProcessInputBOMScanReplace r
+        join ProcessOrder po on po.PSNo = r.PSNo
+        left join Material m on m.MatCode = r.Material
+        left join ProductionProcess p on p.ProcessCode = r.ProcessCode
+        left join Users us on us.UserCode = r.Operator
+        outer apply (select top 1 mb.Serial from MaterialBarcode mb where mb.DocNo = r.PSNo and mb.Material = po.Material order by mb.BarcodeNo desc) u
+        where po.BusinessUnit = @bu${when}
+        order by r.RefNo desc offset @from rows fetch next @size rows only`,
+      params,
+    ),
+    scalar(`select count(*) from ProcessInputBOMScanReplace r join ProcessOrder po on po.PSNo = r.PSNo where po.BusinessUnit = @bu${when}`, params),
+  ]);
+  return listShape(rows, ['Replaced On', 'Unit Serial', 'Component', 'Process', 'Old Serial', 'New Serial', 'Operator'], total, from);
+}
+
+/** FG Scrap's history (owner, 28 Oct 2026; the original had no list): the units / items scrapped (FGScrap) on job cards
+ *  of the business unit, newest first, a page of PAGE_SIZE at a time. Read only; the same list shape as above. */
+export async function scrapHistory(businessUnit, page = 0, range = {}) {
+  const from = Math.max(0, Math.floor(Number(page) || 0)) * PAGE_SIZE;
+  const params = { bu: netInt(businessUnit), from, size: PAGE_SIZE, ...range };
+  const when = timeWhere('s.ScrapDate', range);
+  const [rows, total] = await Promise.all([
+    query(
+      `select format(s.ScrapDate, 'dd-MM-yyyy hh:mm:ss tt') [Scrapped On], s.Serial [Serial], isnull(mi.Name, mp.Name) [Material],
+          isnull(sr.Type, cast(s.SCRAPCATEGORY as nvarchar(50))) [Scrap Category], isnull(w.Name, s.LastStation) [Last Station], s.Remark [Remark],
+          isnull(u.UserName, s.UserID) [Scrapped By]
+        from FGScrap s
+        join ProcessOrder po on po.PSNo = s.PSNo
+        left join MaterialBarcode mb on mb.BarcodeNo = s.BarcodeNo
+        left join Material mi on mi.MatCode = mb.Material
+        left join Material mp on mp.MatCode = po.Material
+        left join ScrapReasons sr on sr.ID = s.SCRAPCATEGORY
+        left join WorkCenter w on w.StationCode = s.LastStation
+        left join Users u on u.UserID = s.UserID
+        where po.BusinessUnit = @bu${when}
+        order by s.ScrapDate desc offset @from rows fetch next @size rows only`,
+      params,
+    ),
+    scalar(`select count(*) from FGScrap s join ProcessOrder po on po.PSNo = s.PSNo where po.BusinessUnit = @bu${when}`, params),
+  ]);
+  return listShape(rows, ['Scrapped On', 'Serial', 'Material', 'Scrap Category', 'Last Station', 'Remark', 'Scrapped By'], total, from);
+}
+
+/** a history's optional time range ({ startTime, endTime }: checked date-times, as parameters) as more of its where */
+const timeWhere = (col, range) => (range.startTime ? ` and ${col} >= @startTime` : '') + (range.endTime ? ` and ${col} <= @endTime` : '');
+
+/** rows as the screen engine's list ({ columns: [{ name }], rows of cell text, keys, count, page, pageSize }); rows open nothing */
+function listShape(rows, names, total, from) {
+  const columns = rows.length ? Object.keys(rows[0]) : names;
+  return { columns: columns.map((name) => ({ name })), rows: rows.map((r) => columns.map((c) => (r[c] == null ? '' : String(r[c])))), keys: [], count: netInt(total), page: from / PAGE_SIZE, pageSize: PAGE_SIZE };
 }
 
 /** AVMM.UpdateLocation(location, barcode, StockAdd: true, dw): the barcode's quantity into the location's stock row,

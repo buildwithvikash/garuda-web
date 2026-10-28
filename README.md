@@ -105,7 +105,9 @@ server/
 client/src/                see client/STRUCTURE.md
 ```
 
-**Change a screen's look**: edit its page file `client/src/pages/<group>/<Page>.jsx` (one per sidebar tab).
+**Change a screen's look**: its page is three files (one set per sidebar tab): `client/src/pages/<group>/<Page>.jsx`
+(settings, e.g. the form's layout, and switching list / form), `<Page>/List.jsx` (the saved records) and
+`<Page>/Form.jsx` (create / update). `node client/scripts/split-page.mjs <file>` splits a one-file page the same way.
 **Change what a screen does**: its handlers are in `server/src/modules/forms/screens/<folder>/<screen>.js` (a screen
 with its own API also has a `server/src/modules/<feature>/` folder); keep
 the original's writes unless the change is intended, and run the parity scripts after.

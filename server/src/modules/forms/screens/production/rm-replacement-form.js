@@ -54,6 +54,8 @@ Object.assign(PAGE_EVENTS, {
         const rows = Array.isArray(v.GvDetails) ? v.GvDetails : [];
         const row = rows.find((r) => htmlCell(r.Serial) === v.TBExistingRM);
         if (!row) return { ...out, alert: errorMsg('Serial No not found') };
+        // owner, 28 Oct 2026: only a raw material can be replaced (the original also took in-process materials)
+        if (!/^raw material$/i.test(htmlCell(row.Category).trim())) return { ...out, alert: errorMsg('Only raw material can be replaced') };
         out.viewState.Data = Object.fromEntries(RM_COLS.map((c) => [c, htmlCell(row[c])]));
         Object.assign(out.set, { TBNewRM: { value: '' }, btnexistScan: { text: 'Clr' }, TBExistingRM: { enabled: false } });
         out.viewState.__ExistGo = 'Clr';
@@ -77,7 +79,12 @@ Object.assign(PAGE_EVENTS, {
         if (!h.vs.Data) throw new Error('There is no row at position 0.');
         const data = { ...h.vs.Data, NewSerialNo: v.TBNewRM.trim() };
         out.viewState.Data = data;
-        await replaceRMScan(data, h.ctx);
+        // owner, 28 Oct 2026: a new serial the material's serial logic rejects is refused, the boxes left as they are
+        // (the original ignored ReplaceRMScanValidate's result and showed success, replacing nothing)
+        if (!(await replaceRMScan(data, h.ctx))) {
+          out.alert = errorMsg('The new serial does not match the serial format of this material');
+          return out;
+        }
         out.success = true;
         Object.assign(out.set, { TBExistingRM: { value: '', enabled: true }, TBNewRM: { value: '', enabled: true }, btnexistScan: { text: 'Go' }, btnNewScan: { text: 'Go' }, Go: { text: 'Go' } });
         Object.assign(out.viewState, { __ExistGo: 'Go', __NewGo: 'Go', __Go: 'Go' });

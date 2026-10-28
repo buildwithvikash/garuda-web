@@ -116,6 +116,11 @@
   #root {
     height: 100%;
   }
+  /* The whole app's size: text, spacing and controls are in rem, so this scales every page at once
+     (87.5% = 14px of the browser's 16px; a percentage keeps the user's own browser text size working). */
+  html {
+    font-size: 87.5%;
+  }
   body {
     @apply bg-background text-foreground antialiased;
   }

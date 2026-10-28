@@ -6,7 +6,9 @@ import { Input } from '@/components/ui/input.jsx';
 
 const ROW_TONE = { green: 'bg-emerald-500/10', red: 'bg-rose-500/10' };
 
-export default function Grid({ c, rows = [], onSelect, onDelete, onEdit, onCommand, title }) {
+/** `onPick(row, i)`: a click on a row uses it (e.g. fills a scan box); only rows `canPick` allows, the rest dimmed with
+ *  `pickHint` as their tooltip. */
+export default function Grid({ c, rows = [], onSelect, onDelete, onEdit, onCommand, title, onPick, canPick = () => true, pickHint }) {
   // BoundFields show text; TemplateFields (a TextBox bound to "<header without spaces>") are edited in place.
   // No columns in the markup: AutoGenerateColumns, one per data column.
   const markup = c.columns.length ? c.columns : Object.keys(rows[0] ?? {}).filter((k) => !k.startsWith('__')).map((k) => ({ kind: 'boundfield', dataField: k, header: k }));
@@ -39,7 +41,12 @@ export default function Grid({ c, rows = [], onSelect, onDelete, onEdit, onComma
               </tr>
             )}
             {rows.map((r, i) => (
-              <tr key={i} className={`hover:bg-muted/60 ${ROW_TONE[r.__color] ?? ''}`}>
+              <tr
+                key={i}
+                className={`hover:bg-muted/60 ${ROW_TONE[r.__color] ?? ''} ${onPick ? (canPick(r) ? 'cursor-pointer' : 'opacity-50') : ''}`}
+                onClick={onPick && canPick(r) ? () => onPick(r, i) : undefined}
+                title={onPick ? (canPick(r) ? 'Use this row' : pickHint) : undefined}
+              >
                 {onSelect && (
                   <td className="px-2">
                     <button type="button" title="Edit row" aria-label={`Edit row ${i + 1}`} onClick={() => onSelect(key(r), i)} className="w-8 h-8 rounded-lg border border-border text-muted-foreground hover:text-primary hover:border-primary/40 flex items-center justify-center cursor-pointer">

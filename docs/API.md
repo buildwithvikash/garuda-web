@@ -49,7 +49,7 @@ the original's list query does.
 
 | Call | Does |
 |---|---|
-| `GET /?page=&column=&op=&value=` (`f.<name>=` a page's own list choices) | a page of records (10) |
+| `GET /?page=&column=&op=&value=` (`f.<name>=` a page's own list choices) | a page of records (1000 a request; `total` = all) |
 | `GET /search-fields`, `GET /search-fields/:column/values` | filterable columns, a column's values |
 | `GET /layout` | what a page draws the screen from (the same as `/api/forms/spec`), plus `api: { fields, names, events }` (field -> control, control -> API name, event -> control) |
 | `GET /new` | `{ record, options, ui, viewState, events, printers, copyFrom }`: a blank record as the screen opens it |
@@ -297,6 +297,10 @@ Original: `View/Production/WRLImageDisply.aspx`. Fields: `primaryKey`, `imgGuide
 Events: `btnGo`.
 
 WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and cabinet details of the scanned unit (`{ route, cabinet }`, each null when its lookup fails).
+
+RM Replacement also has `GET /api/production/rm-replacements/history?page=`: the components replaced in units of the user's business unit, newest first, read only (replaced on, unit serial, component, process, old serial, new serial, operator; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
+
+FG Scrap also has `GET /api/production/fg-scrap/history?page=`: the units / items scrapped on job cards of the user's business unit, newest first, read only (scrapped on, serial, material, scrap category, last station, remark, scrapped by; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
 
 ## Screen engine — /api/forms
 
