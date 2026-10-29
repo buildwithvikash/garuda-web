@@ -7,9 +7,11 @@ import { AppError } from '../../shared/AppError.js';
 import { ok } from '../../shared/http.js';
 import { netString } from '../../shared/net.js';
 import { log } from '../../config/logger.js';
+import { sessionContext } from '../auth/context.js';
 import { screensRouter } from '../forms/resource.routes.js';
 import { cabinetByLabel, routeByLabel } from './wip.service.js';
 import { replacementHistory, scrapHistory } from './production.service.js';
+import { checkTransfer, transferMany } from './model-transfer-bulk.js';
 
 /** API name -> screen */
 export const PRODUCTION = {
@@ -33,7 +35,7 @@ router.get('/wip-capture/units/:label', requireAuth, authorizeScreen(PRODUCTION[
   ok(res, { route: route.value ?? null, cabinet: cabinet.value ?? null });
 });
 /** a history's optional time range: ?start=&end= as a date-time box sends them (YYYY-MM-DDTHH:mm), else refused */
-function rangeOf(q) {
+export function rangeOf(q) {
   const range = {};
   for (const [name, key] of [['start', 'startTime'], ['end', 'endTime']]) {
     const v = netString(q[name]).trim();
@@ -54,6 +56,14 @@ router.get('/rm-replacements/history', requireAuth, authorizeScreen(PRODUCTION['
 // (?page=&start=&end=)
 router.get('/fg-scrap/history', requireAuth, authorizeScreen(PRODUCTION['fg-scrap']), async (req, res) => {
   ok(res, await scrapHistory(req.session.businessUnit, pageOf(req.query), rangeOf(req.query)));
+});
+// Model To Model Transfer by a list of FG serials (model-transfer-bulk.js): { serials } checked and grouped by product,
+// then { source, destination, barcodeNos, printer } moved MAX_MOVE at a time
+router.post('/model-transfers/bulk/check', requireAuth, authorizeScreen(PRODUCTION['model-transfers']), async (req, res) => {
+  ok(res, await checkTransfer(req.body?.serials));
+});
+router.post('/model-transfers/bulk', requireAuth, authorizeScreen(PRODUCTION['model-transfers']), async (req, res) => {
+  ok(res, await transferMany(req.body ?? {}, sessionContext(req)));
 });
 router.use(screensRouter(PRODUCTION));
 

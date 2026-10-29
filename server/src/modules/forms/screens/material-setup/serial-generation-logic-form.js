@@ -3,7 +3,7 @@ import { execute, query } from '../../../../db/pool.js';
 import { netString, netInt, netLong } from '../../../../shared/net.js';
 import { update, collect } from '../../write.js';
 import { toText } from '../../../../shared/values.js';
-import { errorMsg, gridDelete, guard, selectedText } from '../_shared.js';
+import { errorMsg, gridDelete, guard, noKey, selectedText } from '../_shared.js';
 import { CUSTOM_DISPLAY, PAGE_DISPLAY, PAGE_EVENTS, PAGE_UPDATE } from '../registry.js';
 
 const SERIAL = 'View/MaterialSetup/SerialGenerationLogicForm.aspx';
@@ -73,10 +73,16 @@ Object.assign(PAGE_EVENTS, {
         if (type === 2 && v.tbLenth.trim() === '') return void (out.alert = errorMsg('Please Enter a Length'));
         if (type === 3 && v.tbValue.trim() === '') return void (out.alert = errorMsg('Please Enter a Value'));
         const t = await h.table('GVTransData');
-        if (t.rows.some((r) => t.get(r, 'Seq') === v.tbSeqNo)) return void (out.alert = errorMsg('Duplicate Sequance'));
-        const row = t.newRow();
-        t.set(row, 'SerialCode', netInt(v.PrimaryKey));
-        t.set(row, 'RowID', t.max('RowID') + 1);
+        // a line being changed (GVTransData:select; ViewState EditRow = its RowID) is replaced in place, its RowID kept;
+        // the sequence check leaves it out. Without one, as the original: a new line
+        const editing = netString(h.vs.EditRow ?? '');
+        const old = editing ? t.rows.find((r) => t.get(r, 'RowID') === editing) : null;
+        if (t.rows.some((r) => r !== old && t.get(r, 'Seq') === v.tbSeqNo)) return void (out.alert = errorMsg('Duplicate Sequance'));
+        const row = old ? { ...old } : t.newRow();
+        if (!old) {
+          t.set(row, 'SerialCode', netInt(v.PrimaryKey));
+          t.set(row, 'RowID', t.max('RowID') + 1);
+        }
         t.set(row, 'VariantCode', v.DdlName.split('-')[0]);
         t.set(row, 'VariantName', await selectedText(h, 'DdlName', v.DdlName));
         t.set(row, 'Name', v.TbDescription.trim());
@@ -89,9 +95,32 @@ Object.assign(PAGE_EVENTS, {
         t.set(row, 'Format', v.tbFormat.trim());
         t.set(row, 'Value', v.tbValue.trim());
         const blank = Object.fromEntries(['tbSeed', 'tbSeqNo', 'tbStartingNo', 'tbLenth', 'tbEndingNo', 'tbFormat', 'tbValue', 'TbDescription'].map((id) => [id, { value: '' }]));
-        Object.assign(out.set, { GVTransData: { rows: [...t.rows, row], visible: true }, ...blank, DdlName: { index: 0 }, ...serialPanels('') });
+        Object.assign(out.set, { GVTransData: { rows: old ? t.rows.map((r) => (r === old ? row : r)) : [...t.rows, row], visible: true }, ...blank, DdlName: { index: 0 }, ...serialPanels('') });
+        if (old) out.viewState = { ...h.vs, EditRow: '' };
       });
     },
+    // a line into the editors to change it in its table (owner, 29 Oct 2026; the original had no edit: a line was
+    // deleted, which removes a saved one at once, and added again). BtnAdd then replaces it; cancel gives it up
+    'GVTransData:select': async (v, h) => {
+      const out = { set: {}, viewState: { ...h.vs } };
+      return guard(out, async () => {
+        const t = await h.table('GVTransData');
+        const row = t.rows.find((r) => t.get(r, 'RowID') === h.arg) ?? noKey();
+        const name = (await h.options('DdlName')).find((o) => o.value !== '' && o.value.split('-')[0] === netString(t.get(row, 'VariantCode')))?.value ?? '';
+        const sep = (await h.options('DDLSeperator')).find((o) => o.text === t.get(row, 'Seperator'))?.value ?? '';
+        const val = (k) => ({ value: netString(t.get(row, k)) });
+        Object.assign(out.set, {
+          DdlName: { value: name }, TbDescription: val('Name'), tbSeqNo: val('Seq'), DDLSeperator: { value: sep },
+          tbStartingNo: val('StartingNo'), tbSeed: val('Seed'), tbLenth: val('Length'), tbEndingNo: val('EndingNo'), tbFormat: val('Format'), tbValue: val('Value'),
+          ...serialPanels(name),
+        });
+        out.viewState.EditRow = h.arg;
+      });
+    },
+    'GVTransData:cancel': async (v, h) => ({
+      set: { ...Object.fromEntries(['tbSeed', 'tbSeqNo', 'tbStartingNo', 'tbLenth', 'tbEndingNo', 'tbFormat', 'tbValue', 'TbDescription'].map((id) => [id, { value: '' }])), DdlName: { index: 0 }, DDLSeperator: { index: 0 }, ...serialPanels('') },
+      viewState: { ...h.vs, EditRow: '' },
+    }),
     'GVTransData:delete': async (v, h) => {
       const out = { set: {} };
       return guard(out, async () => {

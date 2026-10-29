@@ -156,6 +156,15 @@ Object.assign(PAGE_EVENTS, {
         out.set.BtnAdd = { text: '    ADD    ' };
       });
     },
+    // a line's edit given up (owner, 29 Oct 2026; the original had none: Select left the editors in Update until the
+    // next Add): the editors back to Add with the next SeqNo, as after an Add, the lines unchanged
+    'GVTransData:cancel': async (v, h) => {
+      const out = { set: {}, viewState: { ...h.vs, add: 'True' } };
+      return guard(out, async () => {
+        Object.assign(out.set, { DdlProcess: { index: 0 }, TbProcessTime: { value: '' }, TbSetupTime: { value: '' }, DDLCheckList: { index: 0 }, ddlBatchFreq: { index: 0 }, TbMaxHoldP: { value: '' }, TbMinHoldP: { value: '' }, BtnAdd: { text: '    ADD    ' } });
+        out.set.TBSeq = { value: nextSeq(await h.table('GVTransData'), true) };
+      });
+    },
     // GVTransData_SelectedIndexChanged: the line back into the editors, Add becomes Update
     'GVTransData:select': async (v, h) => {
       const out = { set: {}, viewState: { ...h.vs } };
@@ -165,6 +174,10 @@ Object.assign(PAGE_EVENTS, {
         const row = i >= 0 ? t.rows[i] : t.newRow(); // not found: a detached new row (all DBNull)
         const get = (c) => parseString(t.get(row, c));
         const intOf = (c) => String(netInt(t.get(row, c)));
+        // a line's stored flag / code put in its list when the list has it, else the list left at its first option (owner,
+        // 29 Oct 2026: on TEST e.g. BatchNoFreq and InputMaterialQC are NULL on every line, and the original failed on
+        // them, so no line could be edited)
+        const pick = async (id, value) => ((await h.options(id)).some((o) => o.value === value) ? select(h, out, id, value) : void (out.set[id] = { index: 0 }));
         if (i >= 0) {
           const changed = { ...row };
           t.set(changed, 'RouteCode', netInt(v.PrimaryKey));
@@ -178,23 +191,23 @@ Object.assign(PAGE_EVENTS, {
         const setup = parseStringZero(t.get(row, 'SetupCheckList'));
         if (setup !== '') out.set.DDLCheckList = { options: await h.fill(`Select ParameterCode, CONCAT(Name, ' - ', Alias) as Name From ParameterHeader where (Status=1 and Type =3) or ParameterCode=${digitsOrEmpty(setup)} order by Name`) };
         await select(h, out, 'DDLCheckList', setup);
-        await select(h, out, 'DdlConsession', intOf('MatConsession'));
-        await select(h, out, 'DDLMaterialSeq', intOf('MaterialSeq'));
+        await pick('DdlConsession', intOf('MatConsession'));
+        await pick('DDLMaterialSeq', intOf('MaterialSeq'));
         Object.assign(out.set, { TbMinHoldP: { value: get('MinHoldPeriod') }, TbMaxHoldP: { value: get('MaxHoldPeriod') } });
-        await select(h, out, 'DDLValidate', intOf('ProcessSeq'));
-        await select(h, out, 'DDLPallet', intOf('HandlingUnit'));
+        await pick('DDLValidate', intOf('ProcessSeq'));
+        await pick('DDLPallet', intOf('HandlingUnit'));
         const insp = parseStringZero(t.get(row, 'InspectionCheckList'));
         if (insp !== '') out.set.DDLInspection = { options: await h.fill(`Select ParameterCode, CONCAT(Name, ' - ', Alias) as Name From ParameterHeader where (Status=1 and Type in(6,7,8,2)) or ParameterCode=${digitsOrEmpty(insp)} order by Name`) };
         await select(h, out, 'DDLInspection', insp);
         out.set.TBDrawaingNo = { value: get('DrawingNo') };
-        await select(h, out, 'DDLStageLabel', intOf('StageLabel'));
-        await select(h, out, 'DDLStageQC', intOf('StageQC'));
-        await select(h, out, 'DDLNextStageLabel', intOf('PrintNextStageLabel'));
-        await select(h, out, 'ddlBatchFreq', intOf('BatchNoFreq'));
-        await select(h, out, 'DDLQCStatus', intOf('InputMaterialQC'));
+        await pick('DDLStageLabel', intOf('StageLabel'));
+        await pick('DDLStageQC', intOf('StageQC'));
+        await pick('DDLNextStageLabel', intOf('PrintNextStageLabel'));
+        await pick('ddlBatchFreq', intOf('BatchNoFreq'));
+        await pick('DDLQCStatus', intOf('InputMaterialQC'));
         out.set.TBAutoProcess = { value: intOf('AutoProcessing') };
         out.set.TbNoOfCopy = { value: intOf('NoOfCopy') };
-        await select(h, out, 'DDLWorkStation', intOf('StationScan'));
+        await pick('DDLWorkStation', intOf('StationScan'));
         out.viewState.add = 'False';
         out.set.BtnAdd = { text: '  Update  ' };
       });

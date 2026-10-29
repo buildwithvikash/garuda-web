@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { openedRecord, useRememberView } from '@/lib/recordParam.js';
-import { RotateCw, Boxes, ClipboardList, Factory, Plus, Printer, Route } from 'lucide-react';
+import { RotateCw, Boxes, ClipboardList, Factory, PackageMinus, PackagePlus, Plus, Printer, Route } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '@/api.js';
 import Loader from '@/components/shared/Loader.jsx';
@@ -41,27 +41,115 @@ export const route = '/production/productionassignmentform';
 const layout = {
   icon: Printer,
   subtitle: 'Start a production order at its first station and print the job cards',
-  header: [{ id: 'DDLDepartment', label: 'Department' }, { id: 'ddlStatus', label: 'Record status' }],
+  header: ['DDLDepartment', 'ddlStatus'],
   sections: [
-    { title: 'Order', icon: ClipboardList, ids: [{ id: 'DDlProdOrder', label: 'Production order' }, { id: 'TextBox2', label: 'Assign date' }] },
-    { title: 'Product', icon: Boxes, ids: ['DDLMaterial', 'DDLVariant', { id: 'DDLBom', label: 'BOM' }, 'DDLRouting', { id: 'TBTotalQty', label: 'Order quantity' }, { id: 'DdlTotalUom', label: 'Order unit' }, { id: 'TBQty', label: 'Production quantity' }, { id: 'DDLUom', label: 'Unit' }] },
-    { title: 'Start at', icon: Factory, ids: [{ id: 'DDLProcessCode', label: 'Process' }, { id: 'DDLStationCode', label: 'Station' }] },
-    { title: 'Print job cards', icon: Printer, ids: [{ id: 'DDLPrinter', label: 'Printer' }, { id: 'btnPrint', label: 'Print job cards' }] },
+    { title: 'Order', icon: ClipboardList, ids: ['DDlProdOrder', 'TextBox2'] },
+    { title: 'Product', icon: Boxes, ids: ['DDLMaterial', 'DDLVariant', 'DDLBom', 'DDLRouting', 'TBTotalQty', 'DdlTotalUom', 'TBQty', 'DDLUom'] },
+    { title: 'Start at', icon: Factory, ids: ['DDLProcessCode', 'DDLStationCode'] },
+    { title: 'Print job cards', icon: Printer, ids: ['DDLPrinter', 'btnPrint'] },
+    // the grids show the columns an operator reads, under readable headers; the rows keep every field (codes, status,
+    // PS no.) for the screen. The BOM's input and output side by side (`width` in tenths)
     {
-      title: 'Route and materials',
-      icon: Route,
-      // the grids show the columns an operator reads; the rows keep every field (codes, status, PS no.) for the screen
-      ids: [
-        { id: 'GVRoute', label: 'Routing stages', columns: ['SeqNo', 'Process', 'Station', 'StartedOn', 'CompletedOn'] },
-        { id: 'GVBOMInput', label: 'BOM Input', columns: ['MaterialDesc', 'Qty', 'UomDesc', 'ProcessDesc', 'ScanReq', 'OutputScan'] },
-        { id: 'GVOutput', label: 'BOM Output', columns: ['MaterialDesc', 'Qty', 'UomDesc', 'YieldQty', 'ProcessDesc'] },
-      ],
+      title: 'Routing Stages', subtitle: 'The stages the order goes through, in sequence', icon: Route, tone: 'violet',
+      // Started On / Completed On not shown (owner, 29 Oct 2026): empty before the order starts
+      ids: ['GVRoute'],
+    },
+    {
+      title: 'BOM Input', subtitle: 'Materials the order consumes', icon: PackageMinus, tone: 'amber', width: 5,
+      ids: ['GVBOMInput'],
+    },
+    {
+      title: 'BOM Output', subtitle: 'What the order produces', icon: PackagePlus, tone: 'emerald', width: 5,
+      ids: ['GVOutput'],
     },
   ],
 };
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = undefined;
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Production Assignment',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Order Code', hidden: false }, // TextBox · ProcessOrder.PSNo · hidden by the screen until its logic shows it
+    TextBox2: { label: 'Assign date', hidden: false }, // TextBox · ProcessOrder.AssignDate
+    Alias: { label: 'Alias', hidden: false }, // TextBox · ProcessOrder.Alias · hidden by the screen until its logic shows it
+    DDLDepartment: { label: 'Department', hidden: false }, // DropDownList · ProcessOrder.Department
+    DDLBU: { label: 'Business Unit', hidden: false }, // DropDownList · ProcessOrder.BusinessUnit · hidden by the screen until its logic shows it
+    ddlStatus: { label: 'Record status', hidden: false }, // DropDownList · ProcessOrder.Status
+    DDlProdOrder: { label: 'Production order', hidden: false }, // DropDownList · ProcessOrder.PRODNo
+    DDLMaterial: { label: 'Material', hidden: false }, // DropDownList · ProcessOrder.Material
+    DDLBom: { label: 'BOM', hidden: false }, // DropDownList · ProcessOrder.BOMCode
+    DDLRouting: { label: 'Routing', hidden: false }, // DropDownList · ProcessOrder.Routing
+    DDLVariant: { label: 'Variant', hidden: false }, // DropDownList
+    DDLProcessCode: { label: 'Process', hidden: false }, // DropDownList · ProcessStageLabel.ProcessCode
+    DDLStationCode: { label: 'Station', hidden: false }, // DropDownList · ProcessStageLabel.StationCode
+    TBTotalQty: { label: 'Order quantity', hidden: false }, // TextBox
+    DdlTotalUom: { label: 'Order unit', hidden: false }, // DropDownList
+    TBQty: { label: 'Production quantity', hidden: false }, // TextBox · ProcessOrder.Qty
+    DDLUom: { label: 'Unit', hidden: false }, // DropDownList · ProcessOrder.Uom
+    ContentPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    GVRoute: { label: 'Process Routing', hidden: false }, // GridView
+    GVBOMInput: { label: 'Process Input BOM', hidden: false }, // GridView
+    GVOutput: { label: 'Process Output BOM', hidden: false }, // GridView
+    DDLPrinter: { label: 'Printer', hidden: false }, // DropDownList
+    btnPrint: { label: 'Print job cards', hidden: false }, // Button
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GVRoute: {
+      SeqNo: { header: 'Seq', hidden: false },
+      Process: { header: 'Process', hidden: false },
+      Station: { header: 'Station', hidden: false },
+      StartedOn: { header: 'StartedOn', hidden: true },
+      CompletedOn: { header: 'CompletedOn', hidden: true },
+      ProcessCode: { header: 'ProcessCode', hidden: true },
+      StationCode: { header: 'StationCode', hidden: true },
+      ParameterCode: { header: 'ParameterCode', hidden: true },
+      SetupParameter: { header: 'SetupParameter', hidden: true },
+      Status: { header: 'Status', hidden: true },
+      RouteCode: { header: 'Route', hidden: true },
+      PSNo: { header: 'ProcessNo', hidden: true },
+    },
+    GVBOMInput: {
+      RowID: { header: 'RowID', hidden: true },
+      MaterialDesc: { header: 'Material', hidden: false },
+      Qty: { header: 'Quantity', hidden: false },
+      UomDesc: { header: 'Unit', hidden: false },
+      ProcessDesc: { header: 'Process', hidden: false },
+      ScanReq: { header: 'Scan Required', hidden: false },
+      OutputScan: { header: 'Output Scan', hidden: false },
+      ConsumedQty: { header: 'ConsumedQty', hidden: true },
+      Parameters: { header: 'Parameters', hidden: true },
+      Status: { header: 'Status', hidden: true },
+      Material: { header: 'Mat Code', hidden: true },
+      Uom: { header: 'Uom Code', hidden: true },
+      PSNo: { header: 'Process', hidden: true },
+      BOMCode: { header: 'BOM Code', hidden: true },
+      ProcessCode: { header: 'ProcessNo', hidden: true },
+    },
+    GVOutput: {
+      RowID: { header: 'RowID', hidden: true },
+      MaterialDesc: { header: 'Material', hidden: false },
+      Qty: { header: 'Quantity', hidden: false },
+      UomDesc: { header: 'Unit', hidden: false },
+      YieldQty: { header: 'Yield Qty', hidden: false },
+      ProcessDesc: { header: 'Process', hidden: false },
+      Status: { header: 'Status', hidden: true },
+      Material: { header: 'Mat Code', hidden: true },
+      Uom: { header: 'Uom Code', hidden: true },
+      PSNo: { header: 'Process', hidden: true },
+      BOMCode: { header: 'BOM Code', hidden: true },
+      ProcessCode: { header: 'ProcessNo', hidden: true },
+    },
+  },
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // 6. PAGE
@@ -109,7 +197,7 @@ export default function ProductionAssignment() {
   const fresh = (notice) => run(api(`/forms/spec?path=${enc(path)}`).then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -120,7 +208,7 @@ export default function ProductionAssignment() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -140,7 +228,7 @@ export default function ProductionAssignment() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

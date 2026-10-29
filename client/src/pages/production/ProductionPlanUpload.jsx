@@ -41,7 +41,45 @@ export const route = "/production/prodplanupload";
 const layout = undefined;
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = undefined;
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Production Plan Upload',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    TBDate: { label: '', hidden: false }, // TextBox · hidden by the screen until its logic shows it
+    GvDetails: { label: '', hidden: false }, // GridView
+    LeftPanel: { label: '', hidden: false }, // Panel
+    FileUpload1: { label: 'Upload Excel', hidden: false }, // FileUpload
+    btnImport: { label: 'Import', hidden: false }, // Button
+    GridPanel: { label: '', hidden: false }, // Panel
+    BtnUpdate: { label: 'Update', hidden: false }, // Button · hidden by the screen until its logic shows it
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GvDetails: {
+    },
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    PlanNo: { header: 'Plan No', hidden: false },
+    PlanMonthYear: { header: 'Plan Month Year', hidden: false },
+    PlanMaterial: { header: 'Plan Material', hidden: false },
+    PlanQty: { header: 'Plan Qty', hidden: false },
+    PrintLbl: { header: 'Print Lbl', hidden: false },
+    PlanType: { header: 'Plan Type', hidden: false },
+    Remark: { header: 'Remark', hidden: false },
+    CreatedBy: { header: 'Created By', hidden: false },
+    CreatedOn: { header: 'Created On', hidden: false },
+    Status: { header: 'Status', hidden: false },
+  },
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // 6. PAGE
@@ -104,7 +142,7 @@ export default function ProductionPlanUpload() {
       ),
     );
 
-  const title = spec?.title || screen?.caption || "Screen";
+  const title = texts.title || spec?.title || screen?.caption || "Screen";
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -127,7 +165,7 @@ export default function ProductionPlanUpload() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -147,7 +185,7 @@ export default function ProductionPlanUpload() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

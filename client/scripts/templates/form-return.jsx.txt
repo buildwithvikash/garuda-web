@@ -10,7 +10,7 @@
       {slot ? createPortal(bar, slot) : <Toolbar>{bar}</Toolbar>}
 
       <fieldset disabled={cancelled} className="space-y-4">
-        <div className="grid items-start gap-4 lg:grid-cols-10">{sections()}</div>
+        <div className="grid items-start gap-2 lg:grid-cols-10">{sections()}</div>
       </fieldset>
 
       {deleting !== null && (

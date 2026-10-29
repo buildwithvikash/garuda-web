@@ -41,32 +41,32 @@ export const route = '/materialsetup/materialform';
 const layout = {
   icon: Package,
   subtitle: 'Materials: their classification, tracking, stock and quality settings',
-  header: [{ id: 'ddlStatus', label: 'Record status' }],
+  header: ['ddlStatus'],
   sections: [
     {
       title: 'Basic Information', subtitle: 'Primary material and classification details', icon: FileText, tone: 'blue', width: 6, cols: 3,
       ids: [
-        'PrimaryKey', 'DdlType', { id: 'DDLLedger', label: 'Customer' },
+        'PrimaryKey', 'DdlType', 'DDLLedger',
         'DdlMaterialCategory', 'DdlModel', 'DDLTag',
         'TextBox2', 'TextBox1', 'Alias',
         // Routing: Production Assignment picks it for this material's orders (server: forms/specs.js ADDED)
-        { id: 'DdlBaseUom', label: 'Base UOM' }, { id: 'TbRetailRate', label: 'MRP' }, { id: 'DDLRoute', label: 'Routing' },
+        'DdlBaseUom', 'TbRetailRate', 'DDLRoute',
       ],
     },
     {
       title: 'Tag & Asset Details', subtitle: 'Tag length, asset tagging and tracking details', icon: Tag, tone: 'violet', width: 4, cols: 2,
       // a row each: FG serial (tracking), asset tag, green tag, packing
       ids: [
-        'DropDownList24', { id: 'ddlTrackSerialLogic', label: 'FG Serial Logic' },
-        { id: 'DropDownList6', label: 'Asset Tag Type' }, { id: 'TextBox11', label: 'Asset Tag Length' },
-        { id: 'DropDownList1', label: 'Green Tag Require' }, { id: 'TextBox10', label: 'Green Tag Length' },
+        'DropDownList24', 'ddlTrackSerialLogic',
+        'DropDownList6', 'TextBox11',
+        'DropDownList1', 'TextBox10',
       ],
     },
     {
       title: 'Purchase & Sales', subtitle: 'Tax, rate and unit for purchase and sale', icon: Receipt, tone: 'amber', cols: 4,
-      ids: ['DdlPurchaseTax', 'TbPurchaseRate', { id: 'DdlPurchaseUom', label: 'Purchase UOM' }, 'TbPConvQty', 'DdlSalesTax', { id: 'TbWholeSaleRate', label: 'Wholesale Rate' }, { id: 'DdlSalesUom', label: 'Sales UOM' }, 'TbSConvQty'],
+      ids: ['DdlPurchaseTax', 'TbPurchaseRate', 'DdlPurchaseUom', 'TbPConvQty', 'DdlSalesTax', 'TbWholeSaleRate', 'DdlSalesUom', 'TbSConvQty'],
     },
-    { title: 'Material Variant', subtitle: 'Add a field and its value in the first row; ✏ changes a value, 🗑 removes it', icon: SlidersHorizontal, tone: 'violet', width: 7, ids: [{ id: 'GVTransData', label: 'Material variants' }] },
+    { title: 'Material Variant', subtitle: 'Add a field and its value in the first row; ✏ changes a value, 🗑 removes it', icon: SlidersHorizontal, tone: 'violet', width: 7, ids: ['GVTransData'] },
     { title: 'Image', subtitle: 'The material\'s picture', icon: ImageIcon, tone: 'slate', width: 3, cols: 1, ids: ['UploadImage'] },
     // artwork, unit frame and basket: stored on their own as soon as each is picked (Material/Images.jsx)
     {
@@ -74,17 +74,7 @@ const layout = {
       render: ({ values, mode }) => <MaterialImages code={values.PrimaryKey} saved={mode === 'edit'} />,
     },
   ],
-  // the group / field / value / new value / Add the variant table drives: in the form, not shown on their own
-  hide: [
-    'DDLGroup', 'DdlName', 'DdlValue', 'TbNewValue', 'BtnAdd',
-    // not used here (owner, 28 Oct 2026): batch & expiry, inventory & accounting, inspection & quality. Not shown; a
-    // record keeps their saved values. To bring one back, give it a step again.
-    'DropDownList3', 'DropDownList4', 'DropDownList5', 'DropDownList9', 'TextBox5', 'DropDownList2',
-    'DropDownList11', 'TextBox3', 'DropDownList16', 'TextBox14', 'TextBox15', 'TextBox4', 'DropDownList26', 'TBResetIn',
-    'DDLInspectionRequired', 'DDLInspectionType', 'DDLInspectionCheckList', 'DDLCertificate',
-    // vendor material codes (MaterialLedgerMap): not used either
-    'ddlVendor', 'DDlSerialLogic', 'tbVendorMat', 'btnLedgerMap', 'GVLedgerCode','DropDownList10','DropDownList7',
-  ],
+  // hidden fields: texts.fields (hidden: true)
 };
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
@@ -93,6 +83,117 @@ const page = {
   rowEdit: { grid: 'GVTransData', group: 'DDLGroup', field: 'DdlName', value: 'DdlValue', newValue: 'TbNewValue', add: 'BtnAdd' },
   // the material code: given by the server on save (IDMaster), not typed
   locked: ['PrimaryKey'],
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Material Master',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Material Code', hidden: false }, // TextBox · Material.MatCode
+    ddlStatus: { label: 'Record status', hidden: false }, // DropDownList · Material.Status
+    DdlType: { label: 'Item Type', hidden: false }, // DropDownList · Material.Type
+    DdlMaterialCategory: { label: 'Category', hidden: false }, // DropDownList · Material.Category
+    DdlModel: { label: 'Model', hidden: false }, // DropDownList · Material.Model
+    DDLLedger: { label: 'Customer', hidden: false }, // DropDownList · Material.Ledger
+    TextBox2: { label: 'Name', hidden: false }, // TextBox · Material.Name
+    TextBox1: { label: 'Item Code', hidden: false }, // TextBox · Material.ALTName
+    Alias: { label: 'Alias', hidden: false }, // TextBox · Material.Alias
+    DdlBaseUom: { label: 'Base UOM', hidden: false }, // DropDownList · Material.BaseUom
+    TextBox10: { label: 'Green Tag Length', hidden: false }, // TextBox · Material.HSNCode
+    TextBox11: { label: 'Asset Tag Length', hidden: false }, // TextBox · Material.Barcode
+    DDLTag: { label: 'Material Tag Design', hidden: false }, // DropDownList · Material.TagCode
+    TbRetailRate: { label: 'MRP', hidden: false }, // TextBox · Material.SRetailRate
+    DropDownList3: { label: 'Enable Batch', hidden: true }, // DropDownList · Material.Batch
+    DropDownList4: { label: 'Supplier Batch', hidden: true }, // DropDownList · Material.SupBatch
+    DropDownList5: { label: 'Manf. Date', hidden: true }, // DropDownList · Material.ManDate
+    DropDownList9: { label: 'Enable Expiry', hidden: true }, // DropDownList · Material.Expiry
+    TextBox5: { label: 'Exipiry Months', hidden: true }, // TextBox · Material.ExipiryMonths
+    DropDownList2: { label: 'Serialized Item', hidden: true }, // DropDownList · Material.Serial
+    DropDownList6: { label: 'Asset Tag Type', hidden: false }, // DropDownList · Material.AssetTagType
+    DropDownList24: { label: 'Track', hidden: false }, // DropDownList · Material.Track
+    ddlTrackSerialLogic: { label: 'FG Serial Logic', hidden: false }, // DropDownList · Material.TrackNoType
+    DropDownList10: { label: 'Is Packet', hidden: true }, // DropDownList · Material.IsPacket
+    DropDownList11: { label: 'Gross Weight', hidden: true }, // DropDownList · Material.GrossWeight
+    DropDownList7: { label: 'Alternative Uom', hidden: true }, // DropDownList · Material.AlterUOM
+    TextBox3: { label: 'Conversion Qty', hidden: true }, // TextBox · Material.ConvVal
+    DropDownList1: { label: 'Green Tag Require', hidden: false }, // DropDownList · Material.Classification
+    DropDownList16: { label: 'FIFO Enable', hidden: true }, // DropDownList · Material.IsFIFO
+    TextBox14: { label: 'FIFO Age(Months)', hidden: true }, // TextBox · Material.FIFOAge
+    TextBox15: { label: 'Reorder Level', hidden: true }, // TextBox · Material.ReorderLevel
+    TextBox4: { label: 'Reorder Qty', hidden: true }, // TextBox · Material.ReorderQty
+    DropDownList26: { label: 'Depreciation', hidden: true }, // DropDownList · Material.DepreciationMethod
+    DDLInspectionRequired: { label: 'Inspection Req', hidden: true }, // DropDownList · Material.IsInspectionReq
+    DDLInspectionType: { label: 'Inspection Type', hidden: true }, // DropDownList · Material.InspectionType
+    DDLInspectionCheckList: { label: 'Inspection Checklist', hidden: true }, // DropDownList · Material.InspectionCheckList
+    TBResetIn: { label: 'Retest In(Months)', hidden: true }, // TextBox · Material.RetestIn
+    DDLCertificate: { label: 'Certificate', hidden: true }, // DropDownList · Material.CertificateControl
+    UploadImage: { label: 'Image', hidden: false }, // Image · Material.MaterialImage
+    DdlPurchaseTax: { label: 'Purchase Tax', hidden: false }, // DropDownList · Material.PurchaseTax
+    TbPurchaseRate: { label: 'Purchase Rate', hidden: false }, // TextBox · Material.PurchaseRate
+    DdlPurchaseUom: { label: 'Purchase UOM', hidden: false }, // DropDownList · Material.PurchaseUnit
+    TbPConvQty: { label: 'Conversion Qty', hidden: false }, // TextBox · Material.PConvQty
+    DdlSalesTax: { label: 'Sales Tax', hidden: false }, // DropDownList · Material.SalesTax
+    TbWholeSaleRate: { label: 'Wholesale Rate', hidden: false }, // TextBox · Material.WholesaleRate
+    DdlSalesUom: { label: 'Sales UOM', hidden: false }, // DropDownList · Material.SalesUnit
+    TbSConvQty: { label: 'Conversion Qty', hidden: false }, // TextBox · Material.SConvQty
+    DDLGroup: { label: 'Variant Group', hidden: true }, // DropDownList
+    DdlName: { label: 'Variant Field', hidden: true }, // DropDownList
+    TbNewValue: { label: 'New Value', hidden: true }, // TextBox
+    GVTransData: { label: 'Material variants', hidden: false }, // GridView
+    ddlVendor: { label: 'Ledger', hidden: true }, // DropDownList
+    DDlSerialLogic: { label: 'Serial Logic', hidden: true }, // DropDownList
+    GVLedgerCode: { label: 'Material Ledger Map', hidden: true }, // GridView
+    DDLRoute: { label: 'Routing', hidden: false }, // DropDownList · Material.Route
+    BatchPanel: { label: '', hidden: false }, // Panel
+    packPanel: { label: '', hidden: false }, // Panel
+    FifoPanel: { label: '', hidden: false }, // Panel
+    QCPanel: { label: '', hidden: false }, // Panel
+    PurchaseConfigPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    SalesConfigPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    VariantPanel: { label: '', hidden: false }, // Panel
+    DdlValue: { label: 'Value', hidden: true }, // DropDownList
+    BtnAdd: { label: '✔', hidden: true }, // Button
+    LedgerMaterial: { label: '', hidden: false }, // Panel
+    tbVendorMat: { label: 'Vendor Material Code', hidden: true }, // TextBox
+    btnLedgerMap: { label: '✔', hidden: true }, // Button
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GVTransData: {
+      RecNo: { header: 'RecNo', hidden: false },
+      Name: { header: 'Field Name', hidden: false },
+      Value: { header: 'Variant Value', hidden: false },
+      Prefix: { header: 'Prefix', hidden: false },
+      MatCode: { header: 'MatCode', hidden: false },
+      RowID: { header: 'Row ID', hidden: false },
+      ValueCode: { header: 'ValueCode', hidden: false },
+    },
+    GVLedgerCode: {
+      RecNo: { header: 'RecNo', hidden: false },
+      Ledger: { header: 'Ledger', hidden: false },
+      LedgerName: { header: 'LedgerName', hidden: false },
+      VandorMatCode: { header: 'VandorMatCode', hidden: false },
+      SerialLogic: { header: 'SerialLogic', hidden: false },
+      SerialLogicName: { header: 'SerialLogic', hidden: false },
+      MatCode: { header: 'MatCode', hidden: false },
+    },
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    ALIAS: { header: 'Alias', hidden: false },
+    NAME: { header: 'Name', hidden: false },
+    ALTNAME: { header: 'Alt Name', hidden: false },
+    TYPE: { header: 'Type', hidden: false },
+    CATEGORY: { header: 'Category', hidden: false },
+    MODEL: { header: 'Model', hidden: false },
+    VARIANTCODE: { header: 'Variant Code', hidden: false },
+  },
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -141,7 +242,7 @@ export default function Material() {
   const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -152,7 +253,7 @@ export default function Material() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -172,7 +273,7 @@ export default function Material() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

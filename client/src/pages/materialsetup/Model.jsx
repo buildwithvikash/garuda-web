@@ -39,7 +39,7 @@ export const route = '/materialsetup/modelform';
 const layout = {
   icon: Boxes,
   subtitle: 'Models and their variant values',
-  header: [{ id: 'ddlStatus', label: 'Record status' }],
+  header: ['ddlStatus'],
   sections: [
     // the two steps side by side on wide screens: 30 % and 70 % (width in tenths)
     { title: 'Details', subtitle: 'The main information of this model', icon: ClipboardList, width: 3, ids: ['PrimaryKey', 'TextBox3', 'Alias', 'DDLCategory', 'TextBox1', 'TextBox2'] },
@@ -48,16 +48,60 @@ const layout = {
       width: 7,
       subtitle: 'Add a field and its value in the first row; ✏ changes a value, 🗑 removes it',
       icon: SlidersHorizontal,
-      ids: [{ id: 'GVTransData', label: 'Model variants' }],
+      ids: ['GVTransData'],
     },
   ],
-  // the group / field / value / new value / Add the table drives: in the form, not shown on their own
-  hide: ['DDLGroup', 'DdlName', 'DdlValue', 'TbNewValue', 'BtnAdd'],
+  // hidden fields: texts.fields (hidden: true)
 };
 
 // the variants grid, edited in place: the controls its add / edit row uses (Form.jsx, VariantGrid)
 const page = {
   rowEdit: { grid: 'GVTransData', group: 'DDLGroup', field: 'DdlName', value: 'DdlValue', newValue: 'TbNewValue', add: 'BtnAdd', category: 'DDLCategory' },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Model',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Model Code', hidden: false }, // TextBox · Model.ModelCode
+    ddlStatus: { label: 'Record status', hidden: false }, // DropDownList · Model.Status
+    TextBox3: { label: 'Name', hidden: false }, // TextBox · Model.Name
+    Alias: { label: 'Alias', hidden: false }, // TextBox · Model.Alias
+    DDLCategory: { label: 'Category', hidden: false }, // DropDownList · Model.Category
+    TextBox1: { label: 'Prefix', hidden: false }, // TextBox · Model.Prefix
+    TextBox2: { label: 'BEE Code', hidden: false }, // TextBox · Model.Variant
+    DDLGroup: { label: 'Variant Group', hidden: true }, // DropDownList
+    DdlName: { label: 'Variant Field', hidden: true }, // DropDownList
+    TbNewValue: { label: 'New Value', hidden: true }, // TextBox
+    GVTransData: { label: 'Model variants', hidden: false }, // GridView
+    DdlValue: { label: 'Value', hidden: true }, // DropDownList
+    BtnAdd: { label: '✔', hidden: true }, // Button
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GVTransData: {
+      RecNo: { header: 'RecNo', hidden: false },
+      Name: { header: 'Field Name', hidden: false },
+      Value: { header: 'Variant Value', hidden: false },
+      Prefix: { header: 'Prefix', hidden: false },
+      ModelCode: { header: 'ModelCode', hidden: false },
+      RowID: { header: 'Row ID', hidden: false },
+      ValueCode: { header: 'ValueCode', hidden: false },
+    },
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    ALIAS: { header: 'Alias', hidden: false },
+    NAME: { header: 'Name', hidden: false },
+    CATEGORY: { header: 'Category', hidden: false },
+    STATUS: { header: 'Status', hidden: false },
+  },
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -106,7 +150,7 @@ export default function Model() {
   const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -117,7 +161,7 @@ export default function Model() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -137,7 +181,7 @@ export default function Model() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

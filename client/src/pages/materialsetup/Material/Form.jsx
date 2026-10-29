@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 import { LockedField, STEP_COLS, STEP_SPAN, Step, TONE_CYCLE } from '@/components/shared/FormStep.jsx';
 import { prettyHeader } from '@/components/shared/DataTable.jsx';
 import { cn } from '@/lib/utils';
+import RowFormGrid from '@/components/shared/RowFormGrid.jsx';
 import VariantGrid from '@/components/shared/VariantGrid.jsx';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -61,20 +62,21 @@ function applyPatch(controls, values, patch = {}) {
 }
 
 /** Panel.Visible / Panel.Enabled = false hide / disable everything inside the panel. */
-function panelState(controls) {
+/** hidden: the ids the page's texts hide (shown nowhere, with what is inside them); the server still sees them */
+function panelState(controls, hidden = new Set()) {
   const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
   const up = (c, key) => {
-    for (let p = c.parent; p; p = byId.get(p)?.parent) if (byId.get(p)?.[key] === false) return false;
+    for (let p = c.parent; p; p = byId.get(p)?.parent) if (byId.get(p)?.[key] === false || (key === 'visible' && hidden.has(p))) return false;
     return true;
   };
-  return { shown: (c) => up(c, 'visible'), live: (c) => (up(c, 'enabled') ? c : { ...c, enabled: false }) };
+  return { shown: (c) => !hidden.has(c.id) && up(c, 'visible'), live: (c) => (up(c, 'enabled') ? c : { ...c, enabled: false }) };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // 3. ENGINE
 // A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to the server (lib/screenApi.js: the engine or the screen's API); the reply is applied here.
 // ────────────────────────────────────────────────────────────────────────────
-function useEngine({ path, state, events, onDone, onListFilter, onResult, initialError }) {
+function useEngine({ path, state, events, onDone, onListFilter, onResult, initialError, hidden }) {
   const [controls, setControls] = useState(state.controls);
   const [values, setValues] = useState(() => valuesOf(state));
   const [viewState, setViewState] = useState(state.viewState ?? {});
@@ -136,7 +138,7 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
     if (events.includes(id)) fire(id, next, undefined, ctl);
   };
 
-  const { shown, live } = panelState(controls);
+  const { shown, live } = panelState(controls, hidden);
   const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
   /** the control as the page shows it (disabled when a panel above it is) */
   const ctl = (id) => (byId.has(id) ? live(byId.get(id)) : null);
@@ -156,12 +158,35 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
 const EDITOR_TYPES = ['TextBox', 'DropDownList', 'CheckBox', 'Button', 'ImageButton', 'FileUpload', 'Image'];
 const WIDE = ['GridView', 'QC', 'CheckBoxList', 'TreeView', 'Picture', 'Footer', 'Panel'];
 const INPUT_TYPES = [...EDITOR_TYPES, 'ComboBox', 'GridView', 'QC', 'CheckBoxList', 'TreeView'];
+/** a grid with the page's texts for it ({ dataField or button id: { header, hidden } }): its data columns in the texts' order (those it
+ *  does not name after them, as they were), renamed or left out; command / button columns keep their place. The rows
+ *  keep every field */
+const gridTexts = (c, t) => {
+  if (!t) return c;
+  const order = Object.keys(t);
+  const at = (x) => order.indexOf(x.dataField) + 1 || order.length + 1;
+  const data = c.columns.filter((x) => x.kind === 'boundfield').sort((x, y) => at(x) - at(y));
+  let i = 0;
+  const columns = c.columns.map((x) => (x.kind === 'boundfield' ? data[i++] : x));
+  return { ...c, columns: columns.filter((x) => !t[x.dataField ?? x.template?.id]?.hidden).map((x) => (t[x.dataField]?.header != null ? { ...x, header: t[x.dataField].header } : x)) };
+};
 
 function RecordForm({ path, state, mode: initialMode, notice, buttons: specButtons, callNewOnSave, copyOptions, events, print, printers, onCopy, onBack, onDone, onReload, onListFilter, layout, page = {} }) {
   const formId = useId();
+  // the page's texts (its settings: labels, grid headers, `hidden`), over what the screen gives
+  const texts = page.texts ?? {};
+  const hiddenIds = useMemo(() => new Set(Object.entries(texts.fields ?? {}).filter(([, t]) => t?.hidden).map(([id]) => id)), [texts]);
   // TitleControl buttons, as the page's display code may switch them for the record (e.g. Display_Update(false))
-  const e = useEngine({ path, state, events, onDone, onListFilter, initialError: notice && !notice.ok ? notice.text : undefined });
+  const e = useEngine({ path, state, events, onDone, onListFilter, initialError: notice && !notice.ok ? notice.text : undefined, hidden: hiddenIds });
   const { controls, values, setValues, viewState, busy, setBusy, error, setError, fire, change, pick, shown, live, vis, ctl } = e;
+  /** the screen shows it (it and its panels), whatever the page's texts hide: a table's editors are hidden from the
+   *  page but drawn in its cells */
+  const screenById = new Map(controls.filter((x) => x.id).map((x) => [x.id, x]));
+  const onScreen = (id) => {
+    if (!screenById.has(id)) return false;
+    for (let x = screenById.get(id); x; x = screenById.get(x.parent)) if (x.visible === false) return false;
+    return true;
+  };
   const buttons = { ...specButtons, ...(state.buttons ?? {}), ...e.buttonPatch };
   const [mode, setMode] = useState(initialMode);
   const [deleting, setDeleting] = useState(null); // the reason being typed, or null
@@ -262,6 +287,10 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
     // page.rowEdit: this grid's rows are added / edited in the table (shared VariantGrid)
     if (c.type === 'GridView' && page.rowEdit?.grid === c.id) return <VariantGrid key={c.id} c={c} cfg={page.rowEdit} values={values} setValues={setValues} controls={controls} ctl={ctl} fire={fire} busy={busy} cancelled={cancelled} setError={setError} />;
     if (c.type === 'GridView') {
+      c = gridTexts(c, texts.grids?.[c.id]);
+      // page.rowForms: this grid's lines are added / edited in the table, with the screen's editors in its cells
+      if (page.rowForms?.[c.id])
+        return <RowFormGrid key={c.id} c={c} cfg={page.rowForms[c.id]} rows={values[c.id]} fire={fire} values={values} controls={controls} events={events} busy={busy} cancelled={cancelled} field={(id) => one(ctl(id), '', true)} onScreen={onScreen} />;
       const can = (k) => !cancelled && c.columns.some((x) => x.kind === 'commandfield' && x[k]) && events.includes(`${c.id}:${k}`);
       return (
         <Grid
@@ -280,7 +309,9 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
 
   const pairLabel = new Map(fields.map((x) => [x.c.id, x.label]));
   /** one control of a layout section, under its caption */
-  function one(c, l = pairLabel.get(c.id) ?? c.caption ?? page.labels?.[c.id] ?? c.column ?? '') {
+  /** bare: no caption (a table cell, under its column's header) */
+  function one(c, l = pairLabel.get(c.id) ?? c.caption ?? page.labels?.[c.id] ?? c.column ?? '', bare = false) {
+    if (!bare && texts.fields?.[c.id]?.label != null) l = texts.fields[c.id].label; // the page's own text wins
     // page.locked: TextBoxes the screen leaves typeable, shown read-only here (e.g. a key the server generates)
     if (c.type === 'TextBox' && (c.readOnly || page.locked?.includes(c.id))) return <LockedField key={c.id} c={c} label={l} value={values[c.id]} />;
     if (WIDE.includes(c.type)) return <div key={c.id} className="col-span-full min-w-0">{block(c)}</div>;
@@ -311,7 +342,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
     if (editors.length) steps.push({ title: 'More details', subtitle: 'Further entries and actions of this screen', icon: SlidersHorizontal, ids: editors.map((c) => ({ id: c.id, label: c.caption ?? page.labels?.[c.id] ?? '' })) });
     // (a role tree without its nodes, or an image not picked yet, shows nothing, so it gets no step)
     const blocks = controls.filter((c) => c.id && c.visible !== false && shown(c) && ['GridView', 'CheckBoxList', 'TreeView', 'QC', 'Picture'].includes(c.type) && (c.type !== 'TreeView' || c.nodes) && (c.type !== 'Picture' || values[c.id]));
-    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
+    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(texts.fields?.[c.id]?.label ?? page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
     // what has no step of its own: a guide panel, the approval footer (shown after the steps)
     const tail = controls.filter((c) => c.id && c.visible !== false && shown(c) && ((c.type === 'Panel' && c.guide) || c.type === 'Footer'));
     return { header, sections: steps, tail };
@@ -320,8 +351,12 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
   /** the layout's steps (the screen's own, or autoLayout()), numbered as shown; visible controls a screen's own layout
    *  does not place follow under "Other details" */
   const itemsOf = (list) => (list ?? []).map((i) => (typeof i === 'string' ? { id: i } : i)).filter((i) => vis(i.id) && (mode !== 'new' || i.id !== 'ddlStatus')); // no record status on Add new
-  /** a grid a layout item gives `columns` (data fields) shows only those; its rows keep every field */
-  const shownColumns = (c, keep) => (keep && c?.type === 'GridView' ? { ...c, columns: c.columns.filter((x) => x.kind !== 'boundfield' || keep.includes(x.dataField)) } : c);
+  /** a grid a layout item gives `columns` (data fields) shows only those, and `headers` ({ dataField: caption }) names
+   *  them; its rows keep every field */
+  const shownColumns = (c, keep, names) =>
+    c?.type === 'GridView' && (keep || names)
+      ? { ...c, columns: c.columns.filter((x) => !keep || x.kind !== 'boundfield' || keep.includes(x.dataField)).map((x) => (names?.[x.dataField] ? { ...x, header: names[x.dataField] } : x)) }
+      : c;
   const L = layout ?? autoLayout();
   function sections() {
     const idOf = (i) => (typeof i === 'string' ? i : i.id);
@@ -361,7 +396,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
           list.length > 0 && (
             <div className={cls}>
               {list.map((i) => {
-                const c = shownColumns(ctl(i.id), i.columns);
+                const c = shownColumns(ctl(i.id), i.columns, i.headers);
                 return (
                   <div key={i.id} className={cn('min-w-0', (WIDE.includes(c.type) || i.wide) && 'col-span-full', i.span === 2 && 'sm:col-span-2')}>
                     {/* a grid / list a layout names gets its name above it */}
@@ -460,7 +495,7 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
       {slot ? createPortal(bar, slot) : <Toolbar>{bar}</Toolbar>}
 
       <fieldset disabled={cancelled} className="space-y-4">
-        <div className="grid items-start gap-4 lg:grid-cols-10">{sections()}</div>
+        <div className="grid items-start gap-2 lg:grid-cols-10">{sections()}</div>
       </fieldset>
 
       {deleting !== null && (

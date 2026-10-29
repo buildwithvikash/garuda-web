@@ -23,7 +23,9 @@ import toast from 'react-hot-toast';
 import { screenApi } from '@/lib/screenApi.js';
 import { askConfirm } from '@/app/confirm.js';
 import Grid from '@/components/shared/DataGrid.jsx';
+import RowFormGrid from '@/components/shared/RowFormGrid.jsx';
 import DataTable from '@/components/shared/DataTable.jsx';
+import { dropdownNames, nameIn } from '@/lib/dropdownNames.js';
 import { CheckList, ComboField, EngineField, FileField, GuideView, ImageField, Panel, RoleTree } from '@/components/shared/FormControls.jsx';
 import Loader from '@/components/shared/Loader.jsx';
 import Modal, { ModalFooter } from '@/components/shared/Modal.jsx';
@@ -92,20 +94,21 @@ function applyPatch(controls, values, patch = {}) {
 }
 
 /** Panel.Visible / Panel.Enabled = false hide / disable everything inside the panel. */
-function panelState(controls) {
+/** hidden: the ids the page's texts hide (shown nowhere, with what is inside them); the server still sees them */
+function panelState(controls, hidden = new Set()) {
   const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
   const up = (c, key) => {
-    for (let p = c.parent; p; p = byId.get(p)?.parent) if (byId.get(p)?.[key] === false) return false;
+    for (let p = c.parent; p; p = byId.get(p)?.parent) if (byId.get(p)?.[key] === false || (key === 'visible' && hidden.has(p))) return false;
     return true;
   };
-  return { shown: (c) => up(c, 'visible'), live: (c) => (up(c, 'enabled') ? c : { ...c, enabled: false }) };
+  return { shown: (c) => !hidden.has(c.id) && up(c, 'visible'), live: (c) => (up(c, 'enabled') ? c : { ...c, enabled: false }) };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // 3. ENGINE
 // A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to the server (lib/screenApi.js: the engine or the screen's API); the reply is applied here.
 // ────────────────────────────────────────────────────────────────────────────
-function useEngine({ path, state, events, onDone, onListFilter, onResult, initialError }) {
+function useEngine({ path, state, events, onDone, onListFilter, onResult, initialError, hidden }) {
   const [controls, setControls] = useState(state.controls);
   const [values, setValues] = useState(() => valuesOf(state));
   const [viewState, setViewState] = useState(state.viewState ?? {});
@@ -167,7 +170,7 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
     if (events.includes(id)) fire(id, next, undefined, ctl);
   };
 
-  const { shown, live } = panelState(controls);
+  const { shown, live } = panelState(controls, hidden);
   const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
   /** the control as the page shows it (disabled when a panel above it is) */
   const ctl = (id) => (byId.has(id) ? live(byId.get(id)) : null);
@@ -187,7 +190,13 @@ function useEngine({ path, state, events, onDone, onListFilter, onResult, initia
 const sel = 'h-8 w-auto min-w-44 text-[13px]';
 const inp = 'h-8 w-auto text-[13px]';
 
-function RecordList({ path, spec, onOpen, filter = {} }) {
+/** a list column's place in the page's texts (the columns it does not name come after, as they were) */
+const placeOf = (texts, name) => {
+  const names = Object.keys(texts.list ?? {});
+  return names.indexOf(name) + 1 || names.length + 1;
+};
+/** texts.list: the page's texts for the list's columns ({ column: { header, hidden } }) */
+function RecordList({ path, spec, onOpen, filter = {}, texts = {} }) {
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -225,9 +234,11 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     setPage(0);
   };
 
+  // a column the form has as a dropdown shows its names, not the stored codes (Status 1 -> Active)
+  const names = useMemo(() => dropdownNames(spec), [spec]);
   const columns = useMemo(
-    () => (data?.columns ?? []).map((c, i) => ({ key: `c${i}`, header: c.name, text: (r) => r[`c${i}`], render: (r) => { const v = r[`c${i}`]; return typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v ?? '—'; } })),
-    [data],
+    () => (data?.columns ?? []).map((c, i) => ({ key: `c${i}`, name: c.name, header: texts.list?.[c.name]?.header ?? c.name, exactHeader: texts.list?.[c.name]?.header != null, text: (r) => nameIn(names, c.name, r[`c${i}`]), render: (r) => { const v = nameIn(names, c.name, r[`c${i}`]); return typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v ?? '—'; } })).filter((c) => !texts.list?.[c.name]?.hidden).sort((x, y) => placeOf(texts, x.name) - placeOf(texts, y.name)),
+    [data, texts, names],
   );
   const rows = useMemo(() => (data?.rows ?? []).map((r, i) => ({ id: i, ...Object.fromEntries(r.map((v, j) => [`c${j}`, v])) })), [data]);
   const totalPages = data ? Math.max(1, Math.ceil(data.count / data.pageSize)) : 1;
@@ -291,11 +302,31 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
 const EDITOR_TYPES = ['TextBox', 'DropDownList', 'CheckBox', 'Button', 'ImageButton', 'FileUpload', 'Image'];
 const WIDE = ['GridView', 'QC', 'CheckBoxList', 'TreeView', 'Picture', 'Footer', 'Panel'];
 const INPUT_TYPES = [...EDITOR_TYPES, 'ComboBox', 'GridView', 'QC', 'CheckBoxList', 'TreeView'];
+/** a grid with the page's texts for it ({ dataField or button id: { header, hidden } }): its data columns in the texts' order (those it
+ *  does not name after them, as they were), renamed or left out; command / button columns keep their place. The rows
+ *  keep every field */
+const gridTexts = (c, t) => {
+  if (!t) return c;
+  const order = Object.keys(t);
+  const at = (x) => order.indexOf(x.dataField) + 1 || order.length + 1;
+  const data = c.columns.filter((x) => x.kind === 'boundfield').sort((x, y) => at(x) - at(y));
+  let i = 0;
+  const columns = c.columns.map((x) => (x.kind === 'boundfield' ? data[i++] : x));
+  return { ...c, columns: columns.filter((x) => !t[x.dataField ?? x.template?.id]?.hidden).map((x) => (t[x.dataField]?.header != null ? { ...x, header: t[x.dataField].header } : x)) };
+};
 
 function RecordForm({ path, state, mode: initialMode, notice, buttons: specButtons, callNewOnSave, copyOptions, events, print, printers, onCopy, onBack, onDone, onReload, onListFilter, layout, page = {} }) {
   // TitleControl buttons, as the page's display code may switch them for the record (e.g. Display_Update(false))
-  const e = useEngine({ path, state, events, onDone, onListFilter, initialError: notice && !notice.ok ? notice.text : undefined });
+  const e = useEngine({ path, state, events, onDone, onListFilter, initialError: notice && !notice.ok ? notice.text : undefined, hidden: hiddenIds });
   const { controls, values, setValues, viewState, busy, setBusy, error, setError, fire, change, pick, shown, live, vis, ctl } = e;
+  /** the screen shows it (it and its panels), whatever the page's texts hide: a table's editors are hidden from the
+   *  page but drawn in its cells */
+  const screenById = new Map(controls.filter((x) => x.id).map((x) => [x.id, x]));
+  const onScreen = (id) => {
+    if (!screenById.has(id)) return false;
+    for (let x = screenById.get(id); x; x = screenById.get(x.parent)) if (x.visible === false) return false;
+    return true;
+  };
   const buttons = { ...specButtons, ...(state.buttons ?? {}), ...e.buttonPatch };
   const [mode, setMode] = useState(initialMode);
   const [deleting, setDeleting] = useState(null); // the reason being typed, or null
@@ -393,6 +424,10 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
       return <QCPanel key={c.id} s={values[c.id]} busy={busy} onChange={(next) => setValues(qc(next))} onEvent={(name, next = values[c.id], arg, i) => fire(name.replace(/^QC:/, `${c.id}:`), qc(next), arg, controls, i)} />;
     }
     if (c.type === 'GridView') {
+      c = gridTexts(c, texts.grids?.[c.id]);
+      // page.rowForms: this grid's lines are added / edited in the table, with the screen's editors in its cells
+      if (page.rowForms?.[c.id])
+        return <RowFormGrid key={c.id} c={c} cfg={page.rowForms[c.id]} rows={values[c.id]} fire={fire} values={values} controls={controls} events={events} busy={busy} cancelled={cancelled} field={(id) => one(ctl(id), '', true)} onScreen={onScreen} />;
       const can = (k) => !cancelled && c.columns.some((x) => x.kind === 'commandfield' && x[k]) && events.includes(`${c.id}:${k}`);
       return (
         <Grid
@@ -411,7 +446,9 @@ function RecordForm({ path, state, mode: initialMode, notice, buttons: specButto
 
   const pairLabel = new Map(fields.map((x) => [x.c.id, x.label]));
   /** one control of a layout section, under its caption */
-  function one(c, l = pairLabel.get(c.id) ?? c.caption ?? page.labels?.[c.id] ?? c.column ?? '') {
+  /** bare: no caption (a table cell, under its column's header) */
+  function one(c, l = pairLabel.get(c.id) ?? c.caption ?? page.labels?.[c.id] ?? c.column ?? '', bare = false) {
+    if (!bare && texts.fields?.[c.id]?.label != null) l = texts.fields[c.id].label; // the page's own text wins
     if (WIDE.includes(c.type)) return <div key={c.id} className="col-span-full min-w-0">{block(c)}</div>;
     if (c.type === 'Button' || c.type === 'ImageButton') {
       return events.includes(c.id) ? (

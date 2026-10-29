@@ -2,7 +2,9 @@
 // resources; the calls are in forms/resource.routes.js, the reference in docs/API.md.
 import { Router } from 'express';
 import { screensRouter } from '../forms/resource.routes.js';
+import materialBarcodeReprint from './material-barcode-reprint.js';
 import materialImages from './material-images.js';
+import serialLogicPreview from './serial-logic-preview.js';
 
 /** API name -> screen */
 export const MASTERS = {
@@ -48,5 +50,7 @@ export const MASTERS = {
 // the material images (material-images.js) first: they are not part of the Material screen's record
 const router = Router();
 router.use(materialImages);
+router.use(serialLogicPreview); // before the screen's /:key routes ('preview' is not a key)
+router.use(materialBarcodeReprint); // before the screen's /:key routes ('reprint' is not a barcode number)
 router.use(screensRouter(MASTERS));
 export default router;

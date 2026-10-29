@@ -40,16 +40,84 @@ const layout = {
   icon: RefreshCcw,
   subtitle: 'Scan a unit sent to rework, then confirm the repair',
   sections: [
-    { title: 'Scan unit', icon: ScanLine, scan: { box: 'TBBarcode', go: 'Go', label: 'Unit barcode', placeholder: 'Scan the unit barcode' }, ids: [{ id: 'DDLDepartment', label: 'Sub inventory' }, { id: 'BtnProduction', label: 'Back to production' }] },
+    { title: 'Scan unit', icon: ScanLine, scan: { box: 'TBBarcode', go: 'Go', label: 'Unit barcode', placeholder: 'Scan the unit barcode' }, ids: ['DDLDepartment', 'BtnProduction'] },
     { title: 'Unit', icon: Tag, ids: ['GVInspectionDetails', 'GVProcess'] },
-    { title: 'Inspection', icon: ShieldCheck, ids: ['DDLStatus', 'DDLNextAction', { id: 'BtnUD', label: 'Quality parameters' }, 'GVSelfInspection', 'GVTransData'] },
-    { title: 'Confirmation', icon: ShieldCheck, ids: ['DDLRootCause', 'SSLActionTaken', 'TBQty', { id: 'DDLUom', label: 'Unit' }, { id: 'DDLApproverStatus', label: 'Status' }, { id: 'DDLNewAction', label: 'Next action' }, { id: 'DDLPrinter', label: 'Printer' }, { id: 'TBApproverRemark', label: 'Approver remark' }] },
+    { title: 'Inspection', icon: ShieldCheck, ids: ['DDLStatus', 'DDLNextAction', 'BtnUD', 'GVSelfInspection', 'GVTransData'] },
+    { title: 'Confirmation', icon: ShieldCheck, ids: ['DDLRootCause', 'SSLActionTaken', 'TBQty', 'DDLUom', 'DDLApproverStatus', 'DDLNewAction', 'DDLPrinter', 'TBApproverRemark'] },
     { title: 'Rework history', icon: History, ids: ['GVReworkHistory'] },
   ],
 };
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = undefined;
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Rework Confirmation',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'ID', hidden: false }, // TextBox · InspectionTrans.ID · hidden by the screen until its logic shows it
+    TBDate: { label: 'InspectedOn', hidden: false }, // TextBox · InspectionTrans.InspectedOn · hidden by the screen until its logic shows it
+    TextBox1: { label: 'UserCode', hidden: false }, // TextBox · InspectionTrans.UserCode · hidden by the screen until its logic shows it
+    TBInspectionLot: { label: 'InspectionLotNo', hidden: false }, // TextBox · InspectionTrans.InspectionLotNo · hidden by the screen until its logic shows it
+    ddlPlant: { label: 'BusinessUnit', hidden: false }, // DropDownList · hidden by the screen until its logic shows it
+    DDLDepartment: { label: 'Sub inventory', hidden: false }, // DropDownList
+    TBBarcode: { label: 'Scan Barcode', hidden: false }, // TextBox
+    TbBar: { label: 'SampleBarcode', hidden: false }, // TextBox · InspectionTrans.SampleBarcode · hidden by the screen until its logic shows it
+    GVInspectionDetails: { label: '', hidden: false }, // GridView
+    GVProcess: { label: '', hidden: false }, // GridView
+    OtherFields: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    DefectPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    DDLStatus: { label: 'Status', hidden: false }, // DropDownList · InspectionTrans.Status
+    DDLNextAction: { label: 'Next Action', hidden: false }, // DropDownList · InspectionTrans.NextAction
+    GVSelfInspection: { label: '', hidden: false }, // GridView
+    GVTransData: { label: 'Inspection Defect', hidden: false }, // GridView
+    DDLRootCause: { label: 'Root Cause', hidden: false }, // DropDownList
+    SSLActionTaken: { label: 'Action Taken', hidden: false }, // DropDownList
+    TBQty: { label: 'Quantity', hidden: false }, // TextBox · InspectionTrans.Qty
+    DDLUom: { label: 'Unit', hidden: false }, // DropDownList · InspectionTrans.Uom
+    TBApproverRemark: { label: 'Approver remark', hidden: false }, // TextBox
+    DDLNewAction: { label: 'Next action', hidden: false }, // DropDownList
+    GVReworkHistory: { label: '', hidden: false }, // GridView
+    BtnProduction: { label: 'Back to production', hidden: false }, // Button
+    LeftPanel: { label: '', hidden: false }, // Panel
+    BarcodePanel: { label: '', hidden: false }, // Panel
+    Go: { label: 'Go', hidden: false }, // Button
+    GridPanel: { label: '', hidden: false }, // Panel
+    ProcessGrid: { label: '', hidden: false }, // Panel
+    BtnUD: { label: 'Quality parameters', hidden: false }, // Button · hidden by the screen until its logic shows it
+    ConfirmationPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    PnlRootCause: { label: '', hidden: false }, // Panel
+    QtyPanel: { label: '', hidden: false }, // Panel
+    DDLApproverStatus: { label: 'Status', hidden: false }, // DropDownList
+    QCPrinterPanel: { label: '', hidden: false }, // Panel
+    DDLPrinter: { label: 'Printer', hidden: false }, // DropDownList
+    ActionPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    ReworkHistory: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    QC: { label: '', hidden: false }, // QC · hidden by the screen until its logic shows it
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GVInspectionDetails: {
+    },
+    GVProcess: {
+    },
+    GVSelfInspection: {
+    },
+    GVTransData: {
+      Defect: { header: 'Defect', hidden: false },
+      Alias: { header: 'DefectCode', hidden: false },
+      Name: { header: 'Name', hidden: false },
+      ID: { header: 'ID', hidden: false },
+    },
+    GVReworkHistory: {
+    },
+  },
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // 6. PAGE
@@ -98,7 +166,7 @@ export default function ReworkConfirmation() {
   const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -109,7 +177,7 @@ export default function ReworkConfirmation() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -129,7 +197,7 @@ export default function ReworkConfirmation() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

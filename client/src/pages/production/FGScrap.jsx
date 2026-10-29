@@ -41,7 +41,43 @@ export const route = '/production/fgscrapform';
 const layout = undefined;
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = undefined;
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'FG Scrap',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    TBDate: { label: '', hidden: false }, // TextBox · hidden by the screen until its logic shows it
+    TBBarcode: { label: 'Scan Barcode', hidden: false }, // TextBox
+    GvDetails: { label: '', hidden: false }, // GridView
+    DDLScrapCategory: { label: 'Scrap Category', hidden: false }, // DropDownList
+    TBRemark: { label: 'Remark', hidden: false }, // TextBox
+    LeftPanel: { label: '', hidden: false }, // Panel
+    BarcodePanel: { label: '', hidden: false }, // Panel
+    Go: { label: 'Go', hidden: false }, // Button
+    GridPanel: { label: '', hidden: false }, // Panel
+    pnlRemark: { label: '', hidden: false }, // Panel
+    btnSave: { label: 'Save', hidden: false }, // Button
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GvDetails: {
+      Category: { header: 'Category', hidden: false },
+      Material: { header: 'Material', hidden: false },
+      Process: { header: 'Process', hidden: false },
+      Serial: { header: 'Serial', hidden: false },
+      PsNo: { header: 'PsNo', hidden: false },
+      RowID: { header: 'RowID', hidden: false },
+      ProcessCode: { header: 'ProcessCode', hidden: false },
+      matCode: { header: 'matCode', hidden: false },
+    },
+  },
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // 6. PAGE
@@ -89,7 +125,7 @@ export default function FGScrap() {
   const fresh = (notice) => run(api(`/forms/spec?path=${enc(path)}`).then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -100,7 +136,7 @@ export default function FGScrap() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -120,7 +156,7 @@ export default function FGScrap() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

@@ -902,7 +902,7 @@ const weekOfYear = (d = new Date()) => {
   return Math.floor((day + jan1.getDay()) / 7) + 1;
 };
 /** the date / week / fixed / AltName segments of an asset logic row (the sequence is the caller's) */
-async function assetSegment(dr, material, tx) {
+export async function assetSegment(dr, material, tx) {
   const c = str(dr.VariantCode);
   if (c === '1' || c === '2' || c === '3') {
     if (c === '2') {

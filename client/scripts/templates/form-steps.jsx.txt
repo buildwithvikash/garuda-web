@@ -11,7 +11,7 @@
     if (editors.length) steps.push({ title: 'More details', subtitle: 'Further entries and actions of this screen', icon: SlidersHorizontal, ids: editors.map((c) => ({ id: c.id, label: c.caption ?? page.labels?.[c.id] ?? '' })) });
     // (a role tree without its nodes, or an image not picked yet, shows nothing, so it gets no step)
     const blocks = controls.filter((c) => c.id && c.visible !== false && shown(c) && ['GridView', 'CheckBoxList', 'TreeView', 'QC', 'Picture'].includes(c.type) && (c.type !== 'TreeView' || c.nodes) && (c.type !== 'Picture' || values[c.id]));
-    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
+    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(texts.fields?.[c.id]?.label ?? page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
     // what has no step of its own: a guide panel, the approval footer (shown after the steps)
     const tail = controls.filter((c) => c.id && c.visible !== false && shown(c) && ((c.type === 'Panel' && c.guide) || c.type === 'Footer'));
     return { header, sections: steps, tail };
@@ -20,17 +20,32 @@
   /** the layout's steps (the screen's own, or autoLayout()), numbered as shown; visible controls a screen's own layout
    *  does not place follow under "Other details" */
   const itemsOf = (list) => (list ?? []).map((i) => (typeof i === 'string' ? { id: i } : i)).filter((i) => vis(i.id));
-  /** a grid a layout item gives `columns` (data fields) shows only those; its rows keep every field */
-  const shownColumns = (c, keep) => (keep && c?.type === 'GridView' ? { ...c, columns: c.columns.filter((x) => x.kind !== 'boundfield' || keep.includes(x.dataField)) } : c);
+  /** a grid a layout item gives `columns` (data fields) shows only those, and `headers` ({ dataField: caption }) names
+   *  them; its rows keep every field */
+  const shownColumns = (c, keep, names) =>
+    c?.type === 'GridView' && (keep || names)
+      ? { ...c, columns: c.columns.filter((x) => !keep || x.kind !== 'boundfield' || keep.includes(x.dataField)).map((x) => (names?.[x.dataField] ? { ...x, header: names[x.dataField] } : x)) }
+      : c;
   const L = layout ?? autoLayout();
   function sections() {
     const idOf = (i) => (typeof i === 'string' ? i : i.id);
-    const listed = new Set([...(L.header ?? []).map(idOf), ...L.sections.flatMap((x) => [...x.ids.map(idOf), ...(x.actions ?? []).map(idOf), ...[...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].flatMap((s) => [s.box, s.go])]), ...(L.tail ?? []).map((c) => c.id)]);
+    const listed = new Set([...(L.header ?? []).map(idOf), ...L.sections.flatMap((x) => [...(x.ids ?? []).map(idOf), ...(x.actions ?? []).map(idOf), ...[...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].flatMap((s) => [s.box, s.go])]), ...(L.tail ?? []).map((c) => c.id)]);
     const rest = layout ? controls.filter((c) => c.id && !listed.has(c.id) && !layout.hide?.includes(c.id) && INPUT_TYPES.includes(c.type) && vis(c.id) && (c.type !== 'Button' || events.includes(c.id))) : [];
     const steps = [...L.sections, ...(rest.length ? [{ title: 'Other details', subtitle: 'More fields of this screen', tone: 'slate', ids: rest.map((c) => c.id) }] : [])];
     let n = 0;
     return [
       ...steps.map((x) => {
+        // `render`: a step the page draws itself (not the screen's controls), given the form's values and mode
+        if (x.render) {
+          n += 1;
+          return (
+            <div key={x.title} className={cn('min-w-0', STEP_SPAN[x.width ?? 10])}>
+              <Step n={n} tone={x.tone ?? TONE_CYCLE[(n - 1) % TONE_CYCLE.length]} icon={x.icon ?? Boxes} title={x.title} subtitle={x.subtitle}>
+                {x.render({ values, mode })}
+              </Step>
+            </div>
+          );
+        }
         const items = itemsOf(x.ids);
         const acts = itemsOf(x.actions);
         // a step's scans (`scan`, or `scans` side by side): a box with its Go / Clear
@@ -50,7 +65,7 @@
           list.length > 0 && (
             <div className={cls}>
               {list.map((i) => {
-                const c = shownColumns(ctl(i.id), i.columns);
+                const c = shownColumns(ctl(i.id), i.columns, i.headers);
                 return (
                   <div key={i.id} className={cn('min-w-0', (WIDE.includes(c.type) || i.wide) && 'col-span-full', i.span === 2 && 'sm:col-span-2')}>
                     {/* a grid / list a layout names gets its name above it */}

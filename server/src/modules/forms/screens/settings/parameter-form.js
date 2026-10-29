@@ -75,6 +75,15 @@ Object.assign(PAGE_EVENTS, {
       });
     },
     'GVTransData:delete': async (v, h) => ({ set: { GVTransData: { rows: await gridRemove(h, 'GVTransData', 'LineCode', h.arg) } } }),
+    // a line's edit given up (owner, 29 Oct 2026; the original had none: Select left the editors in Update until the
+    // next Add): the editors back to Add, as after an Add, the lines unchanged
+    'GVTransData:cancel': async (v, h) => {
+      const blank = { value: '' };
+      return {
+        set: { TbName: blank, TbDescription: blank, TbMaxValue: blank, TbMinValue: blank, TbPassValue: blank, DdlUom: { value: '' }, MinMaxPanel: { visible: false }, ListPanel: { visible: false }, BtnAdd: { text: '  ADD  ' } },
+        viewState: { ...h.vs, btnAdd: '1', LineCode: '' },
+      };
+    },
   },
 });
 

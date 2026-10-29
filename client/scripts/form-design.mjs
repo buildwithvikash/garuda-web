@@ -56,7 +56,7 @@ export function designForm(file) {
   }
   const oneBody = src.slice(one.body.start, one.body.end);
   if (!oneBody.includes('LockedField')) edits.push({ from: one.body.start + 1, to: one.body.start + 1, text: "\n    if (c.type === 'TextBox' && c.readOnly) return <LockedField key={c.id} c={c} label={l} value={values[c.id]} />;" });
-  if (!src.slice(rf.start, rf.end).includes('formId = useId()')) edits.push({ from: rf.body.start + 1, to: rf.body.start + 1, text: '\n  const formId = useId();' });
+  if (!src.slice(rf.start, rf.end).includes('formId = useId()')) edits.push({ from: rf.body.start + 1, to: rf.body.start + 1, text: "\n  const formId = useId();\n  // the page's texts (its settings: labels, grid headers, `hidden`), over what the screen gives\n  const texts = page.texts ?? {};\n  const hiddenIds = useMemo(() => new Set(Object.entries(texts.fields ?? {}).filter(([, t]) => t?.hidden).map(([id]) => id)), [texts]);" });
   for (const n of body) {
     const names = n.type === 'VariableDeclaration' ? n.declarations.map((d) => d.id.name) : n.type === 'FunctionDeclaration' ? [n.id.name] : [];
     if (names.length && names.every((x) => DROP_LOCAL.has(x))) edits.push({ from: startOf(n), to: n.end, text: '' });

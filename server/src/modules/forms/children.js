@@ -3,6 +3,7 @@
 import { query, queryTable } from '../../db/pool.js';
 import { netString, netNum } from '../../shared/net.js';
 import { toText } from '../../shared/values.js';
+import { KEPT_MODULES } from '../menu/menu.service.js';
 
 // Cell text as the BoundField showed it: value.ToString() by column type (time -> hh:mm:ss, decimal keeps scale).
 // Keys follow the grid's DataField spelling: a BoundField finds its column case-insensitively (DataRow lookup).
@@ -38,8 +39,12 @@ export async function roleTree() {
     if (!byParent.has(p)) byParent.set(p, []);
     byParent.get(p).push(r);
   }
+  // only the pages this app offers and their folders (owner, 29 Oct 2026; menu.service.js KEPT_MODULES): the original
+  // listed every module. A role's grants for the others are kept: the tree's value holds them, and a save writes them
   const level = (parent, depth) =>
-    (byParent.get(netString(parent)) ?? []).map((r) => ({ value: netString(r.ModuleId), text: netString(r.Caption), children: depth < 2 ? level(r.ModuleId, depth + 1) : [] }));
+    (byParent.get(netString(parent)) ?? [])
+      .map((r) => ({ value: netString(r.ModuleId), text: netString(r.Caption), children: depth < 2 ? level(r.ModuleId, depth + 1) : [] }))
+      .filter((n) => KEPT_MODULES.has(n.value) || n.children.length > 0);
   return level(0, 0);
 }
 

@@ -47,21 +47,21 @@ const layout = {
   subtitle: 'Create a production order: product, quantity and materials',
   saveLabel: 'Create Order',
   updateLabel: 'Update Order',
-  header: [{ id: 'DropDownList4', label: 'Department' }, { id: 'ddlStatus', label: 'Record status' }],
+  header: ['DropDownList4', 'ddlStatus'],
   sections: [
     {
       title: 'Order Details',
       subtitle: 'Basic information about the production order',
       icon: ClipboardList,
       tone: 'blue',
-      ids: [{ id: 'PrimaryKey', label: 'Order code', span: 2 }, { id: 'Alias', label: 'Alias', span: 2 }, { id: 'TextBox2', label: 'Order date' }, 'DDLOrderType', { id: 'DropDownList2', label: 'Priority' }, 'DDLSO'],
+      ids: [{ id: 'PrimaryKey', span: 2 }, { id: 'Alias', span: 2 }, 'TextBox2', 'DDLOrderType', 'DropDownList2', 'DDLSO'],
     },
     {
       title: 'Product & Quantity',
       subtitle: 'Select the product and define the production quantity',
       icon: Package,
       tone: 'emerald',
-      ids: ['DDLMaterial', 'DdlBOM', { id: 'TBTotalQty', label: 'Order quantity' }, { id: 'DdlTotalUom', label: 'Order unit' }, { id: 'TBQty', label: 'Production quantity' }, { id: 'DDLUom', label: 'Unit' }],
+      ids: ['DDLMaterial', 'DdlBOM', 'TBTotalQty', 'DdlTotalUom', 'TBQty', 'DDLUom'],
     },
     {
       // the screen shows these only for a serial-tracked material (its Track panel); otherwise this step is left out
@@ -69,15 +69,71 @@ const layout = {
       subtitle: 'Tracking information for this order',
       icon: Tag,
       tone: 'violet',
-      ids: [{ id: 'TBTrackID', label: 'Track ID', span: 2 }, { id: 'TextBox1', label: 'Customer ID', span: 2 }],
+      ids: [{ id: 'TBTrackID', span: 2 }, { id: 'TextBox1', span: 2 }],
     },
   ],
-  // not shown on this page (owner, 28 Oct 2026): the remark, and the service-request lines (picker, add, grid)
-  hide: ['TextBox9', 'DDLOrder', 'BtnAdd', 'GVTransData'],
+  // hidden fields: texts.fields (hidden: true)
 };
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = undefined;
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Production Order',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Order code', hidden: false }, // TextBox · PRODHeader.PRODNo
+    TextBox2: { label: 'Order date', hidden: false }, // TextBox · PRODHeader.OrderDate
+    Alias: { label: 'Alias', hidden: false }, // TextBox · PRODHeader.Alias
+    DDLBU: { label: 'Business Unit', hidden: false }, // DropDownList · PRODHeader.BusinessUnit · hidden by the screen until its logic shows it
+    ddlStatus: { label: 'Record status', hidden: false }, // DropDownList · PRODHeader.Status
+    DropDownList4: { label: 'Department', hidden: false }, // DropDownList · PRODHeader.Department
+    DDLOrderType: { label: 'Order Type', hidden: false }, // DropDownList · PRODHeader.OrderType
+    DDLSO: { label: 'Sales Order', hidden: false }, // DropDownList · PRODHeader.SalesOrder
+    DropDownList2: { label: 'Priority', hidden: false }, // DropDownList · PRODHeader.Priority
+    DDLMaterial: { label: 'Material', hidden: false }, // DropDownList · PRODHeader.Material
+    TBTotalQty: { label: 'Order quantity', hidden: false }, // TextBox
+    DdlTotalUom: { label: 'Order unit', hidden: false }, // DropDownList
+    TBQty: { label: 'Production quantity', hidden: false }, // TextBox · PRODHeader.Qty
+    DDLUom: { label: 'Unit', hidden: false }, // DropDownList · PRODHeader.Uom
+    DdlBOM: { label: 'BOM', hidden: false }, // DropDownList · PRODHeader.BOMCode
+    TextBox9: { label: 'Remark', hidden: true }, // TextBox · PRODHeader.Remark
+    TBTrackID: { label: 'Track ID', hidden: false }, // TextBox · PRODHeader.TrackID
+    TextBox1: { label: 'Customer ID', hidden: false }, // TextBox · PRODHeader.CustID
+    DDLOrder: { label: 'OrderNo', hidden: true }, // DropDownList
+    GVTransData: { label: 'Prod Material', hidden: true }, // GridView
+    SalesOrderPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    OrderQtyPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    Track: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
+    BtnAdd: { label: '✔', hidden: true }, // Button
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+    GVTransData: {
+      PRODNo: { header: 'PRODNo', hidden: false },
+      SeqNo: { header: 'SeqNo', hidden: false },
+      OrderCode: { header: 'OrderNo', hidden: false },
+      OrderNo: { header: 'OrderNo', hidden: false },
+    },
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    ORDER: { header: 'Order', hidden: false },
+    ORDERDATE: { header: 'Order Date', hidden: false },
+    REMARK: { header: 'Remark', hidden: false },
+    MATERIAL: { header: 'Material', hidden: false },
+    'PRODUCT CODE': { header: 'Product Code', hidden: false },
+    QTY: { header: 'Qty', hidden: false },
+    UOM: { header: 'UOM', hidden: false },
+    STATUS: { header: 'Status', hidden: false },
+  },
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // 6. PAGE
@@ -125,7 +181,7 @@ export default function ProductionOrder() {
   const fresh = (notice) => run(api(`/forms/spec?path=${enc(path)}`).then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -136,7 +192,7 @@ export default function ProductionOrder() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -156,7 +212,7 @@ export default function ProductionOrder() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

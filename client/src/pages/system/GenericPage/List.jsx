@@ -5,6 +5,7 @@ import { RotateCcw, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import { screenApi } from "@/lib/screenApi.js";
 import DataTable from "@/components/shared/DataTable.jsx";
+import { dropdownNames, nameIn } from '@/lib/dropdownNames.js';
 import { Button } from "@/components/ui/button.jsx";
 import { Input } from "@/components/ui/input.jsx";
 import { NativeSelect } from "@/components/ui/native-select.jsx";
@@ -18,7 +19,13 @@ const enc = encodeURIComponent;
 const sel = "h-8 w-auto min-w-44 text-[13px]";
 const inp = "h-8 w-auto text-[13px]";
 
-function RecordList({ path, spec, onOpen, filter = {} }) {
+/** a list column's place in the page's texts (the columns it does not name come after, as they were) */
+const placeOf = (texts, name) => {
+  const names = Object.keys(texts.list ?? {});
+  return names.indexOf(name) + 1 || names.length + 1;
+};
+/** texts.list: the page's texts for the list's columns ({ column: { header, hidden } }) */
+function RecordList({ path, spec, onOpen, filter = {}, texts = {} }) {
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -69,18 +76,21 @@ function RecordList({ path, spec, onOpen, filter = {} }) {
     setPage(0);
   };
 
+  // a column the form has as a dropdown shows its names, not the stored codes (Status 1 -> Active)
+  const names = useMemo(() => dropdownNames(spec), [spec]);
   const columns = useMemo(
     () =>
       (data?.columns ?? []).map((c, i) => ({
         key: `c${i}`,
-        header: c.name,
-        text: (r) => r[`c${i}`],
+        name: c.name,
+        header: texts.list?.[c.name]?.header ?? c.name, exactHeader: texts.list?.[c.name]?.header != null,
+        text: (r) => nameIn(names, c.name, r[`c${i}`]),
         render: (r) => {
-          const v = r[`c${i}`];
+          const v = nameIn(names, c.name, r[`c${i}`]);
           return typeof v === "boolean" ? (v ? "Yes" : "No") : (v ?? "—");
         },
-      })),
-    [data],
+      })).filter((c) => !texts.list?.[c.name]?.hidden).sort((x, y) => placeOf(texts, x.name) - placeOf(texts, y.name)),
+    [data, texts, names],
   );
   const rows = useMemo(
     () =>

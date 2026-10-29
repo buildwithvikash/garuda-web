@@ -41,13 +41,48 @@ export const route = '/materialsetup/materialcategoryform';
 const layout = {
   icon: Boxes,
   subtitle: 'Material categories: code, name and type',
-  header: [{ id: 'ddlStatus', label: 'Record status' }],
+  header: ['ddlStatus'],
   sections: [{ title: 'Details', subtitle: 'The main information of this category', icon: ClipboardList, ids: ['PrimaryKey', 'TextBox3', 'TextBox4', 'TextBox1', 'DropDownList1'] }],
-  hide: ['DropDownList2', 'DDLInspectionRequired', 'DDLInspectionType', 'DDLInspectionCheckList', 'DDLCertificate'],
+  // hidden fields: texts.fields (hidden: true)
 };
 
 // const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = undefined;
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Material Category',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Category Code', hidden: false }, // TextBox · MaterialCategory.CategoryCode
+    ddlStatus: { label: 'Record status', hidden: false }, // DropDownList · MaterialCategory.Status
+    TextBox3: { label: 'Name', hidden: false }, // TextBox · MaterialCategory.Name
+    TextBox4: { label: 'Alias', hidden: false }, // TextBox · MaterialCategory.Alias
+    TextBox1: { label: 'Prefix', hidden: false }, // TextBox · MaterialCategory.Prefix
+    DropDownList1: { label: 'Category Type', hidden: false }, // DropDownList · MaterialCategory.CategoryType
+    DropDownList2: { label: 'Material Tag Design', hidden: true }, // DropDownList · MaterialCategory.TagCode
+    DDLInspectionRequired: { label: 'Inspection Req', hidden: true }, // DropDownList · MaterialCategory.IsInspectionReq
+    DDLInspectionType: { label: 'Inspection Type', hidden: true }, // DropDownList · MaterialCategory.InspectionType
+    DDLInspectionCheckList: { label: 'Inspection Checklist', hidden: true }, // DropDownList · MaterialCategory.InspectionCheckList
+    DDLCertificate: { label: 'Certificate', hidden: true }, // DropDownList · MaterialCategory.CertificateControl
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    CODE: { header: 'Code', hidden: false },
+    NAME: { header: 'Name', hidden: false },
+    ALIAS: { header: 'Alias', hidden: false },
+    TYPE: { header: 'Type', hidden: false },
+    STATUS: { header: 'Status', hidden: false },
+  },
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // 6. PAGE
@@ -95,7 +130,7 @@ export default function MaterialCategory() {
   const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -106,7 +141,7 @@ export default function MaterialCategory() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -126,7 +161,7 @@ export default function MaterialCategory() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

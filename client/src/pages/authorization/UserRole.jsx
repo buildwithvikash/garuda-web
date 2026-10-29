@@ -41,7 +41,33 @@ const layout = undefined;
 /** Client-side bits of this page (its code-behind runs on the server): captions the markup gives without a Tag,
  *  and TextBoxes that filter a CheckBoxList. */
 const page = {
-  labels: { TreeView1: 'Detail' },
+  
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'User Roles',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Role Code', hidden: false }, // TextBox · UserRoles.RoleCode
+    ddlStatus: { label: 'Record Status', hidden: false }, // DropDownList · UserRoles.Status
+    TextBox3: { label: 'Role Name', hidden: false }, // TextBox · UserRoles.RoleName
+    TextBox444: { label: 'Expiry in days', hidden: false }, // TextBox · UserRoles.ExpiryDays
+    TreeView1: { label: 'Detail', hidden: false }, // TreeView · UserRoleForm.Role
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    RoleCode: { header: 'Role Code', hidden: false },
+    RoleName: { header: 'Role Name', hidden: false },
+  },
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -91,7 +117,7 @@ export default function UserRole() {
   const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -102,7 +128,7 @@ export default function UserRole() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -122,7 +148,7 @@ export default function UserRole() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>

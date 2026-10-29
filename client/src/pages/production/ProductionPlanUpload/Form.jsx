@@ -79,15 +79,16 @@ function applyPatch(controls, values, patch = {}) {
 }
 
 /** Panel.Visible / Panel.Enabled = false hide / disable everything inside the panel. */
-function panelState(controls) {
+/** hidden: the ids the page's texts hide (shown nowhere, with what is inside them); the server still sees them */
+function panelState(controls, hidden = new Set()) {
   const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
   const up = (c, key) => {
     for (let p = c.parent; p; p = byId.get(p)?.parent)
-      if (byId.get(p)?.[key] === false) return false;
+      if (byId.get(p)?.[key] === false || (key === "visible" && hidden.has(p))) return false;
     return true;
   };
   return {
-    shown: (c) => up(c, "visible"),
+    shown: (c) => !hidden.has(c.id) && up(c, "visible"),
     live: (c) => (up(c, "enabled") ? c : { ...c, enabled: false }),
   };
 }
@@ -104,6 +105,7 @@ function useEngine({
   onListFilter,
   onResult,
   initialError,
+  hidden,
 }) {
   const [controls, setControls] = useState(state.controls);
   const [values, setValues] = useState(() => valuesOf(state));
@@ -185,7 +187,7 @@ function useEngine({
     if (events.includes(id)) fire(id, next, undefined, ctl);
   };
 
-  const { shown, live } = panelState(controls);
+  const { shown, live } = panelState(controls, hidden);
   const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
   /** the control as the page shows it (disabled when a panel above it is) */
   const ctl = (id) => (byId.has(id) ? live(byId.get(id)) : null);
@@ -247,6 +249,18 @@ const INPUT_TYPES = [
   "CheckBoxList",
   "TreeView",
 ];
+/** a grid with the page's texts for it ({ dataField or button id: { header, hidden } }): its data columns in the texts' order (those it
+ *  does not name after them, as they were), renamed or left out; command / button columns keep their place. The rows
+ *  keep every field */
+const gridTexts = (c, t) => {
+  if (!t) return c;
+  const order = Object.keys(t);
+  const at = (x) => order.indexOf(x.dataField) + 1 || order.length + 1;
+  const data = c.columns.filter((x) => x.kind === 'boundfield').sort((x, y) => at(x) - at(y));
+  let i = 0;
+  const columns = c.columns.map((x) => (x.kind === 'boundfield' ? data[i++] : x));
+  return { ...c, columns: columns.filter((x) => !t[x.dataField ?? x.template?.id]?.hidden).map((x) => (t[x.dataField]?.header != null ? { ...x, header: t[x.dataField].header } : x)) };
+};
 
 function RecordForm({
   path,
@@ -268,6 +282,9 @@ function RecordForm({
   page = {},
 }) {
   const formId = useId();
+  // the page's texts (its settings: labels, grid headers, `hidden`), over what the screen gives
+  const texts = page.texts ?? {};
+  const hiddenIds = useMemo(() => new Set(Object.entries(texts.fields ?? {}).filter(([, t]) => t?.hidden).map(([id]) => id)), [texts]);
   // TitleControl buttons, as the page's display code may switch them for the record (e.g. Display_Update(false))
   const e = useEngine({
     path,
@@ -276,6 +293,7 @@ function RecordForm({
     onDone,
     onListFilter,
     initialError: notice && !notice.ok ? notice.text : undefined,
+    hidden: hiddenIds,
   });
   const {
     controls,
@@ -489,6 +507,7 @@ function RecordForm({
       );
     }
     if (c.type === "GridView") {
+      c = gridTexts(c, texts.grids?.[c.id]);
       const can = (k) =>
         !cancelled &&
         c.columns.some((x) => x.kind === "commandfield" && x[k]) &&
@@ -536,6 +555,7 @@ function RecordForm({
       c.column ??
       "",
   ) {
+    if (texts.fields?.[c.id]?.label != null) l = texts.fields[c.id].label; // the page's own text wins
     if (c.type === 'TextBox' && c.readOnly) return <LockedField key={c.id} c={c} label={l} value={values[c.id]} />;
     if (WIDE.includes(c.type))
       return (
@@ -620,7 +640,7 @@ function RecordForm({
     if (editors.length) steps.push({ title: 'More details', subtitle: 'Further entries and actions of this screen', icon: SlidersHorizontal, ids: editors.map((c) => ({ id: c.id, label: c.caption ?? page.labels?.[c.id] ?? '' })) });
     // (a role tree without its nodes, or an image not picked yet, shows nothing, so it gets no step)
     const blocks = controls.filter((c) => c.id && c.visible !== false && shown(c) && ['GridView', 'CheckBoxList', 'TreeView', 'QC', 'Picture'].includes(c.type) && (c.type !== 'TreeView' || c.nodes) && (c.type !== 'Picture' || values[c.id]));
-    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
+    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(texts.fields?.[c.id]?.label ?? page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
     // what has no step of its own: a guide panel, the approval footer (shown after the steps)
     const tail = controls.filter((c) => c.id && c.visible !== false && shown(c) && ((c.type === 'Panel' && c.guide) || c.type === 'Footer'));
     return { header, sections: steps, tail };
@@ -629,17 +649,32 @@ function RecordForm({
   /** the layout's steps (the screen's own, or autoLayout()), numbered as shown; visible controls a screen's own layout
    *  does not place follow under "Other details" */
   const itemsOf = (list) => (list ?? []).map((i) => (typeof i === 'string' ? { id: i } : i)).filter((i) => vis(i.id));
-  /** a grid a layout item gives `columns` (data fields) shows only those; its rows keep every field */
-  const shownColumns = (c, keep) => (keep && c?.type === 'GridView' ? { ...c, columns: c.columns.filter((x) => x.kind !== 'boundfield' || keep.includes(x.dataField)) } : c);
+  /** a grid a layout item gives `columns` (data fields) shows only those, and `headers` ({ dataField: caption }) names
+   *  them; its rows keep every field */
+  const shownColumns = (c, keep, names) =>
+    c?.type === 'GridView' && (keep || names)
+      ? { ...c, columns: c.columns.filter((x) => !keep || x.kind !== 'boundfield' || keep.includes(x.dataField)).map((x) => (names?.[x.dataField] ? { ...x, header: names[x.dataField] } : x)) }
+      : c;
   const L = layout ?? autoLayout();
   function sections() {
     const idOf = (i) => (typeof i === 'string' ? i : i.id);
-    const listed = new Set([...(L.header ?? []).map(idOf), ...L.sections.flatMap((x) => [...x.ids.map(idOf), ...(x.actions ?? []).map(idOf), ...[...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].flatMap((s) => [s.box, s.go])]), ...(L.tail ?? []).map((c) => c.id)]);
+    const listed = new Set([...(L.header ?? []).map(idOf), ...L.sections.flatMap((x) => [...(x.ids ?? []).map(idOf), ...(x.actions ?? []).map(idOf), ...[...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].flatMap((s) => [s.box, s.go])]), ...(L.tail ?? []).map((c) => c.id)]);
     const rest = layout ? controls.filter((c) => c.id && !listed.has(c.id) && !layout.hide?.includes(c.id) && INPUT_TYPES.includes(c.type) && vis(c.id) && (c.type !== 'Button' || events.includes(c.id))) : [];
     const steps = [...L.sections, ...(rest.length ? [{ title: 'Other details', subtitle: 'More fields of this screen', tone: 'slate', ids: rest.map((c) => c.id) }] : [])];
     let n = 0;
     return [
       ...steps.map((x) => {
+        // `render`: a step the page draws itself (not the screen's controls), given the form's values and mode
+        if (x.render) {
+          n += 1;
+          return (
+            <div key={x.title} className={cn('min-w-0', STEP_SPAN[x.width ?? 10])}>
+              <Step n={n} tone={x.tone ?? TONE_CYCLE[(n - 1) % TONE_CYCLE.length]} icon={x.icon ?? Boxes} title={x.title} subtitle={x.subtitle}>
+                {x.render({ values, mode })}
+              </Step>
+            </div>
+          );
+        }
         const items = itemsOf(x.ids);
         const acts = itemsOf(x.actions);
         // a step's scans (`scan`, or `scans` side by side): a box with its Go / Clear
@@ -659,7 +694,7 @@ function RecordForm({
           list.length > 0 && (
             <div className={cls}>
               {list.map((i) => {
-                const c = shownColumns(ctl(i.id), i.columns);
+                const c = shownColumns(ctl(i.id), i.columns, i.headers);
                 return (
                   <div key={i.id} className={cn('min-w-0', (WIDE.includes(c.type) || i.wide) && 'col-span-full', i.span === 2 && 'sm:col-span-2')}>
                     {/* a grid / list a layout names gets its name above it */}
@@ -758,7 +793,7 @@ function RecordForm({
       {slot ? createPortal(bar, slot) : <Toolbar>{bar}</Toolbar>}
 
       <fieldset disabled={cancelled} className="space-y-4">
-        <div className="grid items-start gap-4 lg:grid-cols-10">{sections()}</div>
+        <div className="grid items-start gap-2 lg:grid-cols-10">{sections()}</div>
       </fieldset>
 
       {deleting !== null && (

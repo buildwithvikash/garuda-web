@@ -141,3 +141,87 @@ when that routing is in the list (`screens/production/production-assignment-form
 longer picks one before printing; a material without a routing keeps the original rule (selected only when there is
 a single routing). Checked on TEST: three open orders whose material has a routing got it; two without kept none.
 The forms / events parity of these two screens against the original is expected to differ by exactly this.
+
+# Intended difference: Material Barcode is a reprint page for FG, assembly and foaming labels (owner, 29 Oct 2026)
+
+The original Material Barcode page listed, created, saved and printed any material barcode. The page is now reprint
+only: the operator scans the label's serial (or its barcode number); only an FG label (its stage label at an FG label
+printing stage, ProdcutionStage 6, though its barcode row is usually at component scanning; or a barcode at that
+stage with no stage label), an assembly barcode (a stage label, serial S…) or a foaming barcode (a stage label,
+serial F… or L… for door / lid foaming) of the user's business unit is found (as TEST's 2.4 million stage labels
+group; corrected 29 Oct 2026, the first rule took FG labels at component scanning for assembly); anything else is
+refused. The reprint is what the original's Print sent for these job-card barcodes (DocType 4001: the in-process
+label, PrintStatus set) and is logged in BarcodePrintTrail with its reason, as before. The server's screen API and
+engine for the page are unchanged (not used by the page); the new calls are in
+`server/src/modules/masters/material-barcode-reprint.js`. Checked on TEST (read only, nothing printed): an FG, an
+assembly and a foaming serial and a barcode number found with the right kind; component serials, an unknown serial
+and another business unit refused; a reprint without reason, printer, or with another unit's printer refused.
+Its reprint history (read only, `GET …/reprint/history`) lists the BarcodePrintTrail rows of these three label kinds
+in the business unit, newest first, with the same date-time filter as the RM Replacement and FG Scrap histories; on
+TEST 28,114 of the 37,207 logged reprints are of these kinds.
+Many labels at once (owner, 29 Oct 2026): up to 500 serials are checked in one query (OPENJSON; the database needs
+compatibility level 130 or higher, TEST is 140) and printed 25 a request with one reason, each logged in
+BarcodePrintTrail as a single reprint is; a label that fails is reported and the others go on. Checked on TEST (read
+only, nothing printed): 300 FG serials with a repeat, a blank and two other serials checked in 49 ms, 300 found in
+order and 2 not found; lists too long, empty or with a bad barcode number refused.
+
+# Intended difference: Model To Model Transfer by a list of FG serials, grouped by product (owner, 29 Oct 2026)
+
+Beside the original's serial range (unchanged: events 10/10 identical), the screen takes up to 500 FG serials: they
+are checked in one query and grouped by their product (source material); each product gets its destination, and each
+unit is moved with the range transfer's own statements (`production.service.js` moveBarcode: stock row, barcode, job
+card, location; no transaction, as there) and its label printed again (printMoved: the routing stage's number of
+copies), 25 a request with progress. Only live barcodes (status not 99) of FG materials (Type 100, the screen's
+material list) are taken; a unit is checked again when it is moved (still of the source, still live). Each unit is
+logged in ModelToModel as its own row (StartSerial = EndSerial = the FG serial, Qty 1) where the range logs one row
+for the range. A unit whose label fails after the move is reported as moved, label not printed (reprint it on
+Material Barcode). Checked on TEST (read only): 12 FG serials of 3 products grouped in 36 ms, a scrapped, an unknown
+and a component serial refused with their reason; bad requests refused. No transfer was run on TEST (it moves stock).
+The page now offers only this (owner, 29 Oct 2026): complete FG serials, one a line; the serial range form is gone
+from the page (the screen's API and engine, Show and Print by range, are unchanged and still answer). The page's
+list is the transfer history (ModelToModel), read only.
+
+# Intended difference: Bill of Material shows each line's material category (owner, 29 Oct 2026)
+
+The BOM Input and BOM Output grids show a Material Category column beside Material Type: the grids' queries (from
+the original page) join MaterialCategory (`server/src/modules/forms/specs.js`, GRID_COLUMNS), and a line added or
+updated gets its material's category (`screens/material-setup/bill-of-material.js`, bomAddLine). It is not a column
+of BOMInput / BOMOutput, so the save writes the same columns as before (checked: the collected rows carry none of
+it). Forms 5/5 and events 18/18 identical against the original (they compare the original's columns). On the page
+the line's alternate materials open as a pop-up from its Alternative button, and the list of every line's alternates
+(GVAltMaterial) is hidden: the screen's controls and events are the same.
+On the page the BOM's lines are added and edited in the BOM Input / Output tables (owner, 29 Oct 2026: the shared
+RowFormGrid): the add row and an edited line draw the screen's own editors in their cells, and Add / ✓ is the
+screen's Add (Update after a Select); ✏ is the grid's Select, 🗑 its Delete. A Cancel event is new
+(`GVBOMInput:cancel`, `GVOutput:cancel`): the editors back to Add (mode, line, material, quantity, button text) with
+the lines unchanged, where the original stayed in Update until the next Add.
+
+# Intended difference: Serial Generation Logic's lines edited in their table (owner, 29 Oct 2026)
+
+The original had no edit for a logic's lines: a line was deleted (a saved one at once) and added again. Now
+`GVTransData:select` puts a line into the editors (its Sequence Field and the date / serial / value part it asks for)
+and the screen's Add (BtnAdd) replaces it in place, keeping its RowID and place (the sequence check leaves it out);
+`GVTransData:cancel` gives an edit up (`screens/material-setup/serial-generation-logic-form.js`, ViewState EditRow).
+Add without an edit is the original's, unchanged: events 3/3 identical. On the page the lines are added and edited
+in the table (shared RowFormGrid, page.rowForms), as on Bill of Material. Checked on TEST in memory: a serial-number
+line's Length changed through select + Add (RowID and order kept), and a cancel left the lines as they were.
+
+# Intended difference: Routing's lines can be selected and edited (owner, 29 Oct 2026)
+
+The original's line Select (GVTransData_SelectedIndexChanged) put each stored flag / code in its dropdown and failed
+when the list did not have it. On TEST every line has BatchNoFreq and InputMaterialQC NULL (they are not columns of
+the grid, so a save never writes them), so Select failed on every line ("ddlBatchFreq has a SelectedValue which is
+invalid") and no line could be edited. Now a line's flag / code is put in its list when the list has it, else the list
+is left at its first option (`screens/production-setup/routing-form.js`, pick); the process and checklist lists keep
+the original's handling. A Cancel event is new (`GVTransData:cancel`: the editors back to Add with the next SeqNo, the
+lines unchanged). Events 12/14 identical; the 2 differences are these Selects (the original's error, now the line
+opened). Checked on TEST in memory: Select opens all 164 lines of 15 routings, and an edit through Select + Add changed
+only the field changed. On the page the lines are added and edited in the table (shared RowFormGrid, page.rowForms).
+
+# Intended difference: CheckList Master's parameters edited in their table (owner, 29 Oct 2026)
+
+On the page the checklist's parameters are added and edited in their table (shared RowFormGrid, page.rowForms), with
+the screen's own editors in its cells, its Add (Update after a Select), Select and Delete. A Cancel event is new
+(`screens/settings/parameter-form.js`, `GVTransData:cancel`: the editors back to Add, the lines unchanged), where the
+original stayed in Update until the next Add. Checked on TEST in memory: Select opens all 72 lines of 20 checklists,
+an edit changed only its description, a cancel left the lines as they were.

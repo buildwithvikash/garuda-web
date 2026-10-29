@@ -1,0 +1,177 @@
+// ════════════════════════════════════════════════════════════════════════════════
+//  Employee
+//  Sidebar: Settings › Employee
+//
+//  Change how this page works or looks in its three files: nothing in them is used by
+//  any other page. Only the UI pieces are shared (@/components/ui = shadcn,
+//  @/components/shared = Page, Section, DataTable, Modal ...).
+//
+//  This page is three files (the router opens this one; the folder beside it holds the views):
+//    Employee.jsx        1. SETTINGS   this page's layout and captions          <- start here
+//                        6. PAGE       loads the screen and switches between list and form
+//    Employee/List.jsx   4. LIST VIEW  saved records: search, table, paging
+//    Employee/Form.jsx   2. STATE      how the form's state is read and patched
+//                        3. ENGINE     sends events to the server and applies its reply
+//                        5. FORM VIEW  one record: fields, buttons, grids, print ...
+// ════════════════════════════════════════════════════════════════════════════════
+
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { openedRecord, useRememberView } from '@/lib/recordParam.js';
+import { RotateCw, Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { screenApi } from '@/lib/screenApi.js';
+import Loader from '@/components/shared/Loader.jsx';
+import Page from '@/components/shared/Page.jsx';
+import { Button } from '@/components/ui/button.jsx';
+import { useMe } from '@/layouts/AppLayout.jsx';
+import { screenOf } from '@/layouts/Sidebar.jsx';
+import RecordList from './Employee/List.jsx';
+import RecordForm from './Employee/Form.jsx';
+
+// ────────────────────────────────────────────────────────────────────────────
+// 1. SETTINGS
+// Edit these for this page. `layout` arranges the fields in sections; `page` adds captions / search boxes.
+// ────────────────────────────────────────────────────────────────────────────
+export const route = '/settings/employeeform';
+
+// const layout = { icon, subtitle, sections: [{ title, icon, ids: ['ControlId', { id: 'ControlId', label: 'Caption' }] }] };
+const layout = undefined;
+
+// const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
+const page = {};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Employee',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Emp Code', hidden: false }, // TextBox · Employee.EmpCode
+    DropDownList8: { label: 'Business Unit', hidden: false }, // DropDownList · Employee.BusinessUnit · hidden by the screen until its logic shows it
+    ddlStatus: { label: 'Record Status', hidden: false }, // DropDownList · Employee.Status
+    TextBox2: { label: 'Name', hidden: false }, // TextBox · Employee.Name
+    Alias: { label: 'Alias', hidden: false }, // TextBox · Employee.Alias
+    TextBox4: { label: 'Join Date', hidden: false }, // TextBox · Employee.JoinDate
+    DropDownList1: { label: 'Emp Type', hidden: false }, // DropDownList · Employee.EmpType
+    DropDownList9: { label: 'Department', hidden: false }, // DropDownList · Employee.Department
+    TextBox13: { label: 'Designation', hidden: false }, // TextBox · Employee.Designation
+    DropDownList3: { label: 'Gender', hidden: false }, // DropDownList · Employee.Gender
+    TextBox6: { label: 'Birth Date', hidden: false }, // TextBox · Employee.BirthDate
+    DropDownList10: { label: 'Married', hidden: false }, // DropDownList · Employee.Married
+    TextBox5: { label: 'Anniversary', hidden: false }, // TextBox · Employee.Anniversary
+    TextBox9: { label: 'Address 1', hidden: false }, // TextBox · Employee.Address1
+    TextBox7: { label: 'Address 2', hidden: false }, // TextBox · Employee.Address2
+    TextBox3: { label: 'Postal Code', hidden: false }, // TextBox · Employee.PostalCode
+    TextBox1: { label: 'City', hidden: false }, // TextBox · Employee.City
+    DropDownList6: { label: 'State', hidden: false }, // DropDownList · Employee.State
+    DropDownList7: { label: 'Country', hidden: false }, // DropDownList · Employee.Country
+    TextBox10: { label: 'Email', hidden: false }, // TextBox · Employee.Email
+    TextBox12: { label: 'Contact No', hidden: false }, // TextBox · Employee.MobileNo
+    TextBox15: { label: 'Alt Contact No', hidden: false }, // TextBox · Employee.AltMobileNo
+    TextBox14: { label: 'Access Card No', hidden: false }, // TextBox · Employee.AccessCardNo
+    DropDownList2: { label: 'Allow Access', hidden: false }, // DropDownList · Employee.AllowAccess
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    CODE: { header: 'Code', hidden: false },
+    NAME: { header: 'Name', hidden: false },
+    JOINDATE: { header: 'Join Date', hidden: false },
+    TYPE: { header: 'Type', hidden: false },
+    DESIGNATION: { header: 'Designation', hidden: false },
+    DEPARTMENT: { header: 'Department', hidden: false },
+    BUSINESSUNIT: { header: 'Businessunit', hidden: false },
+    STATUS: { header: 'Status', hidden: false },
+  },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// 6. PAGE
+// Loads the screen from the server and switches between the list and the form.
+// ────────────────────────────────────────────────────────────────────────────
+export default function Employee() {
+  const me = useMe();
+  const { pathname } = useLocation();
+  const path = route;
+  const screen = me ? screenOf(me.menu, pathname) : null;
+  const [spec, setSpec] = useState(null);
+  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
+  const [error, setErrorState] = useState('');
+  const setError = (message) => {
+    setErrorState(message);
+    if (message) toast.error(message, { id: message, duration: 6000 });
+  };
+  const [seq, setSeq] = useState(0);
+  const remember = useRememberView();
+  const [listFilter, setListFilter] = useState({});
+  const show = (v) => {
+    setError('');
+    setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
+    setView(v);
+    remember(v); // ?record=<key> | new: a refresh reopens this form
+  };
+
+  useEffect(() => {
+    setSpec(null);
+    screenApi(path).spec()
+      .then((s) => {
+        setSpec(s);
+        // the form the URL names (a refresh), else where the screen starts
+        const want = openedRecord();
+        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
+        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
+        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
+      })
+      .catch((e) => setError(e.message));
+  }, [path]);
+
+  const run = (p) => p.catch((e) => setError(e.message));
+  const open = (key, notice) => run(screenApi(path).record(key).then((state) => show({ kind: 'form', mode: 'edit', key, state, notice })));
+  // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
+  const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
+  const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
+
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
+  return (
+    <Page
+      icon={layout?.icon ?? screen?.group.icon}
+      title={title}
+      subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
+      actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
+    >
+        {!spec || view.kind === 'opening' ? (
+          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
+        ) : view.kind === 'list' ? (
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
+        ) : (
+          <RecordForm
+            key={seq}
+            path={path}
+            state={view.state}
+            mode={view.mode}
+            notice={view.notice}
+            buttons={spec.buttons}
+            callNewOnSave={spec.callNewOnSave}
+            copyOptions={spec.copyOptions}
+            print={spec.print}
+            printers={spec.printers}
+            onReload={(key, notice) => open(key, notice)}
+            events={spec.events ?? []}
+            onCopy={copy}
+            onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}
+            onDone={(notice) => fresh(notice)}
+            onListFilter={setListFilter}
+            layout={layout}
+            page={{ ...page, texts }}
+          />
+        )}
+    </Page>
+  );
+}

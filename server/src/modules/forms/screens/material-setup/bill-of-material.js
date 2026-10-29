@@ -57,6 +57,8 @@ async function bomAddLine(v, h, side) {
     const fill = async (row, update) => {
       if (input && update) t.set(row, 'ProcessCode', v.DdlProcess); // the update branch sets it first (and again below)
       t.set(row, 'Type', await text(ids.type));
+      // the material's category, shown beside its type (specs.js GRID_COLUMNS; not a column of the table, never saved)
+      t.set(row, 'MaterialCategory', await scalarString('select mc.Name from Material m inner join MaterialCategory mc on mc.CategoryCode = m.Category where m.MatCode = @m', { m: v[ids.mat] }));
       t.set(row, 'MaterialDesc', await text(ids.mat));
       t.set(row, 'Material', v[ids.mat]);
       t.set(row, 'Qty', netDouble(v[ids.qty]));
@@ -174,6 +176,16 @@ Object.assign(PAGE_EVENTS, {
         if (netBool(await scalar('select  Serial from Material where MatCode=@m', { m }))) out.set.TBOutputQty = { value: '1' };
       });
     },
+    // a line's edit given up (owner, 29 Oct 2026; the original had none: Select left the editors in Update until the
+    // next Add): the editors back to Add, as after an Add, the line unchanged
+    'GVBOMInput:cancel': async (v, h) => ({
+      set: { DDLInputMaterial: { index: 0 }, TbInputQuantity: { value: '' }, DDLOutputScan: { index: 0 }, BtnInputAdd: { text: ' ADD ' } },
+      viewState: { ...h.vs, BOMINAdd: '1', INRowID: '' },
+    }),
+    'GVOutput:cancel': async (v, h) => ({
+      set: { DDLOutputMaterial: { index: 0 }, TBOutputQty: { value: '' }, BtnOutputAdd: { text: ' ADD ' } },
+      viewState: { ...h.vs, BOMOutAdd: '1', OutRowID: '' },
+    }),
     BtnInputAdd: (v, h) => bomAddLine(v, h, 'in'),
     BtnOutputAdd: (v, h) => bomAddLine(v, h, 'out'),
     'GVBOMInput:select': (v, h) => bomSelectLine(v, h, 'in'),

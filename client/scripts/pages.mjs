@@ -16,6 +16,8 @@ import path from 'node:path';
 import { splitPage } from './split-page.mjs';
 import { designForm } from './form-design.mjs';
 import { useScreenApi } from './screen-api-calls.mjs';
+import { addTexts } from './page-texts.mjs';
+import { KEEP } from '../../server/src/modules/menu/keep.js';
 
 const PAGES = path.resolve('src/pages');
 const HIDDEN_GROUP = 10000; // not shown in the sidebar
@@ -52,9 +54,18 @@ const template = (name, caption, group, route) =>
     .replaceAll('__GROUP__', group)
     .replaceAll('__ROUTE__', route);
 
+/** the real routes nearest a mistyped one: those that start with it, or share its last part (e.g. "routing" ->
+ *  /productionsetup/routingform) */
+function nearest(route) {
+  const last = route.split('/').filter(Boolean).at(-1) ?? '';
+  return [...KEEP].filter((r) => r.startsWith(route) || (last.length >= 3 && r.split('/').at(-1).includes(last.replace(/form$/, '')))).slice(0, 5);
+}
+
 function create({ route, caption, groupCaption }, known) {
   route = route.toLowerCase();
   if (known.has(route)) return { status: 'exists', file: known.get(route) };
+  // only a screen this app offers (server/src/modules/menu/keep.js): a mistyped route would make a page for nothing
+  if (!KEEP.has(route)) return { status: 'unknown', near: nearest(route) };
   const segs = route.split('/').filter(Boolean);
   const group = (segs[0] ?? 'misc').replace(/[^a-z0-9]/g, '');
   const dir = path.join(PAGES, group);
@@ -68,6 +79,13 @@ function create({ route, caption, groupCaption }, known) {
   const split = splitPage(file); // the template is one file: kept as page + List + Form, in the shared form design
   designForm(split.form);
   for (const f of [split.page, split.list, split.form]) useScreenApi(f); // calls through lib/screenApi.js
+  // every text the page shows, in its texts block (it reads the screen: needs server/.env; else add it later with
+  // node scripts/page-texts.mjs <page>)
+  try {
+    console.log(addTexts(split.page));
+  } catch (e) {
+    console.log(`  (no texts block: ${e.message.split('\n')[0]}; add it later with node scripts/page-texts.mjs ${path.relative(process.cwd(), split.page)})`);
+  }
   known.set(route, path.relative(PAGES, file));
   return { status: 'created', file: path.relative(PAGES, file) };
 }
@@ -103,7 +121,10 @@ if (a === '--menu') {
   const route = a;
   const caption = b ?? pascal(route.split('/').filter(Boolean).at(-1) ?? 'Page');
   const r = create({ route, caption }, known);
-  console.log(r.status === 'created' ? `+ src/pages/${r.file}` : `Already exists: src/pages/${r.file}`);
+  if (r.status === 'unknown') {
+    console.log(`No screen ${route.toLowerCase()}: nothing created.${r.near.length ? `\nDid you mean:\n${r.near.map((x) => `  ${x}`).join('\n')}` : ''}\n(the screens: server/src/modules/menu/keep.js)`);
+    process.exitCode = 1;
+  } else console.log(r.status === 'created' ? `+ src/pages/${r.file}` : `Already exists: src/pages/${r.file}`);
 } else {
   console.log('Usage:\n  npm run page -- /group/someform "Caption"\n  npm run pages:sync');
 }

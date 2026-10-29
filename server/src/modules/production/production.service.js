@@ -191,10 +191,10 @@ export async function scrapHistory(businessUnit, page = 0, range = {}) {
 }
 
 /** a history's optional time range ({ startTime, endTime }: checked date-times, as parameters) as more of its where */
-const timeWhere = (col, range) => (range.startTime ? ` and ${col} >= @startTime` : '') + (range.endTime ? ` and ${col} <= @endTime` : '');
+export const timeWhere = (col, range) => (range.startTime ? ` and ${col} >= @startTime` : '') + (range.endTime ? ` and ${col} <= @endTime` : '');
 
 /** rows as the screen engine's list ({ columns: [{ name }], rows of cell text, keys, count, page, pageSize }); rows open nothing */
-function listShape(rows, names, total, from) {
+export function listShape(rows, names, total, from) {
   const columns = rows.length ? Object.keys(rows[0]) : names;
   return { columns: columns.map((name) => ({ name })), rows: rows.map((r) => columns.map((c) => (r[c] == null ? '' : String(r[c])))), keys: [], count: netInt(total), page: from / PAGE_SIZE, pageSize: PAGE_SIZE };
 }
@@ -232,6 +232,25 @@ export async function showModelDetails(srcMat, startSerial, endSerial) {
   return dataTable(`${SHOW}mb.Material=${num(srcMat)} and Cast(${tail('mb.Serial', n)} as bigint) >=${netLong(startSerial)} and Cast(${tail('mb.Serial', n)}as bigint) <=${netLong(endSerial)} and mb.Status != 99`);
 }
 
+/** one barcode (its MaterialBarcode row) moved to the destination material, as ModelToModelTransferWRL does: its stock
+ *  row, the barcode, its job card, then its location (no transaction: each statement stands, as there) */
+export async function moveBarcode(d, des) {
+  await execute(`Update MaterialStock set Qty=qty-${num(d.CurrentQty)},ReleasedQty=ReleasedQty-${num(d.CurrentQty)} where Material=${num(d.Material)}  and  StorageCode=${num(d.StorageCode)}  and Batch=${num(d.Batch)}`);
+  await execute(`Update MaterialBarcode set Material=${num(des)} where BarcodeNo=${num(d.BarcodeNo)}`);
+  await execute(`Update ProcessOrder set Material=${num(des)} where PSNo=${num(d.DocNo)}`);
+  await updateLocationAdd(str(d.StorageCode), str(d.BarcodeNo));
+}
+
+/** a moved barcode's label printed again: its routing stage's number of copies (at least once). bp: the printer row */
+export async function printMoved(d, bp, ctx) {
+  const copies = netInt(await scalar(`Select NoofCopy from RoutingTrans where routecode=(Select Routing from ProcessOrder where PSNO=${num(d.DocNo)}) and ProcessCode=${num(d.ProcessCode)}`));
+  let j = 0;
+  do {
+    await printLabel('inprocess', str(d.BarcodeNo), bp, ctx.userId);
+    j++;
+  } while (j < copies);
+}
+
 /** AVProductionCapture.ModelToModelTransferWRL (no transaction: each statement stands): every live barcode of the source
  *  material in the serial range moves to the destination material (stock row, job card), its label printed again;
  *  returns the moved barcodes. start / end are spliced as typed (the page lets only whole numbers through). */
@@ -244,17 +263,8 @@ export async function modelToModelTransfer(srcMat, desMat, startSerial, endSeria
   for (let s = start; s <= end; s++) {
     const d = (await query(`Select * from MaterialBarcode where Material=${src} and ${tail('Serial', n)}='${String(s).padStart(n, '0')}' and Status !=99`))[0];
     if (!d) continue;
-    await execute(`Update MaterialStock set Qty=qty-${num(d.CurrentQty)},ReleasedQty=ReleasedQty-${num(d.CurrentQty)} where Material=${num(d.Material)}  and  StorageCode=${num(d.StorageCode)}  and Batch=${num(d.Batch)}`);
-    await execute(`Update MaterialBarcode set Material=${des} where BarcodeNo=${num(d.BarcodeNo)}`);
-    await execute(`Update ProcessOrder set Material=${des} where PSNo=${num(d.DocNo)}`);
-    await updateLocationAdd(str(d.StorageCode), str(d.BarcodeNo));
-    const copies = netInt(await scalar(`Select NoofCopy from RoutingTrans where routecode=(Select Routing from ProcessOrder where PSNO=${num(d.DocNo)}) and ProcessCode=${num(d.ProcessCode)}`));
-    const bp = await printerDetail(printer);
-    let j = 0;
-    do {
-      await printLabel('inprocess', str(d.BarcodeNo), bp, ctx.userId);
-      j++;
-    } while (j < copies);
+    await moveBarcode(d, des);
+    await printMoved(d, await printerDetail(printer), ctx);
     i++;
     listBar += `${str(d.BarcodeNo)}${s >= end ? ')' : ','}`;
   }

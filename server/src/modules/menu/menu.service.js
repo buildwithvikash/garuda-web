@@ -14,6 +14,15 @@ const prune = (nodes) =>
   });
 const MENU = prune(JSON.parse(readFileSync(new URL('./menu.json', import.meta.url), 'utf8')));
 
+/** the menu's own module ids (the kept screens and the folders that hold them, not Logout): what a role can be given in
+ *  this app (UserRoleForm's tree, forms/children.js roleTree) */
+export const KEPT_MODULES = (() => {
+  const ids = new Set();
+  const walk = (nodes) => nodes.forEach((n) => (ALWAYS.has(n.moduleId) || ids.add(String(n.moduleId)), walk(n.children)));
+  walk(MENU);
+  return ids;
+})();
+
 /** Original page path ("View/X/Y.aspx") -> React route ("/x/y"). */
 export function routeFor(url) {
   if (!url) return null;

@@ -100,7 +100,7 @@ Original: `View/BusinessSetup/LedgerForm.aspx`. Fields: `ledgerCode`, `departmen
 
 Original: `View/MaterialSetup/BillOfMaterial.aspx`. Fields: `bomCode`, `businessUnit`, `status`, `alias`, `version`, `remark`, `model`, `material`, `baseQty`, `baseUom`, `weight`, `weightUom`, `ddlProcess`, `ddlInputMaterialType`, `ddlInputMaterial`, `ddlInputUom`, `ddlRouting`, `bomInput`, `bomInputAltMaterial`, `dDlAltInputMaterial`, `gvCurrentAltMaterial`, `ddlOutoutMaterialType`, `ddlOutputMaterial`, `ddlOutputUom`, `bomOutput`, `tbInputQuantity`, `ddlInputScan`, `ddlOutputScan`, `tbOutputQty`.
 
-Events: `material`, `ddlInputMaterialType`, `ddlOutoutMaterialType`, `ddlInputMaterial`, `ddlOutputMaterial`, `btnInputAdd`, `btnOutputAdd`, `gvbomInputSelect`, `gvOutputSelect`, `gvbomInputDelete`, `gvOutputDelete`, `gvbomInputAlternativeMat`, `btnAltPanelClose`, `btnAddAltMaterial`, `btnUpdateAltMaterial`, `gvCurrentAltMaterialDelete`.
+Events: `material`, `ddlInputMaterialType`, `ddlOutoutMaterialType`, `ddlInputMaterial`, `ddlOutputMaterial`, `gvbomInputCancel`, `gvOutputCancel`, `btnInputAdd`, `btnOutputAdd`, `gvbomInputSelect`, `gvOutputSelect`, `gvbomInputDelete`, `gvOutputDelete`, `gvbomInputAlternativeMat`, `btnAltPanelClose`, `btnAddAltMaterial`, `btnUpdateAltMaterial`, `gvCurrentAltMaterialDelete`.
 
 ### Material Barcode — `/api/masters/material-barcodes`
 
@@ -132,7 +132,7 @@ Events: `ddlName`, `ddlGroup`, `btnAdd`, `gvTransDataDelete`.
 
 Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `serialLength`, `ddlName`, `tbDescription`, `tbSeqNo`, `ddlSeperator`, `tbStartingNo`, `tbSeed`, `tbLenth`, `tbEndingNo`, `tbFormat`, `tbValue`, `serialGenerationLogicDetail`.
 
-Events: `ddlName`, `type`, `btnAdd`, `gvTransDataDelete`.
+Events: `ddlName`, `type`, `btnAdd`, `gvTransDataSelect`, `gvTransDataCancel`, `gvTransDataDelete`.
 
 ### Unit of Measure — `/api/masters/units-of-measure`
 
@@ -270,7 +270,15 @@ Material also has its artwork, unit frame and basket images (`:kind` = `artwork`
 
 Material's `route` is the material's routing (`Material.Route`): Production Assignment selects it when an order of that material is chosen. The original screen had no such field; added by the owner, 28 Oct 2026, as on LIVE.
 
+Material Barcode is a reprint page (owner, 29 Oct 2026): `GET /api/masters/material-barcodes/reprint/:serial` finds the FG label, assembly or foaming barcode with that serial (or barcode number) in the user's business unit (`kind`, `serial`, `barcodeNo`, material, job card, production order, process, reprints; 404 for any other barcode), `GET …/reprint/printers` lists the unit's printers, and `POST …/reprint` with `{ barcodeNo, printer, remark }` prints the label again (the in-process label, as the original Print) and logs it in BarcodePrintTrail; `GET …/reprint/history?page=&start=&end=` lists those reprints, newest first, read only (reprinted on, label, serial, material, job card, reason, reprinted by; 1000 a page; the same time range as the histories below).
+
+Many labels at once (e.g. 300 FG labels from their serials): `POST …/reprint/check` with `{ serials }` (up to 500; blanks and repeats left out) answers each serial in order, found (the label, as above) or `{ serial, error }`; `POST …/reprint/many` with `{ barcodeNos, printer, remark }` (up to 50 a request; the page sends 25 at a time) prints them in order with one reason and answers `[{ barcodeNo, serial, ok, error? }]`: a label that fails is reported and the rest go on. The serial lookup uses OPENJSON (database compatibility level 130 or higher).
+
+Serial Generation Logic also has `POST /api/masters/serial-logics/preview` (owner, 29 Oct 2026; read only): `{ rows, barcodeLength, serialCode?, material? }` (the form's lines, saved or not) answers what the logic makes, built as production builds a serial from its lines (dates today, the model's Alt Name, the serial number padded to its length): `first`, `last` (its Ending No, else the largest the length holds), `count`, `length`, `parts` (each line's part and separator), `problems` (e.g. a length that differs from the Barcode Length, a start after the end), and for a saved logic the `materials` using it (the Model part's material, the first one by default). Nothing is taken or counted.
+
 WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and cabinet details of the scanned unit (`{ route, cabinet }`, each null when its lookup fails).
+
+Model To Model Transfer works by a list of FG serials (owner, 29 Oct 2026; the page no longer offers the serial range form, which stays in the screen API): `POST /api/production/model-transfers/bulk/check` with `{ serials }` (up to 500; blanks and repeats left out) groups the live barcodes (status not 99) of FG materials (Type 100) by product, `{ groups: [{ materialCode, material, materialAlias, units: [{ serial, barcodeNo }] }], refused: [{ serial, error }] }`; `POST /api/production/model-transfers/bulk` with `{ source, destination, barcodeNos, printer }` (up to 50 a request; the page sends 25) moves each unit as the range transfer does (stock row, barcode, job card, location), prints its label again (its routing stage's number of copies) and logs it in ModelToModel one serial a row, answering `[{ barcodeNo, serial, ok, printed, error? }]` (`printed` false: moved, label not printed).
 
 RM Replacement also has `GET /api/production/rm-replacements/history?page=&start=&end=`: the components replaced in units of the user's business unit, newest first, read only (replaced on, unit serial, component, process, old serial, new serial, operator; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
 

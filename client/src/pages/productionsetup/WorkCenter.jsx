@@ -18,7 +18,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { openedRecord, useRememberView } from '@/lib/recordParam.js';
-import { RotateCw, Plus } from 'lucide-react';
+import { ClipboardList, Factory, ListChecks, RotateCw, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { screenApi } from '@/lib/screenApi.js';
 import Loader from '@/components/shared/Loader.jsx';
@@ -35,14 +35,61 @@ import RecordForm from './WorkCenter/Form.jsx';
 // ────────────────────────────────────────────────────────────────────────────
 export const route = '/productionsetup/workcenterform';
 
-// const layout = { icon, subtitle, sections: [{ title, icon, ids: ['ControlId', { id: 'ControlId', label: 'Caption' }] }] };
-const layout = undefined;
+// the work center beside the processes it runs (`width` in tenths of the row); department and status in the header
+const layout = {
+  icon: Factory,
+  subtitle: 'A station on a line and the processes it runs',
+  header: ['DDLDepartment', 'ddlStatus'],
+  sections: [
+    {
+      title: 'Work Center', subtitle: 'The station and its line', icon: ClipboardList, tone: 'blue', width: 5, cols: 2,
+      // Business Unit, Group and Cost[Hr]: hidden (the screen, or texts below)
+      ids: ['PrimaryKey', 'TextBox3', 'TextBox4', 'DDLLine', 'DropDownList3', 'DropDownList4', 'DropDownList1', 'TextBox1'],
+    },
+    // the list has its own search (page.checkSearch below)
+    { title: 'Processes', subtitle: 'Tick the processes this station runs', icon: ListChecks, tone: 'violet', width: 5, ids: ['CBProcess'] },
+  ],
+};
 
-/** Client-side bits of this page (its code-behind runs on the server): captions the markup gives without a Tag,
- *  and TextBoxes that filter a CheckBoxList. */
+
 const page = {
   checkSearch: { TBCheckListSearch: 'CBProcess' },
-  labels: { CBProcess: 'Process List' },
+  
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// TEXTS
+// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
+// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
+// ────────────────────────────────────────────────────────────────────────────
+const texts = {
+  title: 'Work Center',
+  // fields, buttons and panels: { label, hidden }
+  fields: {
+    PrimaryKey: { label: 'Center Code', hidden: false }, // TextBox · WorkCenter.StationCode
+    DropDownList4: { label: 'Business Unit', hidden: false }, // DropDownList · WorkCenter.BusinessUnit · hidden by the screen until its logic shows it
+    ddlStatus: { label: 'Record Status', hidden: false }, // DropDownList · WorkCenter.Status
+    DDLDepartment: { label: 'Department', hidden: false }, // DropDownList · WorkCenter.Department
+    DropDownList1: { label: 'Group', hidden: true }, // DropDownList · WorkCenter.GroupID
+    TextBox3: { label: 'Name', hidden: false }, // TextBox · WorkCenter.Name
+    TextBox4: { label: 'Alias', hidden: false }, // TextBox · WorkCenter.Alias
+    TBCheckListSearch: { label: '', hidden: true }, // TextBox · the Process List's own search is used
+    CBProcess: { label: 'Process List', hidden: false }, // CheckBoxList · WorkCenterProcesses.ProcessCode
+    DDLLine: { label: 'Manf. Line', hidden: false }, // DropDownList · WorkCenter.ManfLine
+    TextBox1: { label: 'Cost[Hr]', hidden: true }, // TextBox · WorkCenter.Cost
+    DropDownList3: { label: 'Is Job Work Center', hidden: false }, // DropDownList · WorkCenter.JobWork
+  },
+  // grids: each one's columns { header, hidden } (its rows keep every field)
+  grids: {
+  },
+  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
+  list: {
+    RECNO: { header: 'Rec No', hidden: false },
+    ALIAS: { header: 'Alias', hidden: false },
+    WORKCENETER: { header: 'Workceneter', hidden: false },
+    PROCESS: { header: 'Process', hidden: false },
+    LINE: { header: 'Line', hidden: false },
+  },
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -92,7 +139,7 @@ export default function WorkCenter() {
   const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
   const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
 
-  const title = spec?.title || screen?.caption || 'Screen';
+  const title = texts.title || spec?.title || screen?.caption || 'Screen';
   return (
     <Page
       icon={layout?.icon ?? screen?.group.icon}
@@ -103,7 +150,7 @@ export default function WorkCenter() {
         {!spec || view.kind === 'opening' ? (
           (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
         ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} />
+          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
         ) : (
           <RecordForm
             key={seq}
@@ -123,7 +170,7 @@ export default function WorkCenter() {
             onDone={(notice) => fresh(notice)}
             onListFilter={setListFilter}
             layout={layout}
-            page={page}
+            page={{ ...page, texts }}
           />
         )}
     </Page>
