@@ -823,12 +823,29 @@ function Station({ spec }) {
   const stationRef = useRef(null);
   const serialRef = useRef(null);
   const [unitTick, setUnitTick] = useState(0);
+  // the last serial scanned at this station, shown under the scan boxes once the box is cleared for the next one
+  const [last, setLast] = useState(null); // { serial, model, ok, note, at }
+  const sentSerial = useRef(""); // the serial of the scan being answered
   const e = useEngine({
     path: PATH,
     state: spec,
     events: spec.events ?? [],
     onResult: (r, control) => {
       setUnitTick((t) => t + 1); // a scan, a QC save or a consume can move the unit along its route
+      if (control === "BtnWorderScan" && sentSerial.current) {
+        // the model comes with the scan's history (tbFG = "model|serial"), even when the scan is refused
+        const model = String(r.set?.tbFG?.value ?? "").split("|")[0];
+        setLast({
+          serial: sentSerial.current,
+          model,
+          ok: !r.alert,
+          note: r.alert
+            ? (r.explain?.title ?? "Not accepted")
+            : ({ 11: "Stage started", 21: "Stage completed" }[r.viewState?.I] ?? "Scan recorded"),
+          at: new Date(),
+        });
+        sentSerial.current = "";
+      }
       if (r.alert) {
         beep(false);
         // a refused scan explained (already completed here / not reached yet / not on its route, and where it is now)
@@ -870,7 +887,11 @@ function Station({ spec }) {
     (stationLocked ? serialRef : stationRef).current?.focus();
   }, [busy, stationLocked, serialLocked]);
 
-  const scan = (button) => fire(button, values);
+  const scan = (button) => {
+    // a serial scan (not the box being cleared with Change): remember what was scanned for "Last scanned"
+    if (button === "BtnWorderScan" && text("BtnWorderScan") !== "Clr") sentSerial.current = String(values.TBJobCoard ?? "").trim();
+    return fire(button, values);
+  };
   const line = text("lblLine");
 
   return (
@@ -984,6 +1005,20 @@ function Station({ spec }) {
                   >
                     Move to rework
                   </Button>
+                </div>
+              )}
+              {last && (
+                <div className={`rounded-lg border px-3 py-2.5 ${last.ok ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20"}`}>
+                  <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                    <span>Last scanned</span>
+                    <span className="tabular">{last.at.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                  </div>
+                  <p className="mt-1 font-mono text-base font-semibold break-all">{last.serial}</p>
+                  {last.model && <p className="text-sm font-medium break-words">{last.model}</p>}
+                  <p className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold ${last.ok ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>
+                    {last.ok ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <X className="size-3.5" aria-hidden="true" />}
+                    {last.note}
+                  </p>
                 </div>
               )}
             </div>
