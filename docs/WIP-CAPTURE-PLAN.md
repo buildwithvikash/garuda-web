@@ -76,9 +76,25 @@ Kept: the scan sound, mute, the big scan boxes for the shop floor.
 - In the browser at a real station with the scanner: station, unit, components, QC pass / fail, FG label print,
   guide; two stations on two PCs at the same time; a server restart in the middle of a shift.
 
-## Questions for the owner
+## Answers (owner, 31 Oct 2026)
 
-1. Does an operator ever use **two tabs** (or two stations) on one PC at once? (The session is per tab.)
-2. Are **QC (30)** and **FG label (40)** used at this plant, or only start / complete? (Decides what to test first.)
-3. Is anything from the "not ported" list needed now (multi-quantity output, stage type 7, other indicators)?
-4. 12 hours for a station session (one shift) right?
+1. **Two tabs / two stations on one PC: yes.** Each tab has its own station session (its id in the tab's
+   sessionStorage): two tabs are two independent stations; a refresh keeps the tab's station, closing it ends it.
+2. **QC (30) and FG label (40): not sure.** The scan result comes from the process' stage type
+   (`ProductionProcess.ProdcutionStage`: 2 / 8 QC, 6 FG label, 7 not ported). To find out (read only):
+   ```sql
+   SELECT pp.ProdcutionStage AS StageType, pp.ProcessCode, pp.Name, COUNT(DISTINCT rt.RouteCode) AS ActiveRoutings
+   FROM ProductionProcess pp
+   JOIN RoutingTrans rt ON rt.ProcessCode = pp.ProcessCode
+   JOIN RoutingHeader rh ON rh.RouteCode = rt.RouteCode AND rh.Status = 1
+   WHERE pp.ProdcutionStage IN (2, 6, 7, 8)
+   GROUP BY pp.ProdcutionStage, pp.ProcessCode, pp.Name ORDER BY pp.ProdcutionStage;
+   ```
+3. **The "not ported" features: to check.** Needed only if one of these returns rows (read only):
+   ```sql
+   SELECT ControlIndicator, COUNT(*) AS Departments FROM Department WHERE DeptType IN (6000, 7000) GROUP BY ControlIndicator; -- other than 10000?
+   SELECT TOP 20 po.PRODNo, ob.ProcessCode, ob.Qty FROM ProcessOutputBOM ob JOIN ProcessOrder po ON po.PSNo = ob.PSNo
+   WHERE ob.Qty > 1 AND po.AssignDate >= DATEADD(day, -90, GETDATE()) ORDER BY po.AssignDate DESC; -- multi-quantity output
+   ```
+   (Stage type 7: a row with StageType 7 in the query under 2.) If any is needed it is a separate step after this plan.
+4. **A station session lasts 12 h (one shift): yes.**
