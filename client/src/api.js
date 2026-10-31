@@ -12,6 +12,9 @@ export async function api(path, { method = 'GET', body } = {}) {
     return new Promise(() => {});
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message ?? `Request failed (${res.status})`);
+  if (!res.ok) {
+    // status, and a 422's field errors ({ field: message }), for a form that shows them beside its fields
+    throw Object.assign(new Error(data.message ?? `Request failed (${res.status})`), { status: res.status, errors: data.errors ?? null, alert: data.alert ?? null });
+  }
   return data;
 }

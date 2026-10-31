@@ -10,6 +10,7 @@ import { PAGE_EVENTS, eventHelpers } from '../forms/pages.js';
 import { netString } from '../../shared/net.js';
 import { AppError } from '../../shared/AppError.js';
 import * as repo from './production-orders.repo.js';
+import { unlocked } from './production-orders.validation.js';
 
 export const SCREEN = '/production/productionorderform';
 const spec = FORMS[SCREEN];
@@ -135,7 +136,7 @@ export async function addServiceRequest(ctx, draft) {
 
 /** a new order; returns its number */
 export async function create(ctx, order) {
-  const values = toValues(valuesOf(await newFormState(spec, ctx)), { ...order, prodNo: undefined });
+  const values = toValues(valuesOf(await newFormState(spec, ctx)), unlocked(order));
   const prodNo = await insert(spec, await collect(spec, values, ctx), ctx);
   return { prodNo: netString(prodNo), message: 'Record Created Successfully' };
 }
@@ -144,7 +145,7 @@ export async function create(ctx, order) {
 export async function save(ctx, prodNo, order) {
   const state = await saved(ctx, prodNo);
   if (!state) return null;
-  const values = toValues(valuesOf(state), { ...order, prodNo });
+  const values = toValues(valuesOf(state), unlocked(order));
   const key = await update(spec, await collect(spec, values, ctx), ctx);
   return { prodNo: netString(key), message: 'Record Updated Successfully' };
 }

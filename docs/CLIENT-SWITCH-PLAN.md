@@ -46,6 +46,21 @@ markup, style or behaviour change.
 and Assignment were. That is a UI redesign per screen, about 30 new pages, each needing its own approval and
 check. It can still be done later, screen by screen, on top of the switched transport.
 
+## Pilot: Production Order as a plain React screen (branch claude/keen-hamilton-o3qvz6, awaiting the owner)
+
+Not "same pages, new transport": the page no longer draws from the control list. It is an ordinary React screen on
+`/api/production/orders` (data by field name), with no `controls`, `viewState`, `ui` posting or patches:
+
+- `pages/production/ProductionOrder/ordersApi.js` the server calls; `useOrderForm.js` the form's state (only the
+  newest answer to a choice is applied, one save at a time, field errors from a 422 shown beside their fields);
+  `Form.jsx` / `List.jsx` the views, laid out in JSX; `texts.js` every text the screen shows.
+- Server: create / update ignore the fields the screen locks (`prodNo`, `alias`, `businessUnit`, `orderDate`); the
+  server keeps the values it built (`production-orders.validation.js`, `server/tests/production-orders.test.js`).
+- Same as before: steps, fields, what material / order type / sales order change (the screen's own handlers), a new
+  order after Save / Update, no Delete button. Not on the page, as before: Remark, the service-request picker and its
+  lines (hidden by the page's texts).
+- To check before it ships: the parity runs through the API (`--api`) and an owner check in the browser on TEST.
+
 ## Rollout: one screen at a time
 
 A list in the client, `API_SCREENS` (routes that use their API), decides which transport a page uses. A screen

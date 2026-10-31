@@ -45,4 +45,9 @@ export function validateOrder(body, { draft = false } = {}) {
   return { value, errors: Object.keys(all).length ? all : null };
 }
 
+/** Fields the screen locks (read-only, or set from the session / today): the server keeps the values it built, whatever
+ *  a request sends. On a new order that is today's date and the session's business unit; on a saved one, its own. */
+export const LOCKED = ['prodNo', 'alias', 'businessUnit', 'orderDate'];
+export const unlocked = (order) => Object.fromEntries(Object.entries(order ?? {}).filter(([f]) => !LOCKED.includes(f)));
+
 export const validateDraft = (body) => validateOrder(body, { draft: true });
