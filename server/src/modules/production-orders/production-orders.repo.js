@@ -1,13 +1,31 @@
 // Production orders (PRODHeader + PRODMaterial): the lookups the order screen uses. SQL text is the original
 // ProductionOrderForm's (WRL branches); codes are checked digits (shared/utils/sql.js) before they go into it.
 // Saving goes through the forms writer (services/forms/write.service.js) as the original's DataWrapper did.
-import { scalar } from '../../db/pool.js';
+import { query, scalar } from '../../db/pool.js';
 import { fill } from '../../db/options.js';
 import { netString, netLong, netBool } from '../../shared/net.js';
 import { digitsOrEmpty } from '../../shared/sql.js';
 
-/** whether the production order exists */
-export const exists = async (prodNo) => (await scalar('select count(*) from PRODHeader where PRODNo=@k', { k: Number(prodNo) })) > 0;
+/** whether the production order exists in the business unit (another unit's order is as good as none) */
+export const exists = async (prodNo, businessUnit) =>
+  (await scalar('select count(*) from PRODHeader where PRODNo=@k and BusinessUnit=@bu', { k: Number(prodNo), bu: Number(businessUnit) })) > 0;
+
+/** the list rows of one business unit (a condition on the list's row X; lists.js listPage scope) */
+export const businessUnitScope = (businessUnit) => ({ where: 'X.PRODNO in (select PRODNo from PRODHeader where BusinessUnit = @scopeBu)', params: { scopeBu: Number(businessUnit) } });
+
+/** The serials generated for the order: each job card's stage label (Production Assignment's print), oldest first. */
+export const serials = (prodNo) =>
+  query(
+    `select psl.BarcodeNo [serial], po.Alias [jobCard], pp.Name [process], wc.Name [station], m.Name [material], po.AssignDate [assignedOn]
+       from ProcessOrder po
+       inner join ProcessStageLabel psl on psl.PSNo = po.PSNo
+       left join ProductionProcess pp on pp.ProcessCode = psl.ProcessCode
+       left join WorkCenter wc on wc.StationCode = psl.StationCode
+       left join Material m on m.MatCode = po.Material
+      where po.PRODNo = @k
+      order by po.PSNo, psl.SeqNo`,
+    { k: Number(prodNo) },
+  );
 
 const parseString = (v) => (netString(v) === '&nbsp;' ? '' : netString(v));
 

@@ -4,10 +4,11 @@
 // (material, qty, orders[] ...) and the screen's controls (DDLMaterial, TBQty, GVTransData ...).
 import { FORMS } from '../forms/specs.js';
 import { newFormState, displayState } from '../forms/state.js';
-import { collect, insert, cancel as cancelRecord } from '../forms/write.js';
+import { collect, insert } from '../forms/write.js';
 import { listPage, searchColumns, distinctValues, operatorsFor, OPERATOR_TEXT } from '../forms/lists.js';
 import { PAGE_EVENTS, eventHelpers } from '../forms/pages.js';
 import { netString } from '../../shared/net.js';
+import { enInDateTime } from '../../shared/format.js';
 import { AppError } from '../../shared/AppError.js';
 import * as repo from './production-orders.repo.js';
 import { NO_CHANGE_AFTER_CREATE, unlistedChoices, unlocked } from './production-orders.validation.js';
@@ -91,9 +92,10 @@ export async function blank(ctx) {
   return fromState(await newFormState(spec, ctx));
 }
 
-/** the screen's state for a saved order; null when there is none */
+/** the screen's state for a saved order of the user's business unit; null when there is none (owner, 31 Oct 2026:
+ *  another unit's order is not shown) */
 async function saved(ctx, prodNo) {
-  if (!/^\d{1,9}$/.test(prodNo) || !(await repo.exists(prodNo))) return null;
+  if (!/^\d{1,9}$/.test(prodNo) || !(await repo.exists(prodNo, ctx.businessUnit))) return null;
   return displayState(spec, ctx, prodNo);
 }
 
@@ -132,7 +134,7 @@ async function refuseUnlisted(state, order) {
 
 /** one page of orders (10 a page), optionally filtered on one column */
 export async function list(ctx, { page = 0, search = null } = {}) {
-  const r = await listPage(spec, ctx, page, search);
+  const r = await listPage(spec, ctx, page, search, { scope: repo.businessUnitScope(ctx.businessUnit) });
   return { columns: r.columns.map((c) => c.name), rows: r.rows, keys: r.keys, total: r.count, page: r.page, pageSize: r.pageSize };
 }
 /** the columns a list can be filtered on, with their conditions */
@@ -140,7 +142,20 @@ export async function searchFields(ctx) {
   return (await searchColumns(spec, ctx)).map((c) => ({ name: c.name, operators: operatorsFor(c.type).map((o) => ({ value: o, text: OPERATOR_TEXT[o] })) }));
 }
 /** the values a column holds (the filter's picker) */
-export const columnValues = async (ctx, column) => (await distinctValues(spec, ctx, column)).map((v) => netString(v));
+export const columnValues = async (ctx, column) => (await distinctValues(spec, ctx, column, { scope: repo.businessUnitScope(ctx.businessUnit) })).map((v) => netString(v));
+
+/** the serials generated for a saved order (its job cards' stage labels); null when there is no such order */
+export async function serials(ctx, prodNo) {
+  if (!/^\d{1,9}$/.test(prodNo) || !(await repo.exists(prodNo, ctx.businessUnit))) return null;
+  return (await repo.serials(prodNo)).map((r) => ({
+    serial: netString(r.serial),
+    jobCard: netString(r.jobCard),
+    process: netString(r.process),
+    station: netString(r.station),
+    material: netString(r.material),
+    assignedOn: r.assignedOn instanceof Date ? enInDateTime(r.assignedOn) : netString(r.assignedOn), // as the lists show dates
+  }));
+}
 
 /** What choosing a material, an order type or a sales order changes (the screen's own handler for it).
  *  Choosing a serial-tracked material takes a new track ID, as the original did. */
@@ -176,10 +191,8 @@ export async function save(ctx, prodNo) {
   throw AppError.conflict(NO_CHANGE_AFTER_CREATE);
 }
 
-/** the order cancelled (status 200, not erased), with the reason; null when there is none */
-export async function cancel(ctx, prodNo, remark) {
-  const state = await saved(ctx, prodNo);
-  if (!state) return null;
-  await cancelRecord(spec, await collect(spec, valuesOf(state), ctx), ctx, remark);
-  return { prodNo, message: 'Record Deleted Successfully' };
+/** A saved order is never cancelled (owner's rule, 31 Oct 2026): refused with 409; null when there is no such order. */
+export async function cancel(ctx, prodNo) {
+  if (!(await saved(ctx, prodNo))) return null;
+  throw AppError.conflict(NO_CHANGE_AFTER_CREATE);
 }

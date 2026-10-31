@@ -32,11 +32,21 @@ const viaApi = rest.includes('--api');
 const only = rest.filter((a) => a !== '--api');
 
 // screens with a domain API: control values -> the API's JSON (its field map), then its validator and service
-/** Intended differences: screens whose saved records are never changed (owner's rule, 31 Oct 2026). With --api the
- *  update step expects this refusal from the new side and skips the original's update, so the cancel step still
- *  compares like with like. */
-const NO_UPDATE = { [ordersApi.SCREEN]: NO_CHANGE_AFTER_CREATE };
-const INTENDED = 'IDENTICAL (intended: update refused, no change after create)';
+/** Intended differences: screens whose saved records are never changed or cancelled (owner's rule, 31 Oct 2026).
+ *  With --api the update and cancel steps expect this refusal from the new side and skip the original's step. */
+const NO_CHANGE = { [ordersApi.SCREEN]: NO_CHANGE_AFTER_CREATE };
+const INTENDED = 'IDENTICAL (intended: update and cancel refused, no change after create)';
+
+/** a step the new side must refuse with the rule's message: '' when it did, else what to report */
+async function refusedStep(route, step, run) {
+  let refusal = null;
+  try {
+    await run();
+  } catch (e) {
+    refusal = e.message;
+  }
+  return refusal === NO_CHANGE[route] ? '' : `${step}: expected the refusal "${NO_CHANGE[route]}" / new ${refusal ? `ERROR ${refusal}` : 'ok'}`;
+}
 
 const API = {
   [ordersApi.SCREEN]: { fields: ordersApi.FIELDS, grid: ordersApi.GRID, lines: (r) => ({ prodNo: r.PRODNo, seqNo: r.SeqNo, orderCode: r.OrderCode, orderNo: r.OrderNo }), list: 'orders', validate: validateOrder, create: ordersApi.create, save: ordersApi.save, cancel: ordersApi.cancel },
@@ -304,17 +314,14 @@ for (const route of routes) {
     };
     await cmp('save');
     // --- update (load each record as displayed, change values)
-    let intended = false;
-    if (viaApi && NO_UPDATE[route]) {
-      // the new side must refuse the update with the rule's message; the original's update is not run
-      let refusal = null;
-      try {
-        await API[route].save(ctx, keyN, {});
-      } catch (e) {
-        refusal = e.message;
+    const intended = !!(viaApi && NO_CHANGE[route]);
+    if (intended) {
+      // the new side must refuse the update and the cancel with the rule's message; the original's are not run
+      for (const [step, run] of [['update', () => API[route].save(ctx, keyN, {})], ['cancel', () => API[route].cancel(ctx, keyN, 'parity')]]) {
+        const bad = await refusedStep(route, step, run);
+        if (bad) report.push(bad);
       }
-      if (refusal === NO_UPDATE[route]) intended = true;
-      else report.push(`update: expected the refusal "${NO_UPDATE[route]}" / new ${refusal ? `ERROR ${refusal}` : 'ok'}`);
+      await cmp('unchanged');
     } else {
       const uO = await withEvents(spec, state, { ...values(state, 'ZZPO', 1), ...(await childValues(spec, state, 'ZZPO', 1, (await displayState(spec, ctx, keyO)).controls)) });
       const uN = await withEvents(spec, state, { ...values(state, 'ZZPN', 1), ...(await childValues(spec, state, 'ZZPN', 1, (await displayState(spec, ctx, keyN)).controls)) });
@@ -332,19 +339,21 @@ for (const route of routes) {
       if (!uo.ok || un) report.push(`update: original ${uo.ok ? 'ok' : `ERROR ${uo.error}`} / new ${un ? `ERROR ${un}` : 'ok'}`);
       await cmp('update');
     }
-    // --- cancel
-    const co = original({ id: 0, mode: 'cancel', key: keyO, remark: 'parity', spec: { top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits }, ctx });
-    const d2 = await displayState(spec, ctx, keyN);
-    let cn = null;
-    try {
-      const api = viaApi && API[route];
-      if (api) await api.cancel(ctx, keyN, 'parity');
-      else await cancel(spec, await collect(spec, sent(d2), ctx), ctx, 'parity');
-    } catch (e) {
-      cn = e.message;
+    if (!intended) {
+      // --- cancel
+      const co = original({ id: 0, mode: 'cancel', key: keyO, remark: 'parity', spec: { top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits }, ctx });
+      const d2 = await displayState(spec, ctx, keyN);
+      let cn = null;
+      try {
+        const api = viaApi && API[route];
+        if (api) await api.cancel(ctx, keyN, 'parity');
+        else await cancel(spec, await collect(spec, sent(d2), ctx), ctx, 'parity');
+      } catch (e) {
+        cn = e.message;
+      }
+      if (!co.ok || cn) report.push(`cancel: original ${co.ok ? 'ok' : `ERROR ${co.error}`} / new ${cn ? `ERROR ${cn}` : 'ok'}`);
+      await cmp('cancel');
     }
-    if (!co.ok || cn) report.push(`cancel: original ${co.ok ? 'ok' : `ERROR ${co.error}`} / new ${cn ? `ERROR ${cn}` : 'ok'}`);
-    await cmp('cancel');
     results.push([route, report.length ? report.join(' | ') : intended ? INTENDED : 'IDENTICAL']);
   } catch (e) {
     results.push([route, `harness error: ${e.message}`]);

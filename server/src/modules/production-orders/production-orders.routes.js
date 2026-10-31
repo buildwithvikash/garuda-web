@@ -38,6 +38,10 @@ router.post('/changes/:field', validate(validateDraft), async (req, res) => {
 });
 router.post('/service-requests', validate(validateDraft), async (req, res) => ok(res, await orders.addServiceRequest(ctx(req), req.valid.body)));
 
+router.get('/:prodNo/serials', async (req, res) => {
+  const prodNo = prodNoOf(req);
+  ok(res, found(await orders.serials(ctx(req), prodNo), prodNo)); // the serials generated for the order
+});
 router.get('/:prodNo', async (req, res) => {
   const prodNo = prodNoOf(req);
   ok(res, found(await orders.get(ctx(req), prodNo), prodNo));
@@ -51,9 +55,8 @@ router.put('/:prodNo', validate(validateOrder), async (req, res) => {
 });
 router.delete('/:prodNo', async (req, res) => {
   const prodNo = prodNoOf(req);
-  const remark = typeof req.body?.remark === 'string' ? req.body.remark.trim().slice(0, 250) : '';
-  if (remark === '') throw AppError.unprocessable('Give the reason for deleting this order.', { remark: 'remark is required' });
-  ok(res, found(await orders.cancel(ctx(req), prodNo, remark), prodNo));
+  // a saved order is never cancelled: 409 (404 when there is no such order)
+  ok(res, found(await orders.cancel(ctx(req), prodNo), prodNo));
 });
 
 router.use(portedErrors);

@@ -64,5 +64,5 @@ export function unlistedChoices(order, was, allowed) {
   return errors;
 }
 
-/** Owner's rule (31 Oct 2026): a production order cannot be changed once it is created (no update, by any route). */
-export const NO_CHANGE_AFTER_CREATE = 'A production order cannot be changed once it is created.';
+/** Owner's rule (31 Oct 2026): a production order cannot be changed or cancelled once it is created, by any route. */
+export const NO_CHANGE_AFTER_CREATE = 'A production order cannot be changed or cancelled once it is created.';

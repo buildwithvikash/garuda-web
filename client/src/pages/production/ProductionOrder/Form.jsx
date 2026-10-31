@@ -1,7 +1,7 @@
 // Production Order: one order (new or saved). Plain React: the fields are this screen's own, the state and server
 // calls are in ./useOrderForm.js.
 import { useEffect, useId } from 'react';
-import { ArrowLeft, ClipboardList, Lock, Package, RotateCw, Save, Tag } from 'lucide-react';
+import { ArrowLeft, Barcode, ClipboardList, Lock, Package, RotateCw, Save, Tag } from 'lucide-react';
 import { askConfirm } from '@/app/confirm.js';
 import { Field, Select, TextInput } from '@/components/shared/FormField.jsx';
 import { Step } from '@/components/shared/FormStep.jsx';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { cn } from '@/lib/utils';
+import OrderSerials from './Serials.jsx';
 import { useOrderForm } from './useOrderForm.js';
 
 const GRID_2 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4';
@@ -140,6 +141,15 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
         </Step>
       )}
       </fieldset>
+
+      {/* a saved order: the serials generated for it */}
+      {!isNew && (
+        <div className="mt-2">
+          <Step n={ui.track ? 4 : 3} tone="amber" icon={Barcode} title="Serials generated" subtitle="Each job card's serial, as Production Assignment printed it">
+            <OrderSerials prodNo={prodNo} />
+          </Step>
+        </div>
+      )}
     </form>,
     actions,
   );

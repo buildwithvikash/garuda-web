@@ -87,16 +87,31 @@ export async function listQuery(spec, ctx) {
   return { count, sql };
 }
 
-/** One page of the list (RecNo between page*PAGE_SIZE+1 and page*PAGE_SIZE+PAGE_SIZE). The grid hides its last column (RowDataBound). */
-export async function listPage(spec, ctx, page = 0, search = null) {
+/** One page of the list (RecNo between page*PAGE_SIZE+1 and page*PAGE_SIZE+PAGE_SIZE). The grid hides its last column (RowDataBound).
+ *  scope: { where, params } keeps only the rows a module allows (a condition on the list's row X, e.g. its business
+ *  unit); the rows are numbered again after it, so paging and Rec No stay whole. No scope: the list as the original. */
+export async function listPage(spec, ctx, page = 0, search = null, { scope = null } = {}) {
   let count;
   let sql;
   let params = {};
   if (search?.column) ({ count, sql, params } = await searchQuery(spec, ctx, search));
   else ({ count, sql } = await listQuery(spec, ctx));
   const from = page * PAGE_SIZE + 1;
-  const t = await queryTable(`select * from ( ${sql}) as X where RecNo between @from and @to`, { ...params, from, to: from + PAGE_SIZE - 1 });
+  let t;
+  if (scope) {
+    params = { ...params, ...scope.params };
+    const kept = `select ROW_NUMBER() over (ORDER BY X.RecNo) as [ScopeRecNo], X.* from (${sql}) as X where ${scope.where}`;
+    count = netInt(await scalar(`select count(1) from (${sql}) as X where ${scope.where}`, params));
+    t = await queryTable(`select * from (${kept}) as Y where ScopeRecNo between @from and @to`, { ...params, from, to: from + PAGE_SIZE - 1 });
+  } else t = await queryTable(`select * from ( ${sql}) as X where RecNo between @from and @to`, { ...params, from, to: from + PAGE_SIZE - 1 });
   const g = toGrid(t);
+  if (scope) {
+    // the renumbered rows' number in place of the unscoped one
+    const at = g.columns.findIndex((c) => c.name.toUpperCase() === 'RECNO');
+    if (at >= 0) g.rows.forEach((r) => (r[at] = r[0]));
+    g.columns.shift();
+    g.rows.forEach((r) => r.shift());
+  }
   const key = parts(spec)[1].split('.').at(-1).toUpperCase();
   const keyIdx = g.columns.findIndex((c) => c.name.toUpperCase() === key);
   const keys = g.rows.map((r) => (keyIdx >= 0 ? String(r[keyIdx]) : null));
@@ -148,12 +163,13 @@ async function searchQuery(spec, ctx, { column, op, value }) {
 }
 
 /** FillColumn_Data: distinct values of a column for the search dropdown. */
-export async function distinctValues(spec, ctx, column) {
+/** a column's values (the list filter's picker); scope as listPage's */
+export async function distinctValues(spec, ctx, column, { scope = null } = {}) {
   const cols = await searchColumns(spec, ctx);
   const col = cols.find((c) => c.name.toLowerCase() === String(column).toLowerCase());
   if (!col) throw new Error('Unknown column');
   const p = parts(spec);
   const { sql } = await baseQuery(spec);
-  const rows = await query(`SELECT  distinct [${col.name.replaceAll(']', ']]')}] v from  (${`${sql} ${sub(p[2] ?? '', ctx)}`.toUpperCase()}) as X`);
+  const rows = await query(`SELECT  distinct [${col.name.replaceAll(']', ']]')}] v from  (${`${sql} ${sub(p[2] ?? '', ctx)}`.toUpperCase()}) as X${scope ? ` where ${scope.where}` : ''}`, scope?.params ?? {});
   return rows.map((r) => r.v);
 }

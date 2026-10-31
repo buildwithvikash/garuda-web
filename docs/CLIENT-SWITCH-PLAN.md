@@ -55,12 +55,15 @@ Not "same pages, new transport": the page no longer draws from the control list.
   newest answer to a choice is applied, one save at a time, field errors from a 422 shown beside their fields);
   `Form.jsx` / `List.jsx` the views, laid out in JSX with their texts written where they show (a separate texts
   file only if a second language is added).
-- Owner's rule (31 Oct 2026): an order cannot be changed once it is created. The page shows a saved order read-only
-  (no Update); the server refuses `PUT /api/production/orders/:prodNo` and the engine's `/api/forms/update` for this
-  screen with 409. Intended difference from the original: parity's update step (forms-write `--api`) now answers 409.
+- Owner's rules (31 Oct 2026): an order cannot be changed or cancelled once it is created, and a user sees only their
+  business unit's orders. The page shows a saved order read-only (no Update, no Delete) with the serials generated
+  for it below; the API refuses update and cancel with 409 and answers 404 for another unit's order; `/api/forms` no
+  longer serves this screen (410). Intended difference from the original: parity's update and cancel steps
+  (forms-write `--api`) check the refusal instead.
+- How an order gets Closed is still open (owner): for now the saved order lists its serials.
 - Server on create: the fields the screen locks (`prodNo`, `alias`, `businessUnit`, `orderDate`) are ignored, a coded
   value the screen does not offer is refused (422 per field), and an `Idempotency-Key` makes a repeated create answer
-  like the first (`middlewares/idempotency.js`). Delete needs a reason. Tests: `server/tests/production-orders.test.js`,
+  like the first (`middlewares/idempotency.js`). Tests: `server/tests/production-orders.test.js`,
   `server/tests/idempotency.test.js`.
 - Same as before: steps, fields, what material / order type / sales order change (the screen's own handlers), a new
   order after Save, no Delete button. Not on the page, as before: Remark, the service-request picker and its

@@ -16,13 +16,14 @@ import { collect, insert, update, cancel } from './write.js';
 import { FORMS } from './specs.js';
 import { specPayload } from './resource.js';
 import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orders.service.js';
-import { NO_CHANGE_AFTER_CREATE } from '../production-orders/production-orders.validation.js';
 
-/** screens whose saved records are never changed (owner's rule, 31 Oct 2026): their Update is refused here too */
-const NO_UPDATE = { [PRODUCTION_ORDER]: NO_CHANGE_AFTER_CREATE };
+/** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
+ *  (Production Order: no change or cancel after create, one business unit's orders only) cannot be gone around. */
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders' };
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();
+  if (MOVED[path]) return void res.status(410).json({ message: `This screen is served by ${MOVED[path]}.` });
   const spec = FORMS[path];
   if (!spec) return void res.status(404).json({ message: 'Form not found' });
   const ok = spec.menuModuleId == null ? (await userMenu(req.session.userCode)).systemUser : await canOpen(req.session.userCode, spec.menuModuleId);
@@ -179,8 +180,6 @@ async function getUnit(req, res) {
 async function postUpdate(req, res) {
   const spec = await load(req, res);
   if (!spec) return;
-  const refused = NO_UPDATE[netString(req.body?.path).toLowerCase()];
-  if (refused) return void res.status(409).json({ message: refused });
   try {
     const own = PAGE_UPDATE[spec.file];
     if (own) {
