@@ -60,7 +60,7 @@ Not "same pages, new transport": the page no longer draws from the control list.
   for it below; the API refuses update and cancel with 409 and answers 404 for another unit's order; `/api/forms` no
   longer serves this screen (410). Intended difference from the original: parity's update and cancel steps
   (forms-write `--api`) check the refusal instead.
-- How an order gets Closed is still open (owner): for now the saved order lists its serials.
+- How an order gets Closed, the order's creation time and other items set aside: [LATER.md](LATER.md).
 - Server on create: the fields the screen locks (`prodNo`, `alias`, `businessUnit`, `orderDate`) are ignored, a coded
   value the screen does not offer is refused (422 per field), and an `Idempotency-Key` makes a repeated create answer
   like the first (`middlewares/idempotency.js`). Tests: `server/tests/production-orders.test.js`,
