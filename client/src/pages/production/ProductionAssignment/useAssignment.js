@@ -95,7 +95,7 @@ export function useAssignment() {
       const r = await assignmentsApi.print(sent, printKey.current);
       printKey.current = newKey(); // printed: the next print is a new one
       apply(r, sent);
-      toast.success(alertText(r.message) || 'Assigned successfully');
+      toast.success(alertText(r.message) || 'Job cards printed.');
       for (const a of r.alerts ?? []) toast(alertText(a), { icon: '⚠️', duration: 6000 });
       return true;
     } catch (e) {

@@ -182,7 +182,7 @@ export async function create(ctx, order) {
   await refuseUnlisted(state, unlocked(order));
   const values = toValues(valuesOf(state), unlocked(order));
   const prodNo = await insert(spec, await collect(spec, values, ctx), ctx);
-  return { prodNo: netString(prodNo), message: 'Record Created Successfully' };
+  return { prodNo: netString(prodNo), message: 'Production order created.' };
 }
 
 /** A saved order is never changed (owner's rule, 31 Oct 2026): refused with 409; null when there is no such order. */

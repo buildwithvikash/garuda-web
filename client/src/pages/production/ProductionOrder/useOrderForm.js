@@ -13,8 +13,8 @@ const alertText = (m) => String(m ?? '').replaceAll('&#44', ',');
 /** what can be checked before the round trip; the server checks again (and everything else) */
 function check(order) {
   const errors = {};
-  for (const f of ['department', 'status', 'qty']) if (String(order[f] ?? '').trim() === '') errors[f] = 'is required';
-  if (!errors.qty && !/^-?\d+(\.\d+)?$/.test(String(order.qty).trim())) errors.qty = 'must be a number';
+  for (const f of ['department', 'status', 'qty']) if (String(order[f] ?? '').trim() === '') errors[f] = 'Required';
+  if (!errors.qty && !/^-?\d+(\.\d+)?$/.test(String(order.qty).trim())) errors.qty = 'Enter a number';
   return errors;
 }
 

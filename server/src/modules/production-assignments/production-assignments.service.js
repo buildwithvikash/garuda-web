@@ -42,12 +42,21 @@ const PLAIN = ['material', 'bom', 'variant', 'uom', 'printer'];
 
 const noPlaceholder = (opts) => (opts ?? []).filter((o) => o.value !== '');
 
+/** a flag cell as the grids hold it (true / 'True' / 1) */
+const flag = (v) => v === true || v === 1 || /^(true|1)$/i.test(netString(v));
+/** the screen's grid rows (database column names) as the API names them; the codes stay on the server */
+const LINES = {
+  route: (r) => ({ seq: netString(r.SeqNo), process: netString(r.Process), station: netString(r.Station) }),
+  bomInput: (r) => ({ material: netString(r.MaterialDesc), qty: netString(r.Qty), unit: netString(r.UomDesc), process: netString(r.ProcessDesc), scanRequired: flag(r.ScanReq), outputScan: flag(r.OutputScan) }),
+  bomOutput: (r) => ({ material: netString(r.MaterialDesc), qty: netString(r.Qty), unit: netString(r.UomDesc), yieldQty: netString(r.YieldQty), process: netString(r.ProcessDesc) }),
+};
+
 /** the screen's form as the API returns it */
 function toApi(form, message = null) {
   const assignment = Object.fromEntries(Object.entries(FIELDS).map(([f, id]) => [f, netString(form.values[id]).trim()]));
   const options = Object.fromEntries(Object.entries(FIELDS).filter(([, id]) => form.options[id]).map(([f, id]) => [f, noPlaceholder(form.options[id])]));
   const ui = Object.fromEntries(Object.entries(UI).map(([k, [id, attr]]) => [k, (attr === 'visible' ? form.visible[id] : form.enabled[id]) !== false]));
-  const details = Object.fromEntries(Object.entries(GRIDS).map(([k, id]) => [k, Array.isArray(form.values[id]) ? form.values[id] : []]));
+  const details = Object.fromEntries(Object.entries(GRIDS).map(([k, id]) => [k, Array.isArray(form.values[id]) ? form.values[id].map(LINES[k]) : []]));
   return { assignment, options, ui, details, left: netString(form.viewState.Qty), message };
 }
 

@@ -13,13 +13,13 @@ const GRID_4 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4';
 const GRID_2 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2';
 
 /** a cell as read: Yes / No for flags, — for nothing */
-const cell = (v) => (v === true || v === 'True' ? 'Yes' : v === false || v === 'False' ? 'No' : v === '' || v == null ? '—' : String(v));
+const cell = (v) => (v === true ? 'Yes' : v === false ? 'No' : v === '' || v == null ? '—' : String(v));
 /** DataTable columns from [field, header] pairs */
-const columns = (pairs) => pairs.map(([key, header]) => ({ key, header, text: (r) => cell(r[key]), render: (r) => cell(r[key]) }));
+const columns = (pairs) => pairs.map(([key, header]) => ({ key, header, exactHeader: true, text: (r) => cell(r[key]), render: (r) => cell(r[key]) }));
 
-const ROUTE = columns([['SeqNo', 'Seq'], ['Process', 'Process'], ['Station', 'Station']]);
-const BOM_INPUT = columns([['MaterialDesc', 'Material'], ['Qty', 'Quantity'], ['UomDesc', 'Unit'], ['ProcessDesc', 'Process'], ['ScanReq', 'Scan Required'], ['OutputScan', 'Output Scan']]);
-const BOM_OUTPUT = columns([['MaterialDesc', 'Material'], ['Qty', 'Quantity'], ['UomDesc', 'Unit'], ['YieldQty', 'Yield Qty'], ['ProcessDesc', 'Process']]);
+const ROUTE = columns([['seq', 'Step'], ['process', 'Process'], ['station', 'Station']]);
+const BOM_INPUT = columns([['material', 'Material'], ['qty', 'Quantity'], ['unit', 'Unit'], ['process', 'Used at'], ['scanRequired', 'Scan needed'], ['outputScan', 'Output scanned']]);
+const BOM_OUTPUT = columns([['material', 'Material'], ['qty', 'Quantity'], ['unit', 'Unit'], ['yieldQty', 'Yield'], ['process', 'Made at']]);
 
 /** one of the order's lines (routing stages, BOM input / output), read-only */
 const Lines = ({ id, rows, cols, empty }) => <DataTable tableId={id} columns={cols} rows={rows.map((r, i) => ({ id: i, ...r }))} empty={empty} exportName={id} />;
@@ -55,7 +55,7 @@ export default function AssignmentForm() {
       <div className="w-56">{select('department', 'Department', { required: true })}</div>
       {/* a job card starts with the screen's default status */}
       <div className="w-44">
-        <LockedValue label="Record status" value={nameOf('status')} />
+        <LockedValue label="Status" value={nameOf('status')} />
       </div>
     </div>
   );
@@ -73,7 +73,7 @@ export default function AssignmentForm() {
         <Step n={1} tone="blue" icon={ClipboardList} title="Order" subtitle="The production order to start">
           <div className={GRID_4}>
             {select('order', 'Production order', { required: true, className: 'sm:col-span-2' })}
-            <LockedValue label="Assign date" value={a.assignDate} />
+            <LockedValue label="Assignment date" value={a.assignDate} />
           </div>
         </Step>
       </div>
@@ -89,7 +89,7 @@ export default function AssignmentForm() {
             <LockedValue label="Order quantity" value={a.totalQty} />
             <LockedValue label="Order unit" value={nameOf('totalUom')} />
             <TextInput
-              label="Production quantity"
+              label="Quantity to start"
               required
               inputMode="decimal"
               value={a.qty ?? ''}
@@ -104,7 +104,7 @@ export default function AssignmentForm() {
       </div>
 
       <div className="min-w-0 lg:col-span-5">
-        <Step n={3} tone="violet" icon={Factory} title="Start at" subtitle="The first stage and its station">
+        <Step n={3} tone="violet" icon={Factory} title="Start at" subtitle="The process the job cards start at, and its station">
           <div className={GRID_2}>
             {select('process', 'Process', { required: true })}
             {select('station', 'Station', { required: true })}
@@ -127,17 +127,17 @@ export default function AssignmentForm() {
       {ui.details && (
         <>
           <div className="min-w-0 lg:col-span-10">
-            <Step n={5} tone="violet" icon={Route} title="Routing Stages" subtitle="The stages the order goes through, in sequence">
+            <Step n={5} tone="violet" icon={Route} title="Routing stages" subtitle="The stages the order goes through, in sequence">
               <Lines id="assignment-route" rows={details.route} cols={ROUTE} empty="Choose a station to see each stage's station." />
             </Step>
           </div>
           <div className="min-w-0 lg:col-span-5">
-            <Step n={6} tone="amber" icon={PackageMinus} title="BOM Input" subtitle="Materials the order consumes">
+            <Step n={6} tone="amber" icon={PackageMinus} title="BOM input" subtitle="Materials the order consumes">
               <Lines id="assignment-bom-input" rows={details.bomInput} cols={BOM_INPUT} empty="No input lines." />
             </Step>
           </div>
           <div className="min-w-0 lg:col-span-5">
-            <Step n={7} tone="emerald" icon={PackagePlus} title="BOM Output" subtitle="What the order produces">
+            <Step n={7} tone="emerald" icon={PackagePlus} title="BOM output" subtitle="What the order produces">
               <Lines id="assignment-bom-output" rows={details.bomOutput} cols={BOM_OUTPUT} empty="No output lines." />
             </Step>
           </div>

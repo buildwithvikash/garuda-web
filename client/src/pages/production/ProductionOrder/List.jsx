@@ -17,14 +17,14 @@ const NO_SEARCH = { column: '', op: '', value: '' };
 const NAMED = { STATUS: 'status', MATERIAL: 'material', UOM: 'uom' };
 /** the list's columns as the server names them -> their headers (in this order; others follow) */
 const HEADERS = {
-  RECNO: 'Rec No',
+  RECNO: 'No.',
   ORDER: 'Order',
-  ORDERDATE: 'Order Date',
+  ORDERDATE: 'Order date',
   REMARK: 'Remark',
   MATERIAL: 'Material',
-  'PRODUCT CODE': 'Product Code',
-  QTY: 'Qty',
-  UOM: 'UOM',
+  'PRODUCT CODE': 'Product code',
+  QTY: 'Quantity',
+  UOM: 'Unit',
   STATUS: 'Status',
 };
 const order = Object.keys(HEADERS);

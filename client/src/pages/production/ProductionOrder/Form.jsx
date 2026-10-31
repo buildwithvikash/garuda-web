@@ -37,7 +37,7 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
   async function submit(e) {
     e.preventDefault();
     const r = await save();
-    if (r) onSaved(r.message || 'Record Created Successfully');
+    if (r) onSaved(r.message || 'Production order created.');
   }
 
   const shell = (children, actions) => (
@@ -74,16 +74,16 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
   const actions = (
     <div className="flex flex-wrap items-end gap-3">
       <span className="hidden items-center gap-2 self-center xl:inline-flex">
-        <Badge variant={isNew ? 'info' : 'neutral'} dot>{isNew ? 'New record' : 'Saved — cannot be changed'}</Badge>
+        <Badge variant={isNew ? 'info' : 'neutral'} dot>{isNew ? 'New order' : 'Saved — cannot be changed'}</Badge>
         {dirty && <Badge variant="warning" dot>Unsaved changes</Badge>}
       </span>
       {backButton}
       <div className="w-56">{select('department', 'Department', { required: true, disabled: !isNew })}</div>
       {/* a new order takes the default status (Active); it shows once the order is saved */}
-      {!isNew && <div className="w-56">{select('status', 'Record status', { disabled: true })}</div>}
+      {!isNew && <div className="w-56">{select('status', 'Status', { disabled: true })}</div>}
       {isNew && (
         <Button type="submit" form={formId} icon={Save} loading={busy === 'save'} disabled={busy !== null} className="h-10 px-5">
-          Create Order
+          Create order
         </Button>
       )}
     </div>
@@ -93,25 +93,25 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
     <form id={formId} onSubmit={submit} noValidate>
       {/* a saved order is shown, not edited */}
       <fieldset disabled={!isNew} className="grid min-w-0 items-start gap-2">
-      <Step n={1} tone="blue" icon={ClipboardList} title="Order Details" subtitle="Basic information about the production order">
+      <Step n={1} tone="blue" icon={ClipboardList} title="Order details" subtitle="What the order is and when it was made">
         <div className={GRID_2}>
-          <LockedValue label="Order code" value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder="Auto-generated" className="sm:col-span-2" />
-          <LockedValue label="Alias" value={order.alias} className="sm:col-span-2" />
+          <LockedValue label="Order ID" value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder="Given when created" className="sm:col-span-2" />
+          <LockedValue label="Order number" value={order.alias} placeholder="Given when created" className="sm:col-span-2" />
           <LockedValue label="Order date" value={order.orderDate} />
-          {select('orderType', 'Order Type')}
+          {select('orderType', 'Order type')}
           {select('priority', 'Priority')}
-          {ui.salesOrder && select('salesOrder', 'Sales Order')}
+          {ui.salesOrder && select('salesOrder', 'Sales order')}
         </div>
       </Step>
 
-      <Step n={2} tone="emerald" icon={Package} title="Product & Quantity" subtitle="Select the product and define the production quantity">
+      <Step n={2} tone="emerald" icon={Package} title="Product and quantity" subtitle="The product, its BOM and how many to make">
         <div className={GRID_2}>
           {select('material', 'Material')}
           {select('bom', 'BOM')}
           {/* a sales order's own quantity: shown, never saved */}
           {ui.orderQty && <LockedValue label="Order quantity" value={order.totalQty} />}
           {ui.orderQty && <LockedValue label="Order unit" value={opts('totalUom').find((o) => o.value === order.totalUom)?.label ?? order.totalUom} />}
-          {text('qty', 'Production quantity', { required: true, inputMode: 'decimal', disabled: !ui.qtyEditable })}
+          {text('qty', 'Quantity to produce', { required: true, inputMode: 'decimal', disabled: !ui.qtyEditable })}
           {select('uom', 'Unit')}
         </div>
       </Step>
@@ -120,7 +120,7 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
       {ui.track && (
         <Step n={3} tone="violet" icon={Tag} title="Tracking" subtitle="Tracking information for this order">
           <div className={GRID_2}>
-            {text('trackId', 'Track ID', { className: 'sm:col-span-2', maxLength: 50 })}
+            {text('trackId', 'Tracking ID', { className: 'sm:col-span-2', maxLength: 50 })}
             {text('custId', 'Customer ID', { className: 'sm:col-span-2', maxLength: 50 })}
           </div>
         </Step>
@@ -130,7 +130,7 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
       {/* a saved order: the serials generated for it */}
       {!isNew && (
         <div className="mt-2">
-          <Step n={ui.track ? 4 : 3} tone="amber" icon={Barcode} title="Serials generated" subtitle="Each job card's serial, as Production Assignment printed it">
+          <Step n={ui.track ? 4 : 3} tone="amber" icon={Barcode} title="Serial numbers" subtitle="One per job card printed on Production Assignment">
             <OrderSerials prodNo={prodNo} />
           </Step>
         </div>

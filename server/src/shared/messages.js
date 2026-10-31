@@ -40,7 +40,19 @@ const RULES = [
   [/^please select defect$/, 'Add at least one defect for a failed unit.'],
   [/^order is on hold$/, 'This production order is on hold. Scanning is blocked until it is released.'],
   [/^order is cancelled$/, 'This production order is cancelled. Units of it cannot be scanned.'],
+  // Production Assignment
+  [/^select a department$/, 'Choose a department first.'],
+  [/^select a order$/, 'Choose a production order first.'],
+  [/^select a routing$/, 'Choose a routing first.'],
+  [/^select a process$/, 'Choose the process to start at first.'],
+  [/^select a station$/, 'Choose a station first.'],
+  [/^select a bom$/, 'This order has no BOM: the job cards were printed without BOM lines.'],
+  [/^enter positive qty$/, 'Enter a quantity above zero.'],
+  [/^assigned succefully$/, 'Job cards printed.'],
 ];
+
+/** messages that carry a value (matched on the original text, which keeps its numbers) */
+const WITH_VALUE = [[/^\s*Quantity Can not be greater Than\s+(.+?)\s*$/i, (m) => `Only ${m[1]} can still be assigned at this stage.`]];
 
 /** misspellings in the original texts */
 const TYPOS = [
@@ -61,18 +73,27 @@ export function friendly(text) {
   if (typeof text !== 'string' || text.trim() === '') return text;
   const n = norm(text.replaceAll('&#44', ','));
   for (const [re, out] of RULES) if (re.test(n)) return out;
+  for (const [re, out] of WITH_VALUE) {
+    const m = re.exec(text);
+    if (m) return out(m);
+  }
   return TYPOS.reduce((s, [re, out]) => s.replace(re, out), text);
 }
 
-/** A response body with its alert / message / statusMessage reworded; each change is logged with the original. */
+/** A response body with its alert / message / statusMessage (and each of its alerts) reworded; each change is logged
+ *  with the original. */
 export function friendlyBody(body, where, warn = console.warn) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return body;
   let out = body;
+  if (Array.isArray(body.alerts) && body.alerts.some((a) => friendly(a) !== a)) {
+    out = { ...body, alerts: body.alerts.map((a) => friendly(a)) };
+    warn(`[message] ${where} alerts: ${JSON.stringify(body.alerts)}`);
+  }
   for (const k of ['alert', 'message', 'statusMessage']) {
     const v = body[k];
     const f = friendly(v);
     if (f === v) continue;
-    out = out === body ? { ...body } : out;
+    if (out === body) out = { ...body };
     out[k] = f;
     warn(`[message] ${where} ${k}: ${JSON.stringify(v)}`);
   }

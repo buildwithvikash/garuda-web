@@ -36,3 +36,15 @@ test('response bodies: only alert / message / statusMessage, the original kept w
   assert.equal(friendlyBody(same, 'test'), same);
   assert.deepEqual(friendlyBody([1], 'test'), [1]);
 });
+
+test('Production Assignment: the original texts in plain words, a value kept', () => {
+  assert.equal(friendly(' Select A Order'), 'Choose a production order first.');
+  assert.equal(friendly('Enter Positive Qty'), 'Enter a quantity above zero.');
+  assert.equal(friendly('Quantity Can not be greater Than 12.5'), 'Only 12.5 can still be assigned at this stage.');
+  assert.equal(friendly('Assigned Succefully'), 'Job cards printed.');
+});
+
+test('the alerts list of a body is reworded too', () => {
+  const b = friendlyBody({ message: 'Assigned Succefully', alerts: ['Select a BOM', 'as it was'] }, 'x', () => {});
+  assert.deepEqual(b, { message: 'Job cards printed.', alerts: ['This order has no BOM: the job cards were printed without BOM lines.', 'as it was'] });
+});

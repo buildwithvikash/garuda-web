@@ -114,7 +114,7 @@ function ColumnPicker({ columns, hidden, onToggle }) {
             onCheckedChange={() => onToggle(c.key)}
             onSelect={(e) => e.preventDefault()}
           >
-            {prettyHeader(c.header)}
+            {headerOf(c)}
           </DropdownMenuCheckboxItem>
         ))}
       </DropdownMenuContent>
@@ -247,7 +247,7 @@ export default function DataTable({
     });
   const clickRow = (row, click) => (e) =>
     !e.target.closest("button, a, input, label") && click(row);
-  const placeholder = named.length ? `Search by ${named.slice(0, 3).map((c) => prettyHeader(c.header).toLowerCase()).join(", ")}…` : "Search…";
+  const placeholder = named.length ? `Search by ${named.slice(0, 3).map((c) => headerOf(c).toLowerCase()).join(", ")}…` : "Search…";
   const cellLine = "border-r border-border/60 last:border-r-0";
 
   return (
@@ -378,7 +378,7 @@ export default function DataTable({
               )}
               {cols.map((c, ci) => {
                 const isIndex = ci === 0 && indexCol;
-                const header = isIndex ? "#" : prettyHeader(c.header);
+                const header = isIndex ? "#" : headerOf(c);
                 const server = c.sortable && onSort;
                 const active = server ? sort?.sort === c.key : order?.key === c.key;
                 const dir = server ? sort?.order : order?.dir;
