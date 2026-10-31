@@ -1003,85 +1003,87 @@ function Station({ spec }) {
         </div>
       }
     >
-      {/* scan bar: station, serial, printer, then the result of the last scan */}
-      <SectionCard
-        icon={ScanLine}
-        title="Scan"
-        actions={
-          line && (
-            <Badge variant="success" dot>
-              Line: {line}
-            </Badge>
-          )
-        }
-      >
-        <div className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-[1fr_1fr_18rem]">
-            {vis("WorkStationPanel") && (
-              <div className="grid min-w-0 gap-2">
-                <span className="text-sm leading-none font-medium">
-                  Work station
-                </span>
-                <ScanBox
-                  ref={stationRef}
-                  size="md"
-                  label="Work station"
-                  placeholder="Scan the station"
-                  value={values.TBWorkStation}
-                  onChange={(v) => e.change("TBWorkStation", v)}
-                  locked={stationLocked}
-                  onScan={() => scan("BtnWorkStationScan")}
-                  onClear={() => scan("BtnWorkStationScan")}
-                  busy={busy && !stationLocked}
-                />
-              </div>
-            )}
-            {vis("JobCardPanel") && (
-              <div className="grid min-w-0 gap-2">
-                <span className="text-sm leading-none font-medium">
-                  Serial number
-                </span>
-                <ScanBox
-                  ref={serialRef}
-                  size="md"
-                  label="Unit serial"
-                  placeholder={
-                    stationLocked ? "Scan the serial" : "Scan the station first"
-                  }
-                  value={values.TBJobCoard}
-                  onChange={(v) => e.change("TBJobCoard", v)}
-                  locked={serialLocked && text("BtnWorderScan") === "Clr"}
-                  onScan={() => scan("BtnWorderScan")}
-                  onClear={() => scan("BtnWorderScan")}
-                  busy={busy && stationLocked}
-                />
-              </div>
-            )}
-            <Ctl
-              e={e}
-              id="DDLStationPrinter"
-              label="Station printer"
-              className="md:col-span-2 2xl:col-span-1"
-            />
-          </div>
-          {vis("BtnRework") && (
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                icon={RefreshCcw}
-                onClick={() => scan("BtnRework")}
-              >
-                Move to rework
-              </Button>
-            </div>
-          )}
-        </div>
-      </SectionCard>
-
-      {/* the scanned unit: cabinet and components on the left, its route as a timeline on the right */}
+      {/* scan (40 %) and the scanned unit's cabinet (60 %) side by side, components under them; the unit's route as
+          a timeline on the right */}
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-4">
-          <Cabinet unit={unit} e={e} line={line} />
+          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <SectionCard
+            icon={ScanLine}
+            title="Scan"
+            className="h-full"
+            actions={
+              line && (
+                <Badge variant="success" dot>
+                  Line: {line}
+                </Badge>
+              )
+            }
+          >
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+                {vis("WorkStationPanel") && (
+                  <div className="grid min-w-0 gap-2">
+                    <span className="text-sm leading-none font-medium">
+                      Work station
+                    </span>
+                    <ScanBox
+                      ref={stationRef}
+                      size="md"
+                      label="Work station"
+                      placeholder="Scan the station"
+                      value={values.TBWorkStation}
+                      onChange={(v) => e.change("TBWorkStation", v)}
+                      locked={stationLocked}
+                      onScan={() => scan("BtnWorkStationScan")}
+                      onClear={() => scan("BtnWorkStationScan")}
+                      busy={busy && !stationLocked}
+                    />
+                  </div>
+                )}
+                {vis("JobCardPanel") && (
+                  <div className="grid min-w-0 gap-2">
+                    <span className="text-sm leading-none font-medium">
+                      Serial number
+                    </span>
+                    <ScanBox
+                      ref={serialRef}
+                      size="md"
+                      label="Unit serial"
+                      placeholder={
+                        stationLocked ? "Scan the serial" : "Scan the station first"
+                      }
+                      value={values.TBJobCoard}
+                      onChange={(v) => e.change("TBJobCoard", v)}
+                      locked={serialLocked && text("BtnWorderScan") === "Clr"}
+                      onScan={() => scan("BtnWorderScan")}
+                      onClear={() => scan("BtnWorderScan")}
+                      busy={busy && stationLocked}
+                    />
+                  </div>
+                )}
+                <Ctl
+                  e={e}
+                  id="DDLStationPrinter"
+                  label="Station printer"
+                  className="md:col-span-2 lg:col-span-1"
+                />
+              </div>
+              {vis("BtnRework") && (
+                <div className="flex justify-end">
+                  <Button
+                    variant="outline"
+                    icon={RefreshCcw}
+                    onClick={() => scan("BtnRework")}
+                  >
+                    Move to rework
+                  </Button>
+                </div>
+              )}
+            </div>
+          </SectionCard>
+            <Cabinet unit={unit} e={e} line={line} className="h-full" />
+          </div>
           <ComponentDetails e={e} />
         </div>
         <ProcessHistory route={unit?.route} e={e} className="xl:sticky xl:top-2" />
