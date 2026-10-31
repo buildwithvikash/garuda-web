@@ -13,6 +13,8 @@ const blankCells = (rows) => rows.map((r) => Object.fromEntries(Object.entries(r
 
 /** the department's production orders with quantity left to assign (by PRODHeader.AssignedQty) */
 export const openOrders = (dept) => fill(`Select ph.PRODNo, CONCAT(m.Name , ' - ', ph.PRODNo) as Name from PRODHeader ph inner join Material m on ph.Material=m.MatCode where ph.Qty>isnull(ph.AssignedQty,0) and ph.Status=1 and ph.Department =${digitsOrEmpty(dept)} order by PRODNo Desc`);
+/** how much of the order is started: its job cards (Print writes one ProcessOrder row per piece) */
+export const startedQty = async (prodNo) => netDouble(await scalar('select isnull(sum(Qty),0) from ProcessOrder where PRODNo=@k', { k: Number(prodNo) }));
 /** the department's label printers */
 export const departmentPrinters = (dept) => fill(`Select ROWID,Name from BarcodePrinter Where  Department=${netInt(dept)}`);
 

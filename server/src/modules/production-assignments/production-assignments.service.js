@@ -7,6 +7,7 @@ import { FORMS } from '../forms/specs.js';
 import { openForm, formOf, runEvent } from '../forms/events.js';
 import { netString } from '../../shared/net.js';
 import { AppError } from '../../shared/AppError.js';
+import * as repo from './production-assignments.repo.js';
 
 export const SCREEN = '/production/productionassignmentform';
 const spec = FORMS[SCREEN];
@@ -42,13 +43,29 @@ const PLAIN = ['material', 'bom', 'variant', 'uom', 'printer'];
 
 const noPlaceholder = (opts) => (opts ?? []).filter((o) => o.value !== '');
 
+/** a flag cell as the grids hold it (true / 'True' / 1) */
+const flag = (v) => v === true || v === 1 || /^(true|1)$/i.test(netString(v));
+/** the screen's grid rows (database column names) as the API names them; the codes stay on the server */
+const LINES = {
+  route: (r) => ({ seq: netString(r.SeqNo), process: netString(r.Process), station: netString(r.Station) }),
+  bomInput: (r) => ({ material: netString(r.MaterialDesc), qty: netString(r.Qty), unit: netString(r.UomDesc), process: netString(r.ProcessDesc), scanRequired: flag(r.ScanReq), outputScan: flag(r.OutputScan) }),
+  bomOutput: (r) => ({ material: netString(r.MaterialDesc), qty: netString(r.Qty), unit: netString(r.UomDesc), yieldQty: netString(r.YieldQty), process: netString(r.ProcessDesc) }),
+};
+
 /** the screen's form as the API returns it */
 function toApi(form, message = null) {
   const assignment = Object.fromEntries(Object.entries(FIELDS).map(([f, id]) => [f, netString(form.values[id]).trim()]));
   const options = Object.fromEntries(Object.entries(FIELDS).filter(([, id]) => form.options[id]).map(([f, id]) => [f, noPlaceholder(form.options[id])]));
   const ui = Object.fromEntries(Object.entries(UI).map(([k, [id, attr]]) => [k, (attr === 'visible' ? form.visible[id] : form.enabled[id]) !== false]));
-  const details = Object.fromEntries(Object.entries(GRIDS).map(([k, id]) => [k, Array.isArray(form.values[id]) ? form.values[id] : []]));
+  const details = Object.fromEntries(Object.entries(GRIDS).map(([k, id]) => [k, Array.isArray(form.values[id]) ? form.values[id].map(LINES[k]) : []]));
   return { assignment, options, ui, details, left: netString(form.viewState.Qty), message };
+}
+
+/** the answer for the screen: the form, and how much of the chosen order is already started (all its job cards) */
+async function answer(form, message = null) {
+  const out = toApi(form, message);
+  const order = out.assignment.order;
+  return { ...out, started: /^\d+$/.test(order) ? netString(await repo.startedQty(order)) : '' };
 }
 
 async function opened(ctx) {
@@ -59,7 +76,7 @@ async function opened(ctx) {
 /** the screen as it opens: the session's department, its orders and printers */
 export async function blank(ctx) {
   const { form, alert } = await opened(ctx);
-  return toApi(form, alert);
+  return answer(form, alert);
 }
 
 /** puts one API field on the form; a dropdown value must be one of its items */
@@ -71,23 +88,14 @@ function put(form, field, value) {
   form.values[id] = value;
 }
 
-/** What a choice (department, order, routing, process, station) fills: the whole screen after the screen's handler */
-export async function change(ctx, field, draft) {
-  const control = CHANGES[field];
-  if (!control) throw AppError.badRequest(`Nothing depends on ${field}`);
-  let { form } = await opened(ctx);
-  for (const [f, id] of Object.entries(FIELDS)) if (draft[f] !== undefined) form.values[id] = draft[f];
-  const r = await runEvent(spec, ctx, control, form);
-  form = r.form;
-  return toApi(form, r.result.alert ?? null);
-}
-
-/** Prints the job cards: replays the choices, then the screen's Print (one job card, barcode and label per piece).
- *  { message, alerts, left, ...the screen after it } */
-export async function print(ctx, draft) {
+/** The choices replayed through the screen's own handlers, in the order the user makes them, each checked against
+ *  the list the server built just before (another department's or business unit's order is never on it). upTo: stop
+ *  before this field (it is the one being changed). { form } after the replay */
+async function replay(ctx, draft, upTo = null) {
   let { form, alert } = await opened(ctx);
   if (alert) throw AppError.badRequest(alert);
   for (const field of PATH) {
+    if (field === upTo) break;
     if (draft[field] === undefined || draft[field] === '') continue;
     put(form, field, draft[field]);
     const r = await runEvent(spec, ctx, CHANGES[field], form);
@@ -102,11 +110,39 @@ export async function print(ctx, draft) {
       }
     }
   }
+  return form;
+}
+
+/** What a choice (department, order, routing, process, station) fills: the whole screen after the screen's handler.
+ *  The choices before it are replayed and checked first, so only what the server offered can be looked at. */
+export async function change(ctx, field, draft) {
+  const control = CHANGES[field];
+  if (!control) throw AppError.badRequest(`Nothing depends on ${field}`);
+  let form = await replay(ctx, draft, field);
+  // the printer chosen stays while it is on the list (a department change brings its own printers)
+  if (draft.printer && form.options[FIELDS.printer]?.some((o) => o.value === draft.printer)) form.values[FIELDS.printer] = draft.printer;
+  if (draft.qty !== undefined) form.values[FIELDS.qty] = draft.qty; // the quantity as typed (a stage's handler resets it)
+  put(form, field, draft[field] ?? '');
+  const r = await runEvent(spec, ctx, control, form);
+  form = r.form;
+  return answer(form, r.result.alert ?? null);
+}
+
+/** Prints the job cards: replays the choices, then the screen's Print (one job card, barcode and label per piece).
+ *  { message, alerts, left, ...the screen after it } */
+export async function print(ctx, draft) {
+  const form = await replay(ctx, draft);
   if (draft.printer) put(form, 'printer', draft.printer);
   // what is assigned now: quantity typed; the order quantity and what is left come from the server's replay
   if (draft.qty !== undefined) form.values[FIELDS.qty] = draft.qty;
   const r = await runEvent(spec, ctx, 'btnPrint', form);
   if (r.result.alert) throw AppError.badRequest(r.result.alert);
-  const out = toApi(r.form, r.result.message ?? null);
-  return { ...out, alerts: r.result.alerts ?? [] };
+  // the department's open orders read again: an order printed in full leaves the list at once (the screen's own Print
+  // only clears the choice)
+  const dept = r.form.values[FIELDS.department];
+  if (/^\d+$/.test(netString(dept))) r.form.options[FIELDS.order] = await repo.openOrders(dept);
+  // the order as printed (Print may clear it from the screen once nothing is left)
+  const out = await answer(r.form, r.result.message ?? null);
+  const printed = draft.order && /^\d+$/.test(draft.order) ? { order: draft.order, started: netString(await repo.startedQty(draft.order)) } : null;
+  return { ...out, printed, alerts: r.result.alerts ?? [] };
 }

@@ -1,6 +1,7 @@
 // /api/production/orders: production orders (PRODHeader + its service-request lines).
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
+import { idempotent } from '../../middlewares/idempotency.js';
 import { portedErrors } from '../../middlewares/errorHandler.js';
 import { operatorMessages } from '../../middlewares/operatorMessages.js';
 import { validate } from '../../middlewares/validate.js';
@@ -37,19 +38,25 @@ router.post('/changes/:field', validate(validateDraft), async (req, res) => {
 });
 router.post('/service-requests', validate(validateDraft), async (req, res) => ok(res, await orders.addServiceRequest(ctx(req), req.valid.body)));
 
+router.get('/:prodNo/serials', async (req, res) => {
+  const prodNo = prodNoOf(req);
+  ok(res, found(await orders.serials(ctx(req), prodNo), prodNo)); // the serials generated for the order
+});
 router.get('/:prodNo', async (req, res) => {
   const prodNo = prodNoOf(req);
   ok(res, found(await orders.get(ctx(req), prodNo), prodNo));
 });
-router.post('/', validate(validateOrder), async (req, res) => created(res, await orders.create(ctx(req), req.valid.body)));
+// Idempotency-Key: a repeated create gets the first one's answer (no second order)
+router.post('/', idempotent, validate(validateOrder), async (req, res) => created(res, await orders.create(ctx(req), req.valid.body)));
 router.put('/:prodNo', validate(validateOrder), async (req, res) => {
   const prodNo = prodNoOf(req);
-  ok(res, found(await orders.save(ctx(req), prodNo, req.valid.body), prodNo));
+  // a saved order is never changed: 409 (404 when there is no such order)
+  ok(res, found(await orders.save(ctx(req), prodNo), prodNo));
 });
 router.delete('/:prodNo', async (req, res) => {
   const prodNo = prodNoOf(req);
-  const remark = typeof req.body?.remark === 'string' ? req.body.remark.slice(0, 250) : '';
-  ok(res, found(await orders.cancel(ctx(req), prodNo, remark), prodNo));
+  // a saved order is never cancelled: 409 (404 when there is no such order)
+  ok(res, found(await orders.cancel(ctx(req), prodNo), prodNo));
 });
 
 router.use(portedErrors);

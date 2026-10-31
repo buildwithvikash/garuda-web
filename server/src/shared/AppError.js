@@ -17,5 +17,6 @@ export class AppError extends Error {
   static forbidden(message = 'You do not have access to this screen.') { return new AppError(403, message); }
   static notFound(what = 'Record') { return new AppError(404, `${what} not found.`); }
   /** field problems: { field: 'message' } for the form to show beside each field */
+  static conflict(message) { return new AppError(409, message); }
   static unprocessable(message, errors) { return new AppError(422, message, { errors }); }
 }

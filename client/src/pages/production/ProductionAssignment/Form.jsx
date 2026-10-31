@@ -1,515 +1,189 @@
-// ProductionAssignment: the form view (create / update one record), with the state and engine only it uses.
-// The page (../ProductionAssignment.jsx) opens it with the screen's state; the list is ./List.jsx.
-
-import { useEffect, useMemo, useRef, useState, useId } from 'react';
-import { ArrowLeft, Copy, Printer, Save, Send, Trash2, Boxes, ClipboardCheck, ClipboardList, SlidersHorizontal } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { api } from '@/api.js';
-import { askConfirm } from '@/app/confirm.js';
-import Grid from '@/components/shared/DataGrid.jsx';
-import { CheckList, ComboField, EngineField, FileField, GuideView, ImageField, Panel, RoleTree } from '@/components/shared/FormControls.jsx';
-import Modal, { ModalFooter } from '@/components/shared/Modal.jsx';
-import QCPanel from '@/components/shared/QCPanel.jsx';
-import Toolbar from '@/components/shared/Toolbar.jsx';
-import { ScanBox } from '@/components/shopfloor';
-import { Badge } from '@/components/ui/badge.jsx';
+// Production Assignment: start a production order at its routing's first stage and print its job cards. Plain React:
+// the fields are this screen's own; the state and server calls are in ./useAssignment.js.
+import { Boxes, CheckCircle2, ClipboardList, Factory, PackageMinus, PackagePlus, Printer, Route, RotateCw } from 'lucide-react';
+import DataTable from '@/components/shared/DataTable.jsx';
+import { Select, TextInput } from '@/components/shared/FormField.jsx';
+import { LockedValue, Step } from '@/components/shared/FormStep.jsx';
+import Loader from '@/components/shared/Loader.jsx';
+import Page from '@/components/shared/Page.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Input } from '@/components/ui/input.jsx';
-import { NativeSelect } from '@/components/ui/native-select.jsx';
-import { createPortal } from 'react-dom';
-import { LockedField, STEP_COLS, STEP_SPAN, Step, TONE_CYCLE } from '@/components/shared/FormStep.jsx';
-import { prettyHeader } from '@/components/shared/DataTable.jsx';
 import { cn } from '@/lib/utils';
-import RowFormGrid from '@/components/shared/RowFormGrid.jsx';
+import { useAssignment } from './useAssignment.js';
 
-// ────────────────────────────────────────────────────────────────────────────
-// 2. STATE
-// What the client keeps of the form and sends back with each server event.
-// ────────────────────────────────────────────────────────────────────────────
-const enc = encodeURIComponent;
+const GRID_4 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4';
+const GRID_2 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2';
 
-/** control id -> value (GridViews: their rows) */
-const valuesOf = (state) => Object.fromEntries(state.controls.filter((c) => c.id).map((c) => [c.id, c.type === 'GridView' ? c.rows : c.value]));
+/** a cell as read: Yes / No for flags, — for nothing */
+const cell = (v) => (v === true ? 'Yes' : v === false ? 'No' : v === '' || v == null ? '—' : String(v));
+/** DataTable columns from [field, header] pairs */
+const columns = (pairs) => pairs.map(([key, header]) => ({ key, header, exactHeader: true, text: (r) => cell(r[key]), render: (r) => cell(r[key]) }));
 
-/** The page as shown, which server page code reads back: Visible / Enabled / Text, plus the items of a page-filled
- *  list or of any list an event or the first load refilled (the server only knows the items the form was built with). */
-const uiOf = (controls) =>
-  Object.fromEntries(
-    controls
-      .filter((c) => c.id)
-      .map((c) => [c.id, { visible: c.visible !== false, enabled: c.enabled !== false, text: c.text ?? '', ...((c.page || c.refilled) && c.options ? { options: c.options } : {}) }]),
+const ROUTE = columns([['seq', 'Step'], ['process', 'Process'], ['station', 'Station']]);
+const BOM_INPUT = columns([['material', 'Material'], ['qty', 'Quantity'], ['unit', 'Unit'], ['process', 'Used at'], ['scanRequired', 'Scan needed'], ['outputScan', 'Output scanned']]);
+const BOM_OUTPUT = columns([['material', 'Material'], ['qty', 'Quantity'], ['unit', 'Unit'], ['yieldQty', 'Yield'], ['process', 'Made at']]);
+
+/** how much of an order is printed: started of total, and what is left (green once all of it is) */
+function OrderProgress({ started, total, unit = '' }) {
+  const [s, t] = [Number(started) || 0, Number(total) || 0];
+  if (t <= 0) return null;
+  const all = s >= t;
+  const u = unit ? ` ${unit}` : '';
+  return (
+    <div className="sm:col-span-2 lg:col-span-4">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
+        <span className="font-medium">
+          Printed {s} of {t}
+          {u}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** what the last print left its order at; it stays after the screen clears a fully printed order */
+function LastPrint({ p }) {
+  const [s, t] = [Number(p.started) || 0, Number(p.total) || 0];
+  const all = t > 0 && s >= t;
+  return (
+    <div role="status" className={cn('flex flex-wrap items-center gap-2 rounded-xl border px-4 py-2.5 text-sm lg:col-span-10', all ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200' : 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200')}>
+      {all ? <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" /> : <Printer className="size-4 shrink-0" aria-hidden="true" />}
+      <span>
+        Last print · <b>{p.orderName}</b>:{' '}
+        {all ? <>all {t} printed. The order is complete and no longer in the list.</> : <>{s} of {t} printed, {t - s} left.</>}
+      </span>
+    </div>
+  );
+}
+
+/** one of the order's lines (routing stages, BOM input / output), read-only */
+const Lines = ({ id, rows, cols, empty }) => <DataTable tableId={id} columns={cols} rows={rows.map((r, i) => ({ id: i, ...r }))} empty={empty} exportName={id} />;
+
+export default function AssignmentForm() {
+  const { screen, loadError, errors, busy, lastPrint, setField, print } = useAssignment();
+
+  const shell = (children, actions) => (
+    <Page icon={Printer} title="Production Assignment" subtitle="Start a production order at its first station and print the job cards" actions={actions}>
+      {children}
+    </Page>
   );
 
-/** Applies a server patch { id: { options?, index?, value?, rows?, visible?, text?, enabled?, maxLength?, guide? } }:
- *  options first, then SelectedIndex / SelectedValue. Returns the new controls and values. */
-function applyPatch(controls, values, patch = {}) {
-  const ctl = controls.map((c) => {
-    const p = patch[c.id];
-    if (!p) return c;
-    const next = { ...c };
-    if (p.options) Object.assign(next, { options: p.options, refilled: true });
-    for (const k of ['visible', 'text', 'enabled', 'maxLength']) if (k in p) next[k] = p[k];
-    if (p.guide) next.guide = p.guide;
-    return next;
-  });
-  const vals = { ...values };
-  for (const c of ctl) if (c.type === 'FileUpload') vals[c.id] = null; // a postback clears a file input, as the browser did
-  for (const [k, p] of Object.entries(patch)) {
-    if ('index' in p) vals[k] = ctl.find((c) => c.id === k)?.options?.[p.index]?.value ?? '';
-    if ('value' in p) vals[k] = p.value;
-    if (p.rows) vals[k] = p.rows;
-  }
-  return { controls: ctl, values: vals };
-}
+  if (loadError)
+    return shell(
+      <div className="flex flex-col items-start gap-3 p-4">
+        <p role="alert" className="text-sm text-destructive">{loadError}</p>
+        <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button>
+      </div>,
+    );
+  if (!screen) return shell(<Loader />);
 
-/** Panel.Visible / Panel.Enabled = false hide / disable everything inside the panel. */
-/** hidden: the ids the page's texts hide (shown nowhere, with what is inside them); the server still sees them */
-function panelState(controls, hidden = new Set()) {
-  const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
-  const up = (c, key) => {
-    for (let p = c.parent; p; p = byId.get(p)?.parent) if (byId.get(p)?.[key] === false || (key === 'visible' && hidden.has(p))) return false;
-    return true;
-  };
-  return { shown: (c) => !hidden.has(c.id) && up(c, 'visible'), live: (c) => (up(c, 'enabled') ? c : { ...c, enabled: false }) };
-}
+  const { assignment: a, options, ui, details, left, started } = screen;
+  // the server's lists ({ value, text }) as the Select takes them, and the name of a chosen value
+  const opts = (field) => (options[field] ?? []).map((o) => ({ value: o.value, label: o.text }));
+  const nameOf = (field) => (options[field] ?? []).find((o) => o.value === a[field])?.text ?? a[field];
+  const unit = nameOf('totalUom') || nameOf('uom');
+  const withUnit = (q) => (q === '' || q == null ? '' : `${q} ${unit ?? ''}`.trim());
+  const select = (field, label, extra = {}) => (
+    <Select label={label} value={a[field]} options={opts(field)} onChange={(v) => setField(field, v ?? '')} error={errors[field]} {...extra} />
+  );
 
-// ────────────────────────────────────────────────────────────────────────────
-// 3. ENGINE
-// A control with code-behind (AutoPostBack, a page button, a grid command) sends the form to /forms/event; the reply is applied here.
-// ────────────────────────────────────────────────────────────────────────────
-function useEngine({ path, state, events, onDone, onListFilter, onResult, initialError, hidden }) {
-  const [controls, setControls] = useState(state.controls);
-  const [values, setValues] = useState(() => valuesOf(state));
-  const [viewState, setViewState] = useState(state.viewState ?? {});
-  const [buttonPatch, setButtonPatch] = useState({});
-  const [busy, setBusy] = useState(false);
-  // Errors are never drawn on the page: they pop up as toasts.
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  useEffect(() => {
-    const first = initialError ?? state.statusMessage;
-    if (first) setError(first);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const report = (r) => {
-    if (r.alert) setError(r.alert);
-    else {
-      setError('');
-      if (r.success) toast.success(r.message && r.message !== '✔' ? r.message : 'Done');
-    }
-  };
-
-  async function fire(control, next = values, arg, base = controls, index) {
-    setBusy(true);
-    try {
-      const r = await api('/forms/event', { method: 'POST', body: { path, control, values: next, viewState, arg, index, ui: uiOf(base) } });
-      const p = applyPatch(base, next, r.set);
-      setControls(p.controls);
-      setValues(p.values);
-      setViewState(r.viewState ?? viewState);
-      if (r.redirect) return void window.location.assign(r.redirect);
-      if (r.list) onListFilter?.(r.list);
-      if (r.buttons) setButtonPatch((b) => ({ ...b, ...r.buttons }));
-      // FooterControl's Save succeeded: the form starts again
-      if (r.reset && onDone) return void onDone(r.alert ? { ok: false, text: r.alert } : { ok: true, text: r.message || 'Saved' });
-      onResult ? onResult(r, control) : report(r);
-      return r;
-    } catch (e) {
-      setError(e.message);
-      onResult?.({ alert: e.message }, control);
-    } finally {
-      setBusy(false);
-    }
-  }
-  function change(id, v) {
-    const next = { ...values, [id]: v };
-    setValues(next);
-    if (events.includes(id)) fire(id, next);
-  }
-  // ComboBox: the picked row becomes the list's only item, then its handler (if the page wired one) runs
-  const pick = (id) => (item) => {
-    const ctl = controls.map((c) => (c.id === id ? { ...c, options: [item] } : c));
-    const next = { ...values, [id]: item.value };
-    setControls(ctl);
-    setValues(next);
-    if (events.includes(id)) fire(id, next, undefined, ctl);
-  };
-
-  const { shown, live } = panelState(controls, hidden);
-  const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
-  /** the control as the page shows it (disabled when a panel above it is) */
-  const ctl = (id) => (byId.has(id) ? live(byId.get(id)) : null);
-  /** visible, with every panel above it */
-  const vis = (id) => {
-    const c = byId.get(id);
-    return !!c && c.visible !== false && shown(c);
-  };
-
-  return { controls, setControls, values, setValues, viewState, buttonPatch, busy, setBusy, error, setError, report, fire, change, pick, shown, live, ctl, vis };
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// 5. FORM VIEW
-// One record: the fields, the buttons, grids, QC, print, copy.
-// ────────────────────────────────────────────────────────────────────────────
-const EDITOR_TYPES = ['TextBox', 'DropDownList', 'CheckBox', 'Button', 'ImageButton', 'FileUpload', 'Image'];
-const WIDE = ['GridView', 'QC', 'CheckBoxList', 'TreeView', 'Picture', 'Footer', 'Panel'];
-const INPUT_TYPES = [...EDITOR_TYPES, 'ComboBox', 'GridView', 'QC', 'CheckBoxList', 'TreeView'];
-/** a grid with the page's texts for it ({ dataField or button id: { header, hidden } }): its data columns in the texts' order (those it
- *  does not name after them, as they were), renamed or left out; command / button columns keep their place. The rows
- *  keep every field */
-const gridTexts = (c, t) => {
-  if (!t) return c;
-  const order = Object.keys(t);
-  const at = (x) => order.indexOf(x.dataField) + 1 || order.length + 1;
-  const data = c.columns.filter((x) => x.kind === 'boundfield').sort((x, y) => at(x) - at(y));
-  let i = 0;
-  const columns = c.columns.map((x) => (x.kind === 'boundfield' ? data[i++] : x));
-  return { ...c, columns: columns.filter((x) => !t[x.dataField ?? x.template?.id]?.hidden).map((x) => (t[x.dataField]?.header != null ? { ...x, header: t[x.dataField].header } : x)) };
-};
-
-function RecordForm({ path, state, mode: initialMode, notice, buttons: specButtons, callNewOnSave, copyOptions, events, print, printers, onCopy, onBack, onDone, onReload, onListFilter, layout, page = {} }) {
-  const formId = useId();
-  // the page's texts (its settings: labels, grid headers, `hidden`), over what the screen gives
-  const texts = page.texts ?? {};
-  const hiddenIds = useMemo(() => new Set(Object.entries(texts.fields ?? {}).filter(([, t]) => t?.hidden).map(([id]) => id)), [texts]);
-  // TitleControl buttons, as the page's display code may switch them for the record (e.g. Display_Update(false))
-  const e = useEngine({ path, state, events, onDone, onListFilter, initialError: notice && !notice.ok ? notice.text : undefined, hidden: hiddenIds });
-  const { controls, values, setValues, viewState, busy, setBusy, error, setError, fire, change, pick, shown, live, vis, ctl } = e;
-  /** the screen shows it (it and its panels), whatever the page's texts hide: a table's editors are hidden from the
-   *  page but drawn in its cells */
-  const screenById = new Map(controls.filter((x) => x.id).map((x) => [x.id, x]));
-  const onScreen = (id) => {
-    if (!screenById.has(id)) return false;
-    for (let x = screenById.get(id); x; x = screenById.get(x.parent)) if (x.visible === false) return false;
-    return true;
-  };
-  const buttons = { ...specButtons, ...(state.buttons ?? {}), ...e.buttonPatch };
-  const [mode, setMode] = useState(initialMode);
-  const [deleting, setDeleting] = useState(null); // the reason being typed, or null
-  const [copyKey, setCopyKey] = useState('');
-  const [printer, setPrinter] = useState(printers?.value ?? '');
-  const cancelled = state.recordStatus === 200;
-  const saved = useRef(JSON.stringify(valuesOf(state)));
-  const dirty = JSON.stringify(values) !== saved.current;
-  // a success notice from the step before (saved, deleted, ...) shows once as a toast
-  useState(() => notice?.ok && notice.text && toast.success(notice.text === '✔' ? 'Done' : notice.text));
-
-  const set = (id) => (v) => change(id, v);
-
-  async function printLabel() {
-    setBusy(true);
-    setError('');
-    try {
-      const r = await api('/forms/print', { method: 'POST', body: { path, values, printer } });
-      if (r.alert) setError(r.alert);
-      else toast.success('Sent to printer');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function act(kind, extra = {}) {
-    setBusy(true);
-    setError('');
-    try {
-      const r = await api(`/forms/${kind}`, { method: 'POST', body: { path, values, viewState, ui: uiOf(controls), ...extra } });
-      // a page's own Save handler: it signed the user out (password changed) / reported failure
-      if (r.logout) return void window.location.assign('/login');
-      if (r.ok === false) return void setError(r.message);
-      // what the page itself alerted wins over the success message
-      const result = r.alert ? { ok: false, text: r.alert } : { ok: true, text: r.message };
-      if (r.display) return onReload(r.display, result); // the page shows the saved record again
-      // Delete always clears the form; Save/Update clear it unless CallNewOnSave = false (the record stays open)
-      if (kind === 'cancel' || callNewOnSave) return onDone(result);
-      if (result.ok) toast.success(result.text || 'Saved');
-      else setError(result.text);
-      setValues((x) => {
-        const next = r.key && 'PrimaryKey' in x ? { ...x, PrimaryKey: r.key } : { ...x };
-        for (const [k, p] of Object.entries(r.set ?? {})) if ('value' in p) next[k] = p.value;
-        saved.current = JSON.stringify(next);
-        return next;
-      });
-      setMode('edit');
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-      setDeleting(null);
-    }
-  }
-
-  async function back() {
-    if (dirty && !(await askConfirm({ title: 'Leave without saving?', message: 'Your changes on this form will be lost.', confirmLabel: 'Leave', variant: 'danger' }))) return;
-    onBack();
-  }
-
-  // the page's own editors (and engine controls with an empty Tag), in markup order
-  const searchBoxes = new Set(Object.keys(page.checkSearch ?? {}));
-  const editors = controls
-    .filter((c) => c.id && c.visible && shown(c) && !searchBoxes.has(c.id) && (EDITOR_TYPES.includes(c.type) || (c.type === 'Label' && c.page && (c.text ?? '') !== '')) && (c.page || (c.table.trim() === '' && c.column.trim() === '')))
-    .sort((a, b) => a.order - b.order);
-  // Label + input pairs by Tag (table|column); TextBoxes with an empty Tag are left to the page logic.
-  const fields = useMemo(() => {
-    const labels = controls.filter((c) => c.type === 'Label');
-    return controls
-      .filter((c) => ['TextBox', 'DropDownList', 'CheckBox', 'ComboBox'].includes(c.type) && c.visible && shown(c) && c.id && (c.table.trim() !== '' || c.column.trim() !== ''))
-      .map((c) => ({ c, label: (labels.find((l) => l.table === c.table && l.column === c.column && l.visible)?.text ?? c.column).replace(/\s*:\s*$/, '') }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [controls]);
-  const label = (c) => page.labels?.[c.id] ?? c.caption ?? c.column;
-  const searched = new Set(Object.values(page.checkSearch ?? {}));
-
-  /** a control that takes a whole row: list, tree, guide, picture, footer save, checklist, grid */
-  function block(c) {
-    if (c.type === 'CheckBoxList') return <CheckList key={c.id} c={c} label={label(c)} value={values[c.id]} onChange={set(c.id)} search={searched.has(c.id)} />;
-    if (c.type === 'TreeView' && c.nodes) return <RoleTree key={c.id} c={c} label={label(c)} value={values[c.id]} onChange={set(c.id)} />;
-    if (c.type === 'Panel' && c.guide) return <GuideView key={c.id} g={c.guide} />;
-    if (c.type === 'Picture') return values[c.id] ? <Panel key={c.id}><img src={String(values[c.id]).replace(/^~\//, '/')} alt="" className="max-h-[70vh] rounded-lg" /></Panel> : null;
-    if (c.type === 'Footer') {
-      return events.includes('Footer:save') ? (
-        <div key={c.id} className="flex justify-end">
-          <Button icon={Save} loading={busy} disabled={cancelled} onClick={() => fire('Footer:save', values)}>Save</Button>
-        </div>
-      ) : null;
-    }
-    if (c.type === 'QC') {
-      const qc = (next) => ({ ...values, [c.id]: next });
-      return <QCPanel key={c.id} s={values[c.id]} busy={busy} onChange={(next) => setValues(qc(next))} onEvent={(name, next = values[c.id], arg, i) => fire(name.replace(/^QC:/, `${c.id}:`), qc(next), arg, controls, i)} />;
-    }
-    if (c.type === 'GridView') {
-      c = gridTexts(c, texts.grids?.[c.id]);
-      // page.rowForms: this grid's lines are added / edited in the table, with the screen's editors in its cells
-      if (page.rowForms?.[c.id])
-        return <RowFormGrid key={c.id} c={c} cfg={page.rowForms[c.id]} rows={values[c.id]} fire={fire} values={values} controls={controls} events={events} busy={busy} cancelled={cancelled} field={(id) => one(ctl(id), '', true)} onScreen={onScreen} />;
-      const can = (k) => !cancelled && c.columns.some((x) => x.kind === 'commandfield' && x[k]) && events.includes(`${c.id}:${k}`);
-      return (
-        <Grid
-          key={c.id}
-          c={c}
-          rows={values[c.id]}
-          onSelect={can('select') ? (k, i) => fire(`${c.id}:select`, values, k, controls, i) : null}
-          onDelete={can('delete') ? (k, i) => fire(`${c.id}:delete`, values, k, controls, i) : null}
-          onCommand={(cmdName, k, i) => events.includes(`${c.id}:${cmdName}`) && fire(`${c.id}:${cmdName}`, values, k, controls, i)}
-          onEdit={(i, field, v) => setValues((x) => ({ ...x, [c.id]: x[c.id].map((r, j) => (j === i ? { ...r, [field]: v } : r)) }))}
-        />
-      );
-    }
-    return null;
-  }
-
-  const pairLabel = new Map(fields.map((x) => [x.c.id, x.label]));
-  /** one control of a layout section, under its caption */
-  /** bare: no caption (a table cell, under its column's header) */
-  function one(c, l = pairLabel.get(c.id) ?? c.caption ?? page.labels?.[c.id] ?? c.column ?? '', bare = false) {
-    if (!bare && texts.fields?.[c.id]?.label != null) l = texts.fields[c.id].label; // the page's own text wins
-    if (c.type === 'TextBox' && c.readOnly) return <LockedField key={c.id} c={c} label={l} value={values[c.id]} />;
-    if (WIDE.includes(c.type)) return <div key={c.id} className="col-span-full min-w-0">{block(c)}</div>;
-    if (c.type === 'Button' || c.type === 'ImageButton') {
-      return events.includes(c.id) ? (
-        <div key={c.id} className="self-end">
-          <Button loading={busy} disabled={!c.enabled || cancelled} onClick={() => fire(c.id, values)}>{l || (c.text ?? '').trim() || 'Go'}</Button>
-        </div>
-      ) : null;
-    }
-    if (c.type === 'ComboBox') return <ComboField key={c.id} path={path} c={c} label={l} value={values[c.id]} onPick={pick(c.id)} />;
-    if (c.type === 'Image') return <ImageField key={c.id} c={c} label={l} value={values[c.id]} onChange={set(c.id)} />;
-    if (c.type === 'FileUpload') return <FileField key={c.id} c={c} label={l} value={values[c.id]} onChange={(v) => setValues({ ...values, [c.id]: v })} />;
-    if (c.type === 'Label') return (c.text ?? '') !== '' ? <span key={c.id} className="self-end pb-2.5 text-sm text-muted-foreground">{c.text}</span> : null;
-    return <EngineField key={c.id} c={live(c)} label={l} value={values[c.id]} onChange={set(c.id)} />;
-  }
-
-    /** A screen without a layout of its own, as numbered steps (the Production Order design): its fields, then its own
-   *  inputs and buttons, then each list / grid / tree / QC panel as a step of its own, in markup order. The record
-   *  status goes in the page header, as on Production Order. */
-  function autoLayout() {
-    // the department and the record status go in the page header, as on Production Order
-    const dept = fields.find(({ c }) => c.type === 'DropDownList' && /^department$/i.test(String(c.column ?? '').trim()));
-    const header = [...(dept ? [{ id: dept.c.id, label: dept.label }] : []), ...(vis('ddlStatus') ? [{ id: 'ddlStatus', label: 'Record status' }] : [])];
-    const steps = [];
-    const details = fields.filter(({ c }) => !header.some((h) => h.id === c.id)).map(({ c, label: l }) => ({ id: c.id, label: l }));
-    if (details.length) steps.push({ title: 'Details', subtitle: 'The main information of this record', icon: ClipboardList, ids: details });
-    if (editors.length) steps.push({ title: 'More details', subtitle: 'Further entries and actions of this screen', icon: SlidersHorizontal, ids: editors.map((c) => ({ id: c.id, label: c.caption ?? page.labels?.[c.id] ?? '' })) });
-    // (a role tree without its nodes, or an image not picked yet, shows nothing, so it gets no step)
-    const blocks = controls.filter((c) => c.id && c.visible !== false && shown(c) && ['GridView', 'CheckBoxList', 'TreeView', 'QC', 'Picture'].includes(c.type) && (c.type !== 'TreeView' || c.nodes) && (c.type !== 'Picture' || values[c.id]));
-    for (const c of blocks) steps.push({ title: c.type === 'QC' ? 'Quality checks' : c.type === 'Picture' ? 'Image' : prettyHeader(texts.fields?.[c.id]?.label ?? page.labels?.[c.id] ?? c.caption ?? c.column ?? c.id) || 'Items', icon: c.type === 'QC' ? ClipboardCheck : Boxes, ids: [c.id] });
-    // what has no step of its own: a guide panel, the approval footer (shown after the steps)
-    const tail = controls.filter((c) => c.id && c.visible !== false && shown(c) && ((c.type === 'Panel' && c.guide) || c.type === 'Footer'));
-    return { header, sections: steps, tail };
-  }
-
-  /** the layout's steps (the screen's own, or autoLayout()), numbered as shown; visible controls a screen's own layout
-   *  does not place follow under "Other details" */
-  const itemsOf = (list) => (list ?? []).map((i) => (typeof i === 'string' ? { id: i } : i)).filter((i) => vis(i.id));
-  /** a grid a layout item gives `columns` (data fields) shows only those, and `headers` ({ dataField: caption }) names
-   *  them; its rows keep every field */
-  const shownColumns = (c, keep, names) =>
-    c?.type === 'GridView' && (keep || names)
-      ? { ...c, columns: c.columns.filter((x) => !keep || x.kind !== 'boundfield' || keep.includes(x.dataField)).map((x) => (names?.[x.dataField] ? { ...x, header: names[x.dataField] } : x)) }
-      : c;
-  const L = layout ?? autoLayout();
-  function sections() {
-    const idOf = (i) => (typeof i === 'string' ? i : i.id);
-    const listed = new Set([...(L.header ?? []).map(idOf), ...L.sections.flatMap((x) => [...(x.ids ?? []).map(idOf), ...(x.actions ?? []).map(idOf), ...[...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].flatMap((s) => [s.box, s.go])]), ...(L.tail ?? []).map((c) => c.id)]);
-    const rest = layout ? controls.filter((c) => c.id && !listed.has(c.id) && !layout.hide?.includes(c.id) && INPUT_TYPES.includes(c.type) && vis(c.id) && (c.type !== 'Button' || events.includes(c.id))) : [];
-    const steps = [...L.sections, ...(rest.length ? [{ title: 'Other details', subtitle: 'More fields of this screen', tone: 'slate', ids: rest.map((c) => c.id) }] : [])];
-    let n = 0;
-    return [
-      ...steps.map((x) => {
-        // `render`: a step the page draws itself (not the screen's controls), given the form's values and mode
-        if (x.render) {
-          n += 1;
-          return (
-            <div key={x.title} className={cn('min-w-0', STEP_SPAN[x.width ?? 10])}>
-              <Step n={n} tone={x.tone ?? TONE_CYCLE[(n - 1) % TONE_CYCLE.length]} icon={x.icon ?? Boxes} title={x.title} subtitle={x.subtitle}>
-                {x.render({ values, mode })}
-              </Step>
-            </div>
-          );
-        }
-        const items = itemsOf(x.ids);
-        const acts = itemsOf(x.actions);
-        // a step's scans (`scan`, or `scans` side by side): a box with its Go / Clear
-        const scans = [...(x.scan ? [x.scan] : []), ...(x.scans ?? [])].filter((s) => vis(s.box));
-        if (!items.length && !acts.length && !scans.length) return null;
-        n += 1;
-        // a step's scans, and a grid of its items (fields, or grids / lists, which take a whole row)
-        const scanList = () =>
-          scans.length > 0 && (
-            <div className={cn('grid gap-4', scans.length > 1 && !x.side && 'sm:grid-cols-2')}>
-              {scans.map((s) => (
-                <ScanBox key={s.box} size="md" label={s.label} placeholder={s.placeholder} value={values[s.box]} onChange={(v) => change(s.box, v)} onScan={() => fire(s.go, values)} locked={ctl(s.go)?.text === 'Clr'} onClear={() => fire(s.go, values)} busy={busy} disabled={cancelled} />
-              ))}
-            </div>
-          );
-        const fieldGrid = (list, cls) =>
-          list.length > 0 && (
-            <div className={cls}>
-              {list.map((i) => {
-                const c = shownColumns(ctl(i.id), i.columns, i.headers);
-                return (
-                  <div key={i.id} className={cn('min-w-0', (WIDE.includes(c.type) || i.wide) && 'col-span-full', i.span === 2 && 'sm:col-span-2')}>
-                    {/* a grid / list a layout names gets its name above it */}
-                    {WIDE.includes(c.type) && i.label && <h4 className="mb-2 text-sm font-semibold text-foreground">{i.label}</h4>}
-                    {one(c, i.label)}
-                    {i.count && c.maxLength > 0 && (
-                      <p className="tabular mt-1 text-right text-[11px] text-muted-foreground">
-                        {String(values[c.id] ?? '').length}/{c.maxLength}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        const wide = (i) => WIDE.includes(ctl(i.id)?.type);
-        return (
-          // a step's `width` in tenths of the row on wide screens (e.g. 3 and 7 side by side); none: the whole row
-          <div key={x.title} className={cn('min-w-0', STEP_SPAN[x.width ?? 10])}>
-          <Step n={n} tone={x.tone ?? TONE_CYCLE[(n - 1) % TONE_CYCLE.length]} icon={x.icon ?? Boxes} title={x.title} subtitle={x.subtitle} actions={acts.length > 0 && acts.map((i) => <div key={i.id} className="min-w-48">{one(ctl(i.id), i.label)}</div>)}>
-            {/* `side`: the scans and fields on the left, the step's grids / lists on the right (wide screens) */}
-            {x.side ? (
-              <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                <div className="space-y-4">
-                  {scanList()}
-                  {fieldGrid(items.filter((i) => !wide(i)), 'grid gap-x-5 gap-y-4 sm:grid-cols-2')}
-                </div>
-                {fieldGrid(items.filter(wide), 'grid gap-4')}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {scanList()}
-                {fieldGrid(items, x.cols ? STEP_COLS[x.cols] : (x.width ?? 10) <= 4 ? 'grid gap-4' : (x.width ?? 10) < 10 ? 'grid gap-x-5 gap-y-4 sm:grid-cols-2' : 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4')}
-              </div>
-            )}
-          </Step>
-          </div>
-        );
-      }),
-      ...(L.tail ?? []).map((c) => <div key={c.id} className="min-w-0 lg:col-span-10">{block(c)}</div>),
-    ];
-  }
-
-  // the page header's part (in the page header's slot): Back to list, the header fields (record status ...), print /
-  // copy, Save / Update
-  const [slot, setSlot] = useState(null);
-  useEffect(() => setSlot(document.getElementById('page-header-slot')), []);
-  const bar = (
+  const actions = (
     <div className="flex flex-wrap items-end gap-3">
-      <span className="hidden items-center gap-2 self-center xl:inline-flex">
-        {mode === 'new' ? <Badge variant="info" dot>New record</Badge> : cancelled ? <Badge variant="danger" dot>Cancelled</Badge> : <Badge variant="neutral" dot>Saved record</Badge>}
-        {dirty && !cancelled && <Badge variant="warning" dot>Unsaved changes</Badge>}
-      </span>
-      {/* a screen without a list of saved records (its View button off) has nothing to go back to */}
-      {onBack && <Button type="button" variant="outline" icon={ArrowLeft} className="h-10" onClick={back}>Back to list</Button>}
-      {/* a new record takes the screen's default status (Active): its status shows once it is saved */}
-      {itemsOf(L.header).filter((i) => mode !== 'new' || i.id !== 'ddlStatus').map((i) => (
-        <div key={i.id} className="w-56">{one(cancelled ? { ...ctl(i.id), enabled: false } : ctl(i.id), i.label)}</div>
-      ))}
-      {print && mode === 'edit' && !cancelled && (
-        <span className="flex items-center gap-2">
-          {printers && (
-            <NativeSelect className="h-10 w-auto" aria-label="Printer" value={printer} onChange={(e) => setPrinter(e.target.value)}>
-              {printers.options.map((o, i) => <option key={i} value={o.value}>{o.text}</option>)}
-            </NativeSelect>
-          )}
-          <Button type="button" variant="outline" icon={Printer} loading={busy} className="h-10" onClick={printLabel}>Print</Button>
-        </span>
-      )}
-      {copyOptions && (
-        <span className="flex items-center gap-2">
-          <NativeSelect className="h-10 w-auto max-w-56" aria-label="Record to copy" value={copyKey} onChange={(e) => setCopyKey(e.target.value)}>
-            {copyOptions.map((o, i) => <option key={i} value={o.value}>{o.text}</option>)}
-          </NativeSelect>
-          <Button type="button" variant="outline" icon={Copy} className="h-10" disabled={copyKey === '' || busy} onClick={() => onCopy(copyKey)}>Copy</Button>
-        </span>
-      )}
-      {buttons.post && events.includes('TitleControl:post') && <Button type="button" icon={Send} loading={busy} className="h-10" onClick={() => fire('TitleControl:post', values)}>Post</Button>}
-      {false && mode === 'edit' && !cancelled && buttons.delete && (
-        <Button type="button" variant="outline" icon={Trash2} className="h-10 text-rose-700 dark:text-rose-300! hover:border-rose-300!" onClick={() => setDeleting('')}>Delete</Button>
-      )}
-      {mode === 'new' && buttons.add && <Button type="submit" form={formId} icon={Save} loading={busy} className="h-10 px-5">{L.saveLabel ?? 'Save'}</Button>}
-      {mode === 'edit' && !cancelled && buttons.update && <Button type="submit" form={formId} icon={Save} loading={busy} className="h-10 px-5">{L.updateLabel ?? 'Update'}</Button>}
+      <div className="w-56">{select('department', 'Department', { required: true })}</div>
+      {/* a job card starts with the screen's default status */}
+      <div className="w-44">
+        <LockedValue label="Status" value={nameOf('status')} />
+      </div>
     </div>
   );
 
-    return (
+  return shell(
     <form
-      id={formId}
-      className="space-y-4"
       onSubmit={(e) => {
         e.preventDefault();
-        act(mode === 'new' ? 'save' : 'update');
+        print();
       }}
+      className="grid items-start gap-2 lg:grid-cols-10"
+      noValidate
     >
-      {slot ? createPortal(bar, slot) : <Toolbar>{bar}</Toolbar>}
+      {lastPrint && <LastPrint p={lastPrint} />}
 
-      <fieldset disabled={cancelled} className="space-y-4">
-        <div className="grid items-start gap-2 lg:grid-cols-10">{sections()}</div>
-      </fieldset>
+      <div className="min-w-0 lg:col-span-10">
+        <Step n={1} tone="blue" icon={ClipboardList} title="Order" subtitle="The production order to start">
+          <div className={GRID_4}>
+            {select('order', 'Production order', { required: true, className: 'sm:col-span-2' })}
+            <LockedValue label="Assignment date" value={a.assignDate} />
+          </div>
+        </Step>
+      </div>
 
-      {deleting !== null && (
-        <Modal
-          title="Delete this record?"
-          subtitle="The record is cancelled, not erased. Give the reason; it is kept with the record."
-          size="sm"
-          onClose={() => setDeleting(null)}
-          footer={<ModalFooter onCancel={() => setDeleting(null)} onSave={() => act('cancel', { remark: deleting })} saveLabel="Delete" saveVariant="danger" saving={busy} />}
-        >
-          <label className="block">
-            <span className="text-sm leading-none font-medium">Reason for deleting</span>
-            <Input value={deleting} onChange={(e) => setDeleting(e.target.value)} autoFocus />
-          </label>
-        </Modal>
+      <div className="min-w-0 lg:col-span-10">
+        <Step n={2} tone="emerald" icon={Boxes} title="Product" subtitle="What the order makes, its routing and the quantity to start">
+          <div className={GRID_4}>
+            {/* the order's own material, unless its BOM has other routed components to start */}
+            {ui.materialEditable ? select('material', 'Material') : <LockedValue label="Material" value={nameOf('material')} />}
+            {select('variant', 'Variant')}
+            <LockedValue label="BOM" value={nameOf('bom')} />
+            {select('routing', 'Routing', { required: true })}
+            <LockedValue label="Order quantity" value={withUnit(a.totalQty)} />
+            {/* the order's job cards printed so far, at any process */}
+            <LockedValue label="Already started" value={a.order ? withUnit(started) : ''} />
+            <TextInput
+              label="Quantity to start"
+              required
+              inputMode="numeric"
+              value={a.qty ?? ''}
+              onChange={(e) => setField('qty', e.target.value)}
+              disabled={!ui.qtyEditable}
+              error={errors.qty}
+              hint={a.process && left !== '' && left != null ? `Left to start at this process: ${withUnit(left)}` : undefined}
+            />
+            <LockedValue label="Unit" value={nameOf('uom')} />
+            {a.order && <OrderProgress started={started} total={a.totalQty} unit={unit} />}
+          </div>
+        </Step>
+      </div>
+
+      <div className="min-w-0 lg:col-span-5">
+        <Step n={3} tone="violet" icon={Factory} title="Start at" subtitle="The process the job cards start at, and its station">
+          <div className={GRID_2}>
+            {select('process', 'Process', { required: true })}
+            {select('station', 'Station', { required: true })}
+          </div>
+        </Step>
+      </div>
+
+      <div className="min-w-0 lg:col-span-5">
+        <Step n={4} tone="amber" icon={Printer} title="Print job cards" subtitle="One job card, serial and label per piece">
+          <div className="grid items-end gap-x-5 gap-y-4 sm:grid-cols-[1fr_auto]">
+            {select('printer', 'Printer', { required: true })}
+            <Button type="submit" icon={Printer} loading={busy === 'print'} disabled={busy !== null || !!errors.qty} className="h-10 px-5">
+              Print job cards
+            </Button>
+          </div>
+        </Step>
+      </div>
+
+      {/* the lines the job cards will carry, once a routing is chosen */}
+      {ui.details && (
+        <>
+          <div className="min-w-0 lg:col-span-10">
+            <Step n={5} tone="violet" icon={Route} title="Routing stages" subtitle="The stages the order goes through, in sequence">
+              <Lines id="assignment-route" rows={details.route} cols={ROUTE} empty="Choose a station to see each stage's station." />
+            </Step>
+          </div>
+          <div className="min-w-0 lg:col-span-5">
+            <Step n={6} tone="amber" icon={PackageMinus} title="BOM input" subtitle="Materials the order consumes">
+              <Lines id="assignment-bom-input" rows={details.bomInput} cols={BOM_INPUT} empty="No input lines." />
+            </Step>
+          </div>
+          <div className="min-w-0 lg:col-span-5">
+            <Step n={7} tone="emerald" icon={PackagePlus} title="BOM output" subtitle="What the order produces">
+              <Lines id="assignment-bom-output" rows={details.bomOutput} cols={BOM_OUTPUT} empty="No output lines." />
+            </Step>
+          </div>
+        </>
       )}
-    </form>
+    </form>,
+    actions,
   );
 }
-
-export default RecordForm;

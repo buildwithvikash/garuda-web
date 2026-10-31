@@ -4,12 +4,15 @@
 // (material, qty, orders[] ...) and the screen's controls (DDLMaterial, TBQty, GVTransData ...).
 import { FORMS } from '../forms/specs.js';
 import { newFormState, displayState } from '../forms/state.js';
-import { collect, insert, update, cancel as cancelRecord } from '../forms/write.js';
+import { collect, insert } from '../forms/write.js';
 import { listPage, searchColumns, distinctValues, operatorsFor, OPERATOR_TEXT } from '../forms/lists.js';
 import { PAGE_EVENTS, eventHelpers } from '../forms/pages.js';
 import { netString } from '../../shared/net.js';
+import { enInDateTime } from '../../shared/format.js';
 import { AppError } from '../../shared/AppError.js';
 import * as repo from './production-orders.repo.js';
+import { startedQty } from '../production-assignments/production-assignments.repo.js';
+import { NO_CHANGE_AFTER_CREATE, unlistedChoices, unlocked } from './production-orders.validation.js';
 
 export const SCREEN = '/production/productionorderform';
 const spec = FORMS[SCREEN];
@@ -90,21 +93,50 @@ export async function blank(ctx) {
   return fromState(await newFormState(spec, ctx));
 }
 
-/** the screen's state for a saved order; null when there is none */
+/** the screen's state for a saved order of the user's business unit; null when there is none (owner, 31 Oct 2026:
+ *  another unit's order is not shown) */
 async function saved(ctx, prodNo) {
-  if (!/^\d{1,9}$/.test(prodNo) || !(await repo.exists(prodNo))) return null;
+  if (!/^\d{1,9}$/.test(prodNo) || !(await repo.exists(prodNo, ctx.businessUnit))) return null;
   return displayState(spec, ctx, prodNo);
 }
 
-/** a saved order; null when there is none */
+/** a saved order, with how much of it is started (its job cards); null when there is none */
 export async function get(ctx, prodNo) {
   const state = await saved(ctx, prodNo);
-  return state && fromState(state);
+  if (!state) return null;
+  return { ...fromState(state), started: netString(await startedQty(prodNo)) };
+}
+
+/** Refuses a coded value the screen would not have offered (as the original's event validation did): the lists the
+ *  screen fills, for every order type and sales order, and the chosen material's BOMs. The material handler itself is
+ *  not run here: for a serial material it takes a new track ID. */
+async function refuseUnlisted(state, order) {
+  const { order: was, options } = fromState(state);
+  const material = order.material ?? was.material;
+  const [salesOrders, production, service, active, boms] = await Promise.all([
+    repo.salesOrders(was.businessUnit),
+    repo.productionMaterials(),
+    repo.serviceMaterials(),
+    repo.activeMaterials(),
+    material ? repo.boms(material) : [],
+  ]);
+  const list = (x) => x ?? [];
+  const errors = unlistedChoices(order, was, {
+    department: list(options.department),
+    status: list(options.status),
+    orderType: list(options.orderType),
+    priority: list(options.priority),
+    uom: list(options.uom),
+    salesOrder: [...list(options.salesOrder), ...list(salesOrders)],
+    material: [...list(production), ...list(service), ...list(active)],
+    bom: list(boms),
+  });
+  if (Object.keys(errors).length) throw AppError.unprocessable('Check the highlighted fields.', errors);
 }
 
 /** one page of orders (10 a page), optionally filtered on one column */
 export async function list(ctx, { page = 0, search = null } = {}) {
-  const r = await listPage(spec, ctx, page, search);
+  const r = await listPage(spec, ctx, page, search, { scope: repo.businessUnitScope(ctx.businessUnit) });
   return { columns: r.columns.map((c) => c.name), rows: r.rows, keys: r.keys, total: r.count, page: r.page, pageSize: r.pageSize };
 }
 /** the columns a list can be filtered on, with their conditions */
@@ -112,7 +144,20 @@ export async function searchFields(ctx) {
   return (await searchColumns(spec, ctx)).map((c) => ({ name: c.name, operators: operatorsFor(c.type).map((o) => ({ value: o, text: OPERATOR_TEXT[o] })) }));
 }
 /** the values a column holds (the filter's picker) */
-export const columnValues = async (ctx, column) => (await distinctValues(spec, ctx, column)).map((v) => netString(v));
+export const columnValues = async (ctx, column) => (await distinctValues(spec, ctx, column, { scope: repo.businessUnitScope(ctx.businessUnit) })).map((v) => netString(v));
+
+/** the serials generated for a saved order (its job cards' stage labels); null when there is no such order */
+export async function serials(ctx, prodNo) {
+  if (!/^\d{1,9}$/.test(prodNo) || !(await repo.exists(prodNo, ctx.businessUnit))) return null;
+  return (await repo.serials(prodNo)).map((r) => ({
+    serial: netString(r.serial),
+    jobCard: netString(r.jobCard),
+    process: netString(r.process),
+    station: netString(r.station),
+    material: netString(r.material),
+    printedOn: r.printedOn instanceof Date ? enInDateTime(r.printedOn) : netString(r.printedOn), // as the lists show dates
+  }));
+}
 
 /** What choosing a material, an order type or a sales order changes (the screen's own handler for it).
  *  Choosing a serial-tracked material takes a new track ID, as the original did. */
@@ -135,24 +180,21 @@ export async function addServiceRequest(ctx, draft) {
 
 /** a new order; returns its number */
 export async function create(ctx, order) {
-  const values = toValues(valuesOf(await newFormState(spec, ctx)), { ...order, prodNo: undefined });
+  const state = await newFormState(spec, ctx);
+  await refuseUnlisted(state, unlocked(order));
+  const values = toValues(valuesOf(state), unlocked(order));
   const prodNo = await insert(spec, await collect(spec, values, ctx), ctx);
-  return { prodNo: netString(prodNo), message: 'Record Created Successfully' };
+  return { prodNo: netString(prodNo), message: 'Production order created.' };
 }
 
-/** the order saved again with the given fields; null when there is none */
-export async function save(ctx, prodNo, order) {
-  const state = await saved(ctx, prodNo);
-  if (!state) return null;
-  const values = toValues(valuesOf(state), { ...order, prodNo });
-  const key = await update(spec, await collect(spec, values, ctx), ctx);
-  return { prodNo: netString(key), message: 'Record Updated Successfully' };
+/** A saved order is never changed (owner's rule, 31 Oct 2026): refused with 409; null when there is no such order. */
+export async function save(ctx, prodNo) {
+  if (!(await saved(ctx, prodNo))) return null;
+  throw AppError.conflict(NO_CHANGE_AFTER_CREATE);
 }
 
-/** the order cancelled (status 200, not erased), with the reason; null when there is none */
-export async function cancel(ctx, prodNo, remark) {
-  const state = await saved(ctx, prodNo);
-  if (!state) return null;
-  await cancelRecord(spec, await collect(spec, valuesOf(state), ctx), ctx, remark);
-  return { prodNo, message: 'Record Deleted Successfully' };
+/** A saved order is never cancelled (owner's rule, 31 Oct 2026): refused with 409; null when there is no such order. */
+export async function cancel(ctx, prodNo) {
+  if (!(await saved(ctx, prodNo))) return null;
+  throw AppError.conflict(NO_CHANGE_AFTER_CREATE);
 }

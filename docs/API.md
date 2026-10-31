@@ -25,7 +25,18 @@ such record / event; 500 `{ message }` with the request reference that is in the
 | `GET /new` | a blank order with its options |
 | `POST /changes/:field` | `material` / `orderType` / `salesOrder` chosen: what changes |
 | `POST /service-requests` | adds the picked service request as a line |
-| `GET /:prodNo` · `POST /` · `PUT /:prodNo` · `DELETE /:prodNo` (`{ remark }`) | read, create, update, cancel |
+| `GET /:prodNo` · `POST /` | read, create |
+| `GET /:prodNo/serials` | the serials generated for the order (its job cards' stage labels): `[{ serial, jobCard, process, station, material, printedOn }]` (printedOn: date and time the job card was printed) |
+| `PUT /:prodNo` · `DELETE /:prodNo` | refused, 409: an order cannot be changed or cancelled once it is created (owner, 31 Oct 2026) |
+
+Only the user's business unit: the list, its filter values, a single order and its serials show that unit's orders;
+another unit's order answers 404. The screen engine (`/api/forms`) no longer serves this screen (410), so none of this
+can be gone around.
+
+`POST /` takes an `Idempotency-Key` header: the same key again (a double click, a retry) gets the first answer, not a
+second order. Create refuses (422, per field) a coded value the screen does not offer (department, status, order type,
+priority, unit, sales order, material, and a BOM of the chosen material), and ignores the fields the screen locks
+(`prodNo`, `alias`, `businessUnit`, `orderDate`).
 
 ## Production assignment — /api/production/assignments
 
@@ -34,6 +45,12 @@ such record / event; 500 `{ message }` with the request reference that is in the
 | `GET /new` | the screen as it opens, with its lists |
 | `POST /changes/:field` | `department` / `order` / `routing` / `process` / `station` chosen: what changes |
 | `POST /print` | starts the order at its first stage and prints the job cards (only values the server offered) |
+
+Every call replays the choices made before it (department, order, routing, process, station) through the screen's own
+handlers and refuses one the server did not offer, so another department's or business unit's order cannot be looked
+at or started. `POST /print` takes an `Idempotency-Key` header: the same key again (a double click, a retry) gets the
+first answer, not a second batch of job cards and labels. The screen engine (`/api/forms`) no longer serves this
+screen (410).
 
 ## Setup and quality screens — /api/masters/<name>, /api/quality/<name>
 
