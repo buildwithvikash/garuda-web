@@ -2,7 +2,7 @@
 // label scan, every component, then the stage completing), comparing the screen, the alerts and every row the run
 // changes; the rows are put back after each side.
 // Usage: node --env-file=.env scripts/parity/wip-parity.js <originalBinDir> [comp|qc|fg] [--api]
-import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -19,6 +19,11 @@ import { apiEvent } from './api.js';
 
 const run = promisify(execFile);
 const [bin, ...args] = process.argv.slice(2);
+// the original bin folder first (PowerShell drops an empty "$B": the scenario would be read as the folder)
+if (!bin || !existsSync(join(bin, 'Yojak.dll'))) {
+  console.error(`The first argument must be the original site's bin folder (with Yojak.dll), got "${bin ?? ''}".\nIn PowerShell: $B = "<path>\\build\\Publish WRL\\bin" then: node --env-file=.env scripts/parity/wip-parity.js "$B" comp --api`);
+  process.exit(2);
+}
 const viaApi = args.includes('--api'); // the new side through /api/production/wip-capture (./api.js)
 const [scenarioArg] = args.filter((a) => a !== '--api');
 const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
