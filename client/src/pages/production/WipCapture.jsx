@@ -924,10 +924,11 @@ function Station({ spec }) {
         </div>
       }
     >
-      {/* scan (40 %) and the scanned unit's cabinet (60 %) side by side, components under them */}
+      {/* the scan card only as wide as its boxes, the scanned unit's cabinet (its artwork) taking the rest; components
+          under them */}
       <div>
         <div className="min-w-0 space-y-4">
-          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]">
           <SectionCard
             icon={ScanLine}
             title="Scan"
