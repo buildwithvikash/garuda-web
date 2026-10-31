@@ -560,7 +560,8 @@ function Inspection({ e, fg }) {
   const { values, busy, fire, vis, ctl } = e;
   const lot = values.GVWQCMaterial?.[0];
   const status = values.DDLWIPQCStatus;
-  // 12 Approved, 13 Rejected (AVQuality status codes)
+  // 12 Approved, 13 Rejected (AVQuality status codes): defects and a remark only for a rejected unit (owner, 31 Oct 2026)
+  const rejected = status === "13";
   const statusTint =
     status === "13"
       ? "[&_select]:border-rose-300 [&_select]:bg-rose-500/10"
@@ -599,15 +600,15 @@ function Inspection({ e, fg }) {
           />
         )}
         {vis("OtherFields") && (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <div className={rejected ? "grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]" : "grid gap-4"}>
             {/* inspection information and the verdict */}
             <div className="space-y-4 min-w-0">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Info className="w-4 h-4 text-primary" /> Inspection Information
               </h3>
               {lot && (
-                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-[minmax(0,2fr)_repeat(4,auto)]">
-                  <div className="col-span-2 sm:col-span-1 min-w-0">
+                <div className="max-w-2xl text-sm">
+                  <div className="min-w-0">
                     <span className="text-sm leading-none font-medium">
                       Description
                     </span>
@@ -618,21 +619,6 @@ function Inspection({ e, fg }) {
                       {lot.Description}
                     </p>
                   </div>
-                  {[
-                    ["Approved Qty", lot.ApprovedQty],
-                    ["Reject Qty", lot.RejectedQty],
-                    ["Unit", lot.UomDesc],
-                    ["Inspection Lot No", lot.InspectionLotNo],
-                  ].map(([k, v]) => (
-                    <div key={k}>
-                      <span className="text-sm leading-none font-medium">
-                        {k}
-                      </span>
-                      <p className="py-2 tabular text-foreground">
-                        {v === "" || v == null ? "-" : v}
-                      </p>
-                    </div>
-                  ))}
                 </div>
               )}
               <div className="grid gap-3 sm:grid-cols-3">
@@ -676,7 +662,8 @@ function Inspection({ e, fg }) {
               )}
             </div>
 
-            {/* defects */}
+            {/* defects: only for a rejected unit */}
+            {rejected && (
             <div className="min-w-0 space-y-3 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-rose-700 dark:text-rose-300">
                 <AlertTriangle className="w-4 h-4" /> Add Defect Codes
@@ -710,42 +697,40 @@ function Inspection({ e, fg }) {
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Set the status to Rejected to record defects.
+                  Choose the defect category to add defect codes.
                 </p>
               )}
             </div>
+            )}
 
-            {/* remark and save */}
-            <div className="flex min-w-0 flex-col gap-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <MessageSquare className="w-4 h-4 text-primary" /> Remark
-              </h3>
-              {vis("TBWQCRemark") ? (
-                <Ctl e={e} id="TBWQCRemark" label="" />
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  A remark can be added with defects.
-                </p>
-              )}
-              <div className="mt-auto flex flex-wrap justify-end gap-2">
-                {vis("btnQCClear") && (
-                  <Button variant="ghost" onClick={() => fire("btnQCClear")}>
-                    Clear
-                  </Button>
-                )}
-                {vis("btnQCSave") && (
-                  <Button
-                    size="lg"
-                    icon={Save}
-                    loading={busy}
-                    className="min-w-44"
-                    onClick={() => fire("btnQCSave")}
-                  >
-                    {fg ? "Save and Print Label" : "Save Record"}
-                  </Button>
+            {/* remark: only for a rejected unit */}
+            {rejected && (
+              <div className="flex min-w-0 flex-col gap-3">
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <MessageSquare className="w-4 h-4 text-primary" /> Remark
+                </h3>
+                {vis("TBWQCRemark") ? (
+                  <Ctl e={e} id="TBWQCRemark" label="" />
+                ) : (
+                  <p className="text-sm text-muted-foreground">A remark can be added with the defects.</p>
                 )}
               </div>
-            </div>
+            )}
+          </div>
+        )}
+        {/* clear / save, whatever the status */}
+        {vis("OtherFields") && (vis("btnQCClear") || vis("btnQCSave")) && (
+          <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+            {vis("btnQCClear") && (
+              <Button variant="ghost" onClick={() => fire("btnQCClear")}>
+                Clear
+              </Button>
+            )}
+            {vis("btnQCSave") && (
+              <Button size="lg" icon={Save} loading={busy} className="min-w-44" onClick={() => fire("btnQCSave")}>
+                {fg ? "Save and Print Label" : "Save Record"}
+              </Button>
+            )}
           </div>
         )}
       </div>
