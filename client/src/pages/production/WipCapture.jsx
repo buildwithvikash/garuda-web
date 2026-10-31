@@ -381,17 +381,23 @@ function splitWhen(v) {
   return k < 0 ? { date: t, time: "" } : { date: t.slice(0, k), time: t.slice(k + 1) };
 }
 
-/** started → completed on one line; the date once when both are the same day */
+/** a stage's Start Time / End Time, side by side: each its date, then its time ("—" when there is none yet) */
 function StageTimes({ startedOn, completedOn }) {
-  const a = splitWhen(startedOn);
-  const b = splitWhen(completedOn);
-  if (!a && !b) return <span>Not started</span>;
-  if (!b) return <span>{a.date} · {a.time} → <span className="text-muted-foreground">…</span></span>;
-  if (!a) return <span>→ {b.date} · {b.time}</span>;
-  return a.date === b.date ? (
-    <span>{a.date} · {a.time} → {b.time}</span>
-  ) : (
-    <span>{a.date} {a.time} → {b.date} {b.time}</span>
+  const cell = (label, v) => {
+    const t = splitWhen(v);
+    return (
+      <div className="min-w-0 px-3 py-2">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="mt-0.5 text-sm tabular">{t?.date ?? "—"}</p>
+        <p className="text-sm tabular">{t?.time || "—"}</p>
+      </div>
+    );
+  };
+  return (
+    <div className="mt-2 grid grid-cols-2 divide-x divide-border rounded-lg bg-muted/50">
+      {cell("Start Time", startedOn)}
+      {cell("End Time", completedOn)}
+    </div>
   );
 }
 
@@ -413,15 +419,15 @@ function ProcessHistory({ route, e, className }) {
   // the dot of a stage: done (a tick), in process (ringed), pending (empty)
   const dot = (status) =>
     status === 2 ? (
-      <span className="grid size-6 place-items-center rounded-full bg-emerald-600 text-white ring-4 ring-card">
-        <CheckCircle2 className="size-4" aria-hidden="true" />
+      <span className="grid size-7 place-items-center rounded-full bg-emerald-600 text-white ring-4 ring-card">
+        <CheckCircle2 className="size-5" aria-hidden="true" />
       </span>
     ) : status === 1 ? (
-      <span className="grid size-6 place-items-center rounded-full bg-primary/15 ring-4 ring-card">
-        <span className="size-2.5 animate-pulse rounded-full bg-primary" />
+      <span className="grid size-7 place-items-center rounded-full bg-primary/15 ring-4 ring-card">
+        <span className="size-3.5 animate-pulse rounded-full bg-primary" />
       </span>
     ) : (
-      <span className="grid size-6 place-items-center rounded-full border-2 border-border bg-card ring-4 ring-card" />
+      <span className="grid size-7 place-items-center rounded-full border-2 border-border bg-card ring-4 ring-card" />
     );
   return (
     <SectionCard
@@ -441,26 +447,29 @@ function ProcessHistory({ route, e, className }) {
           The unit's route shows here after a serial scan.
         </p>
       ) : (
-        <ol className="relative max-h-[32rem] overflow-auto pr-1">
+        <ol className="max-h-[36rem] overflow-auto">
           {steps.map((s, i) => (
-            <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
-              {/* the line down to the next stage */}
+            <li
+              key={i}
+              className={`relative flex gap-3 border-b border-border px-3 py-4 last:border-b-0 ${s.status === 1 ? "rounded-xl border-transparent bg-primary/5" : ""}`}
+            >
+              {/* the line down to the next stage (green while the stages are done) */}
               {i < steps.length - 1 && (
-                <span className={`absolute top-6 left-3 h-full w-0.5 -translate-x-1/2 ${s.status === 2 ? "bg-emerald-600/60" : "bg-border"}`} aria-hidden="true" />
+                <span className={`absolute top-11 left-[1.625rem] h-full w-0.5 -translate-x-1/2 ${s.status === 2 ? "bg-emerald-600/70" : "bg-border"}`} aria-hidden="true" />
               )}
-              <span className="relative z-10 shrink-0">{dot(s.status)}</span>
-              <div className={`min-w-0 flex-1 rounded-lg px-3 py-2 ${s.status === 1 ? "bg-primary/5" : ""}`}>
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <p className="font-semibold leading-tight">
-                    <span className="mr-1.5 text-xs text-muted-foreground tabular">{i + 1}.</span>
+              <span className="relative z-10 mt-0.5 shrink-0">{dot(s.status)}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 text-base font-bold leading-tight break-words">
+                    <span className="mr-1.5 font-semibold text-muted-foreground tabular">{i + 1}.</span>
                     {s.process}
                   </p>
-                  <StatusPill status={s.status} />
+                  <span className="shrink-0">
+                    <StatusPill status={s.status} />
+                  </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{s.station || "—"}</p>
-                <p className="mt-0.5 text-xs tabular text-muted-foreground">
-                  <StageTimes startedOn={s.startedOn} completedOn={s.completedOn} />
-                </p>
+                <StageTimes startedOn={s.startedOn} completedOn={s.completedOn} />
               </div>
             </li>
           ))}
