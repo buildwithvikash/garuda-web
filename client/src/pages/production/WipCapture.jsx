@@ -47,6 +47,7 @@ import ComponentChecklist from "@/components/shopfloor/ComponentChecklist.jsx";
 import Ctl from "@/components/shopfloor/Ctl.jsx";
 import MuteButton from "@/components/shopfloor/MuteButton.jsx";
 import ImageZoom from "@/components/shopfloor/ImageZoom.jsx";
+import QuickPrinters from "@/components/shopfloor/QuickPrinters.jsx";
 import ScanBox from "@/components/shopfloor/ScanBox.jsx";
 import SectionCard from "@/components/shopfloor/SectionCard.jsx";
 import { Button } from "@/components/ui/button.jsx";
@@ -635,11 +636,13 @@ function Inspection({ e, fg }) {
                 <Ctl e={e} id="TBQty" label="Quantity" className="w-32" />
                 <Ctl e={e} id="TbBEENo" label="BEE number" className="w-48" />
                 {vis("QCPrinterPanel") && (
-                  <Ctl
+                  // two saved printers as buttons, the last one used picked by itself (per department, this device)
+                  <QuickPrinters
                     e={e}
                     id="DDLQCPrinter"
                     label="Label printer"
-                    className="w-56"
+                    scope={values.DDLDepartment}
+                    className="min-w-56"
                   />
                 )}
                 {vis("BtnUD") && (
