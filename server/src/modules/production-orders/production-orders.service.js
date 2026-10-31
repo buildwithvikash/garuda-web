@@ -11,6 +11,7 @@ import { netString } from '../../shared/net.js';
 import { enInDateTime } from '../../shared/format.js';
 import { AppError } from '../../shared/AppError.js';
 import * as repo from './production-orders.repo.js';
+import { startedQty } from '../production-assignments/production-assignments.repo.js';
 import { NO_CHANGE_AFTER_CREATE, unlistedChoices, unlocked } from './production-orders.validation.js';
 
 export const SCREEN = '/production/productionorderform';
@@ -99,10 +100,11 @@ async function saved(ctx, prodNo) {
   return displayState(spec, ctx, prodNo);
 }
 
-/** a saved order; null when there is none */
+/** a saved order, with how much of it is started (its job cards); null when there is none */
 export async function get(ctx, prodNo) {
   const state = await saved(ctx, prodNo);
-  return state && fromState(state);
+  if (!state) return null;
+  return { ...fromState(state), started: netString(await startedQty(prodNo)) };
 }
 
 /** Refuses a coded value the screen would not have offered (as the original's event validation did): the lists the

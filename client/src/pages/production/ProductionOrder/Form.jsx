@@ -113,6 +113,8 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
           {ui.orderQty && <LockedValue label="Order unit" value={opts('totalUom').find((o) => o.value === order.totalUom)?.label ?? order.totalUom} />}
           {text('qty', 'Quantity to produce', { required: true, inputMode: 'decimal', disabled: !ui.qtyEditable })}
           {select('uom', 'Unit')}
+          {/* a saved order: its job cards printed so far on Production Assignment */}
+          {!isNew && <LockedValue label="Already started" value={`${form.started ?? 0} of ${order.qty}`} />}
         </div>
       </Step>
 

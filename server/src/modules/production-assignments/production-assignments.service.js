@@ -7,6 +7,7 @@ import { FORMS } from '../forms/specs.js';
 import { openForm, formOf, runEvent } from '../forms/events.js';
 import { netString } from '../../shared/net.js';
 import { AppError } from '../../shared/AppError.js';
+import * as repo from './production-assignments.repo.js';
 
 export const SCREEN = '/production/productionassignmentform';
 const spec = FORMS[SCREEN];
@@ -60,6 +61,13 @@ function toApi(form, message = null) {
   return { assignment, options, ui, details, left: netString(form.viewState.Qty), message };
 }
 
+/** the answer for the screen: the form, and how much of the chosen order is already started (all its job cards) */
+async function answer(form, message = null) {
+  const out = toApi(form, message);
+  const order = out.assignment.order;
+  return { ...out, started: /^\d+$/.test(order) ? netString(await repo.startedQty(order)) : '' };
+}
+
 async function opened(ctx) {
   const { state, alert } = await openForm(spec, ctx);
   return { form: formOf(state), alert };
@@ -68,7 +76,7 @@ async function opened(ctx) {
 /** the screen as it opens: the session's department, its orders and printers */
 export async function blank(ctx) {
   const { form, alert } = await opened(ctx);
-  return toApi(form, alert);
+  return answer(form, alert);
 }
 
 /** puts one API field on the form; a dropdown value must be one of its items */
@@ -117,7 +125,7 @@ export async function change(ctx, field, draft) {
   put(form, field, draft[field] ?? '');
   const r = await runEvent(spec, ctx, control, form);
   form = r.form;
-  return toApi(form, r.result.alert ?? null);
+  return answer(form, r.result.alert ?? null);
 }
 
 /** Prints the job cards: replays the choices, then the screen's Print (one job card, barcode and label per piece).
@@ -129,6 +137,12 @@ export async function print(ctx, draft) {
   if (draft.qty !== undefined) form.values[FIELDS.qty] = draft.qty;
   const r = await runEvent(spec, ctx, 'btnPrint', form);
   if (r.result.alert) throw AppError.badRequest(r.result.alert);
-  const out = toApi(r.form, r.result.message ?? null);
-  return { ...out, alerts: r.result.alerts ?? [] };
+  // the department's open orders read again: an order printed in full leaves the list at once (the screen's own Print
+  // only clears the choice)
+  const dept = r.form.values[FIELDS.department];
+  if (/^\d+$/.test(netString(dept))) r.form.options[FIELDS.order] = await repo.openOrders(dept);
+  // the order as printed (Print may clear it from the screen once nothing is left)
+  const out = await answer(r.form, r.result.message ?? null);
+  const printed = draft.order && /^\d+$/.test(draft.order) ? { order: draft.order, started: netString(await repo.startedQty(draft.order)) } : null;
+  return { ...out, printed, alerts: r.result.alerts ?? [] };
 }

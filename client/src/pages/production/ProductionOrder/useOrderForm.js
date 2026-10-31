@@ -60,7 +60,7 @@ export function useOrderForm(prodNo) {
       if (n !== changeSeq.current) return; // a later choice was made meanwhile: its answer wins
       const next = { ...latest.current, ...p.order };
       latest.current = next;
-      setForm((f) => ({ order: next, options: { ...f.options, ...p.options }, ui: { ...f.ui, ...p.ui } }));
+      setForm((f) => ({ ...f, order: next, options: { ...f.options, ...p.options }, ui: { ...f.ui, ...p.ui } }));
       if (p.message) toast.error(alertText(p.message), { id: p.message });
     } catch (e) {
       if (n === changeSeq.current) toast.error(e.message, { id: e.message });
