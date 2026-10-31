@@ -25,7 +25,13 @@ such record / event; 500 `{ message }` with the request reference that is in the
 | `GET /new` | a blank order with its options |
 | `POST /changes/:field` | `material` / `orderType` / `salesOrder` chosen: what changes |
 | `POST /service-requests` | adds the picked service request as a line |
-| `GET /:prodNo` · `POST /` · `PUT /:prodNo` · `DELETE /:prodNo` (`{ remark }`) | read, create, update, cancel |
+| `GET /:prodNo` · `POST /` · `DELETE /:prodNo` (`{ remark }`, required) | read, create, cancel |
+| `PUT /:prodNo` | refused, 409: an order cannot be changed once it is created (owner, 31 Oct 2026; `/api/forms/update` refuses it too) |
+
+`POST /` takes an `Idempotency-Key` header: the same key again (a double click, a retry) gets the first answer, not a
+second order. Create refuses (422, per field) a coded value the screen does not offer (department, status, order type,
+priority, unit, sales order, material, and a BOM of the chosen material), and ignores the fields the screen locks
+(`prodNo`, `alias`, `businessUnit`, `orderDate`).
 
 ## Production assignment — /api/production/assignments
 

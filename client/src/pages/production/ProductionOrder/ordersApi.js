@@ -18,6 +18,7 @@ export const ordersApi = {
   get: (prodNo) => api(`${BASE}/${enc(prodNo)}`),
   /** what choosing a material / order type / sales order changes: { order, options, ui, message } */
   change: (field, order) => api(`${BASE}/changes/${field}`, { method: 'POST', body: order }),
-  create: (order) => api(BASE, { method: 'POST', body: order }),
-  update: (prodNo, order) => api(`${BASE}/${enc(prodNo)}`, { method: 'PUT', body: order }),
+  /** key: one per form, so a repeated click or a retry never creates a second order. A saved order cannot be changed
+   *  (owner's rule), so there is no update. */
+  create: (order, key) => api(BASE, { method: 'POST', body: order, headers: { 'Idempotency-Key': key } }),
 };

@@ -28,7 +28,8 @@ function LockedValue({ label, value, placeholder, className }) {
   );
 }
 
-/** prodNo: the saved order to open, or null for a new one. onSaved(message) after a successful Save / Update. */
+/** prodNo: the saved order to open (shown read-only: an order cannot be changed once created), or null for a new one.
+ *  onSaved(message) after the order is created. */
 export default function OrderForm({ prodNo, onBack, onSaved }) {
   const formId = useId();
   const { form, loadError, errors, busy, dirty, setField, save } = useOrderForm(prodNo);
@@ -50,11 +51,11 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
   async function submit(e) {
     e.preventDefault();
     const r = await save();
-    if (r) onSaved(r.message || (isNew ? 'Record Created Successfully' : 'Record Updated Successfully'));
+    if (r) onSaved(r.message || 'Record Created Successfully');
   }
 
   const shell = (children, actions) => (
-    <Page icon={ClipboardList} title="Production Order" subtitle="Create a production order: product, quantity and materials" actions={actions}>
+    <Page icon={ClipboardList} title="Production Order" subtitle={isNew ? 'Create a production order: product, quantity and materials' : 'A saved order: it cannot be changed'} actions={actions}>
       {children}
     </Page>
   );
@@ -87,21 +88,25 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
   const actions = (
     <div className="flex flex-wrap items-end gap-3">
       <span className="hidden items-center gap-2 self-center xl:inline-flex">
-        <Badge variant={isNew ? 'info' : 'neutral'} dot>{isNew ? 'New record' : 'Saved record'}</Badge>
+        <Badge variant={isNew ? 'info' : 'neutral'} dot>{isNew ? 'New record' : 'Saved — cannot be changed'}</Badge>
         {dirty && <Badge variant="warning" dot>Unsaved changes</Badge>}
       </span>
       {backButton}
-      <div className="w-56">{select('department', 'Department', { required: true })}</div>
+      <div className="w-56">{select('department', 'Department', { required: true, disabled: !isNew })}</div>
       {/* a new order takes the default status (Active); it shows once the order is saved */}
-      {!isNew && <div className="w-56">{select('status', 'Record status', { required: true })}</div>}
-      <Button type="submit" form={formId} icon={Save} loading={busy === 'save'} disabled={busy !== null} className="h-10 px-5">
-        {isNew ? 'Create Order' : 'Update Order'}
-      </Button>
+      {!isNew && <div className="w-56">{select('status', 'Record status', { disabled: true })}</div>}
+      {isNew && (
+        <Button type="submit" form={formId} icon={Save} loading={busy === 'save'} disabled={busy !== null} className="h-10 px-5">
+          Create Order
+        </Button>
+      )}
     </div>
   );
 
   return shell(
-    <form id={formId} onSubmit={submit} className="grid items-start gap-2" noValidate>
+    <form id={formId} onSubmit={submit} noValidate>
+      {/* a saved order is shown, not edited */}
+      <fieldset disabled={!isNew} className="grid min-w-0 items-start gap-2">
       <Step n={1} tone="blue" icon={ClipboardList} title="Order Details" subtitle="Basic information about the production order">
         <div className={GRID_2}>
           <LockedValue label="Order code" value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder="Auto-generated" className="sm:col-span-2" />
@@ -134,6 +139,7 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
           </div>
         </Step>
       )}
+      </fieldset>
     </form>,
     actions,
   );

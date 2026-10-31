@@ -15,6 +15,11 @@ import { listPage, distinctValues } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
 import { FORMS } from './specs.js';
 import { specPayload } from './resource.js';
+import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orders.service.js';
+import { NO_CHANGE_AFTER_CREATE } from '../production-orders/production-orders.validation.js';
+
+/** screens whose saved records are never changed (owner's rule, 31 Oct 2026): their Update is refused here too */
+const NO_UPDATE = { [PRODUCTION_ORDER]: NO_CHANGE_AFTER_CREATE };
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();
@@ -174,6 +179,8 @@ async function getUnit(req, res) {
 async function postUpdate(req, res) {
   const spec = await load(req, res);
   if (!spec) return;
+  const refused = NO_UPDATE[netString(req.body?.path).toLowerCase()];
+  if (refused) return void res.status(409).json({ message: refused });
   try {
     const own = PAGE_UPDATE[spec.file];
     if (own) {

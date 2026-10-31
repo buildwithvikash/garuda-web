@@ -4,13 +4,13 @@
 // (material, qty, orders[] ...) and the screen's controls (DDLMaterial, TBQty, GVTransData ...).
 import { FORMS } from '../forms/specs.js';
 import { newFormState, displayState } from '../forms/state.js';
-import { collect, insert, update, cancel as cancelRecord } from '../forms/write.js';
+import { collect, insert, cancel as cancelRecord } from '../forms/write.js';
 import { listPage, searchColumns, distinctValues, operatorsFor, OPERATOR_TEXT } from '../forms/lists.js';
 import { PAGE_EVENTS, eventHelpers } from '../forms/pages.js';
 import { netString } from '../../shared/net.js';
 import { AppError } from '../../shared/AppError.js';
 import * as repo from './production-orders.repo.js';
-import { unlocked } from './production-orders.validation.js';
+import { NO_CHANGE_AFTER_CREATE, unlistedChoices, unlocked } from './production-orders.validation.js';
 
 export const SCREEN = '/production/productionorderform';
 const spec = FORMS[SCREEN];
@@ -103,6 +103,33 @@ export async function get(ctx, prodNo) {
   return state && fromState(state);
 }
 
+/** Refuses a coded value the screen would not have offered (as the original's event validation did): the lists the
+ *  screen fills, for every order type and sales order, and the chosen material's BOMs. The material handler itself is
+ *  not run here: for a serial material it takes a new track ID. */
+async function refuseUnlisted(state, order) {
+  const { order: was, options } = fromState(state);
+  const material = order.material ?? was.material;
+  const [salesOrders, production, service, active, boms] = await Promise.all([
+    repo.salesOrders(was.businessUnit),
+    repo.productionMaterials(),
+    repo.serviceMaterials(),
+    repo.activeMaterials(),
+    material ? repo.boms(material) : [],
+  ]);
+  const list = (x) => x ?? [];
+  const errors = unlistedChoices(order, was, {
+    department: list(options.department),
+    status: list(options.status),
+    orderType: list(options.orderType),
+    priority: list(options.priority),
+    uom: list(options.uom),
+    salesOrder: [...list(options.salesOrder), ...list(salesOrders)],
+    material: [...list(production), ...list(service), ...list(active)],
+    bom: list(boms),
+  });
+  if (Object.keys(errors).length) throw AppError.unprocessable('Check the highlighted fields.', errors);
+}
+
 /** one page of orders (10 a page), optionally filtered on one column */
 export async function list(ctx, { page = 0, search = null } = {}) {
   const r = await listPage(spec, ctx, page, search);
@@ -136,18 +163,17 @@ export async function addServiceRequest(ctx, draft) {
 
 /** a new order; returns its number */
 export async function create(ctx, order) {
-  const values = toValues(valuesOf(await newFormState(spec, ctx)), unlocked(order));
+  const state = await newFormState(spec, ctx);
+  await refuseUnlisted(state, unlocked(order));
+  const values = toValues(valuesOf(state), unlocked(order));
   const prodNo = await insert(spec, await collect(spec, values, ctx), ctx);
   return { prodNo: netString(prodNo), message: 'Record Created Successfully' };
 }
 
-/** the order saved again with the given fields; null when there is none */
-export async function save(ctx, prodNo, order) {
-  const state = await saved(ctx, prodNo);
-  if (!state) return null;
-  const values = toValues(valuesOf(state), unlocked(order));
-  const key = await update(spec, await collect(spec, values, ctx), ctx);
-  return { prodNo: netString(key), message: 'Record Updated Successfully' };
+/** A saved order is never changed (owner's rule, 31 Oct 2026): refused with 409; null when there is no such order. */
+export async function save(ctx, prodNo) {
+  if (!(await saved(ctx, prodNo))) return null;
+  throw AppError.conflict(NO_CHANGE_AFTER_CREATE);
 }
 
 /** the order cancelled (status 200, not erased), with the reason; null when there is none */

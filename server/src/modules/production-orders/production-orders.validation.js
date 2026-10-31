@@ -51,3 +51,18 @@ export const LOCKED = ['prodNo', 'alias', 'businessUnit', 'orderDate'];
 export const unlocked = (order) => Object.fromEntries(Object.entries(order ?? {}).filter(([f]) => !LOCKED.includes(f)));
 
 export const validateDraft = (body) => validateOrder(body, { draft: true });
+
+/** { field: message } for the coded fields whose value is not one the screen offers (allowed: { field: [{ value }] }).
+ *  Empty is left to the required checks; the value the order already has stays allowed (a list may have changed). */
+export function unlistedChoices(order, was, allowed) {
+  const errors = {};
+  for (const [field, list] of Object.entries(allowed)) {
+    const v = order[field];
+    if (v === undefined || v === '' || v === was[field]) continue;
+    if (!list.some((o) => String(o.value) === v)) errors[field] = `${field} is not one of the choices offered`;
+  }
+  return errors;
+}
+
+/** Owner's rule (31 Oct 2026): a production order cannot be changed once it is created (no update, by any route). */
+export const NO_CHANGE_AFTER_CREATE = 'A production order cannot be changed once it is created.';

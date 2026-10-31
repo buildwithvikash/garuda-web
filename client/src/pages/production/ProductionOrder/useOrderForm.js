@@ -18,7 +18,10 @@ function check(order) {
   return errors;
 }
 
-/** prodNo: a saved order to open, or null for a new one */
+/** a key for this form's create (crypto.randomUUID needs https or localhost; the plant may open the app over http) */
+const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+/** prodNo: a saved order to open (read-only: an order cannot be changed once created), or null for a new one */
 export function useOrderForm(prodNo) {
   const [form, setForm] = useState(null); // { order, options, ui }
   const [loadError, setLoadError] = useState('');
@@ -27,6 +30,7 @@ export function useOrderForm(prodNo) {
   const saved = useRef(''); // the order as loaded, to tell unsaved changes
   const latest = useRef(null); // the order as typed so far (an answer may arrive after more typing)
   const changeSeq = useRef(0); // only the newest change's answer is applied
+  const createKey = useRef(newKey()); // the same for every attempt from this form: never two orders
 
   useEffect(() => {
     let live = true;
@@ -72,9 +76,9 @@ export function useOrderForm(prodNo) {
     if (DEPENDENT.includes(field)) runChange(field, order);
   }
 
-  /** Save / Update; resolves to the server's answer, or null when it was refused (the reasons are shown) */
+  /** Creates the order; resolves to the server's answer, or null when it was refused (the reasons are shown) */
   async function save() {
-    if (busy) return null; // one save at a time, never while a choice is still being answered
+    if (prodNo || busy) return null; // a saved order is not changed; one save at a time, never while a choice is pending
     const order = latest.current;
     const found = check(order);
     if (Object.keys(found).length) {
@@ -83,7 +87,7 @@ export function useOrderForm(prodNo) {
     }
     setBusy('save');
     try {
-      const r = prodNo ? await ordersApi.update(prodNo, order) : await ordersApi.create(order);
+      const r = await ordersApi.create(order, createKey.current);
       saved.current = JSON.stringify(order);
       return r;
     } catch (e) {

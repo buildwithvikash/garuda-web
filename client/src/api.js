@@ -1,9 +1,9 @@
 // Thin fetch wrapper: JSON in/out, cookies included, 401 -> login.
-export async function api(path, { method = 'GET', body } = {}) {
+export async function api(path, { method = 'GET', body, headers = {} } = {}) {
   const res = await fetch(`/api${path}`, {
     method,
     credentials: 'same-origin',
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
   // Any 401 (session missing or expired) goes to login, like Layout.Master's redirect. Login calls never return 401.

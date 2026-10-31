@@ -55,10 +55,15 @@ Not "same pages, new transport": the page no longer draws from the control list.
   newest answer to a choice is applied, one save at a time, field errors from a 422 shown beside their fields);
   `Form.jsx` / `List.jsx` the views, laid out in JSX with their texts written where they show (a separate texts
   file only if a second language is added).
-- Server: create / update ignore the fields the screen locks (`prodNo`, `alias`, `businessUnit`, `orderDate`); the
-  server keeps the values it built (`production-orders.validation.js`, `server/tests/production-orders.test.js`).
+- Owner's rule (31 Oct 2026): an order cannot be changed once it is created. The page shows a saved order read-only
+  (no Update); the server refuses `PUT /api/production/orders/:prodNo` and the engine's `/api/forms/update` for this
+  screen with 409. Intended difference from the original: parity's update step (forms-write `--api`) now answers 409.
+- Server on create: the fields the screen locks (`prodNo`, `alias`, `businessUnit`, `orderDate`) are ignored, a coded
+  value the screen does not offer is refused (422 per field), and an `Idempotency-Key` makes a repeated create answer
+  like the first (`middlewares/idempotency.js`). Delete needs a reason. Tests: `server/tests/production-orders.test.js`,
+  `server/tests/idempotency.test.js`.
 - Same as before: steps, fields, what material / order type / sales order change (the screen's own handlers), a new
-  order after Save / Update, no Delete button. Not on the page, as before: Remark, the service-request picker and its
+  order after Save, no Delete button. Not on the page, as before: Remark, the service-request picker and its
   lines (hidden by the page's texts).
 - To check before it ships: the parity runs through the API (`--api`) and an owner check in the browser on TEST.
 
