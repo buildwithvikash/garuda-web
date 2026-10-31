@@ -720,7 +720,7 @@ function Inspection({ e, fg }) {
         )}
         {/* clear / save, whatever the status */}
         {vis("OtherFields") && (vis("btnQCClear") || vis("btnQCSave")) && (
-          <div className="flex flex-wrap justify-end gap-2 border-t pt-4">
+          <div className="flex flex-wrap gap-2 border-t pt-4">
             {vis("btnQCClear") && (
               <Button variant="ghost" onClick={() => fire("btnQCClear")}>
                 Clear
