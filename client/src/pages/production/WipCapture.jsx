@@ -930,10 +930,9 @@ function Station({ spec }) {
         </div>
       }
     >
-      {/* the scan card only as wide as its boxes, the scanned unit's cabinet (its artwork) taking the rest; components
-          under them */}
-      <div>
-        <div className="min-w-0 space-y-4">
+      {/* the scan card only as wide as its boxes, the scanned unit's cabinet (its artwork) taking the rest. Frozen at
+          the top of the page (owner, 31 Oct 2026): components, inspection and the rest scroll under it */}
+      <div className="sticky top-0 z-20 -mx-2 -mt-2 bg-background px-2 pt-2 pb-2 sm:-mx-3 sm:-mt-3 sm:px-3 sm:pt-3">
           <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]">
           <SectionCard
             icon={ScanLine}
@@ -1025,9 +1024,8 @@ function Station({ spec }) {
           </SectionCard>
             <Cabinet unit={unit} label={unitLabel} e={e} line={line} className="h-full" />
           </div>
-          <ComponentDetails e={e} />
-        </div>
       </div>
+      <ComponentDetails e={e} />
 
       {vis("InputMaterialPanel") && <ComponentScan e={e} />}
       {vis("QCPanel") && <Inspection e={e} fg={result === 40} />}

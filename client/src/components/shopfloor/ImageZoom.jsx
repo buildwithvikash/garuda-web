@@ -70,7 +70,7 @@ export default function ImageZoom({ src, alt, onClose }) {
             src={src}
             alt={alt}
             draggable={false}
-            className="absolute inset-0 m-auto max-h-full max-w-full select-none object-contain p-4"
+            className="absolute inset-0 h-full w-full select-none object-contain p-2" // fills the area whatever the picture's own size (auto fit), its shape kept
             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transition: drag.current ? 'none' : 'transform 120ms ease-out' }}
           />
         </div>
