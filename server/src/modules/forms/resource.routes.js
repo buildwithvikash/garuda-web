@@ -10,6 +10,7 @@
 //   POST   /print                     the page's print with { record, printer }
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
+import { SERVER_STATE } from './screenSessions.js';
 import { portedErrors } from '../../middlewares/errorHandler.js';
 import { operatorMessages } from '../../middlewares/operatorMessages.js';
 import { validate } from '../../middlewares/validate.js';
@@ -55,7 +56,12 @@ export function resourceRouter(route) {
   router.get('/pickers/:field', async (req, res) => {
     ok(res, found(await m.picker(ctx(req), netString(req.params.field), req.query.search == null ? null : netString(req.query.search)), req.params.field));
   });
-  router.post('/events/:event', body, async (req, res) => ok(res, session(req, res, await m.event(ctx(req), netString(req.params.event), req.valid.body))));
+  router.post('/events/:event', body, async (req, res) => {
+    // a screen whose page state the server keeps (WIP Capture) takes no ViewState / page state from a request: its
+    // events go through /api/forms with the tab's kept state until it has calls of its own (docs/WIP-CAPTURE-PLAN.md)
+    if (SERVER_STATE.has(route)) throw new AppError(409, 'This screen keeps its station state on the server: use the screen itself.');
+    ok(res, session(req, res, await m.event(ctx(req), netString(req.params.event), req.valid.body)));
+  });
   router.post('/print', body, async (req, res) => ok(res, await m.printRecord(ctx(req), req.valid.body)));
   router.get('/:key', async (req, res) => ok(res, found(await m.get(ctx(req), keyOf(req)), req.params.key)));
   router.get('/:key/copy', async (req, res) => {

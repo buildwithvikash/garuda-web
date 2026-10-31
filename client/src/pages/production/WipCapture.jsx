@@ -91,6 +91,10 @@ function beep(ok) {
   }
 }
 
+/** This page load's own id: the server keeps the station state of each one apart (two tabs, two stations) and never
+ *  takes it from a request. A new page load starts afresh, as before. */
+const TAB = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
 /** the screen's first state (/forms/spec: Page_Load already run) */
 function useSpec(path) {
   const [spec, setSpec] = useState(null);
@@ -100,7 +104,7 @@ function useSpec(path) {
     if (message) toast.error(message, { id: message, duration: 6000 });
   };
   useEffect(() => {
-    api(`/forms/spec?path=${encodeURIComponent(path)}`).then(setSpec, (e) =>
+    api(`/forms/spec?path=${encodeURIComponent(path)}&tab=${TAB}`).then(setSpec, (e) =>
       setError(e.message),
     );
   }, [path]);
@@ -122,25 +126,6 @@ const valuesOf = (state) =>
     state.controls
       .filter((c) => c.id)
       .map((c) => [c.id, c.type === "GridView" ? c.rows : c.value]),
-  );
-
-/** The page as shown, which server page code reads back: Visible / Enabled / Text, plus the items of a page-filled
- *  list or of any list an event or the first load refilled (the server only knows the items the form was built with). */
-const uiOf = (controls) =>
-  Object.fromEntries(
-    controls
-      .filter((c) => c.id)
-      .map((c) => [
-        c.id,
-        {
-          visible: c.visible !== false,
-          enabled: c.enabled !== false,
-          text: c.text ?? "",
-          ...((c.page || c.refilled) && c.options
-            ? { options: c.options }
-            : {}),
-        },
-      ]),
   );
 
 /** Applies a server patch { id: { options?, index?, value?, rows?, visible?, text?, enabled?, maxLength?, guide? } }:
@@ -221,16 +206,14 @@ function useEngine({
     try {
       const r = await api("/forms/event", {
         method: "POST",
-        body: {
-          path,
-          control,
-          values: next,
-          viewState,
-          arg,
-          index,
-          ui: uiOf(base),
-        },
+        // the station state (ViewState, the page as shown) is kept on the server for this page load (TAB)
+        body: { path, tab: TAB, control, values: next, arg, index },
       });
+      // the server lost this page's station state (it restarted, or a shift went by): start the page afresh
+      if (r.restarted) {
+        setError(r.alert);
+        return void setTimeout(() => window.location.reload(), 2500);
+      }
       const p = applyPatch(base, next, r.set);
       setControls(p.controls);
       setValues(p.values);

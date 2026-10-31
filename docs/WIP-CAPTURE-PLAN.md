@@ -1,6 +1,6 @@
 # WIP Capture: plan to make it a plain React screen
 
-Status: proposal, waiting for the owner's approval. Nothing is changed yet.
+Status: approved (owner, 31 Oct 2026). Step 1 built, waiting for its test on TEST; steps 2 and 3 to do.
 
 ## What the screen does
 
@@ -36,6 +36,12 @@ output), production stage type 7, department indicators other than 10000, output
 ## The plan: three steps, each tested and merged on its own
 
 ### Step 1: the server keeps the scan state (no visible change)
+
+Built (`server/src/modules/forms/screenSessions.js`, `server/tests/screen-sessions.test.js`): each page load has a
+random id; `/forms/spec` starts its state, `/forms/event` uses only the kept ViewState and page state (the request's are
+not read) and keeps the answer. A refresh starts afresh, as before (the id is per page load, so a duplicated tab is a
+station of its own). After a restart the page says so and reloads. `/api/production/wip-capture/events` answers 409
+until step 2. The handlers are unchanged.
 
 - A **station session** on the server: department, printer, scanned station, its process and stage, the scanned unit,
   the scan result, the QC lot / checklist rows. Created when the screen opens; the browser holds only its id.
@@ -76,10 +82,20 @@ Kept: the scan sound, mute, the big scan boxes for the shop floor.
 - In the browser at a real station with the scanner: station, unit, components, QC pass / fail, FG label print,
   guide; two stations on two PCs at the same time; a server restart in the middle of a shift.
 
+## What the queries found (LIVE, 31 Oct 2026)
+
+- **QC is used**: 19 processes of stage type 2 / 8 in active routings (leak tests, HLD high / low, post-foaming QA,
+  QC-Foaming in 10 routings, gas charging, electrical safety, multi-function test, CPT, FG final inspection).
+- **FG label is used**: FG LABEL PRINTING (7 routings), SUS FG LABEL PRINTING (3).
+- **Not needed**: no stage type 7, every production department has indicator 10000, no multi-quantity output in the
+  last 90 days. (Output printing for serial logic > 1 was not checked: it stays in LATER.md.)
+
+So QC and FG label are tested as thoroughly as start / complete.
+
 ## Answers (owner, 31 Oct 2026)
 
-1. **Two tabs / two stations on one PC: yes.** Each tab has its own station session (its id in the tab's
-   sessionStorage): two tabs are two independent stations; a refresh keeps the tab's station, closing it ends it.
+1. **Two tabs / two stations on one PC: yes.** Each page load has its own station state: two tabs are two independent
+   stations (a duplicated tab too). A refresh starts afresh, as the original did.
 2. **QC (30) and FG label (40): not sure.** The scan result comes from the process' stage type
    (`ProductionProcess.ProdcutionStage`: 2 / 8 QC, 6 FG label, 7 not ported). To find out (read only):
    ```sql

@@ -15,6 +15,7 @@ import { listPage, distinctValues } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
 import { FORMS } from './specs.js';
 import { specPayload } from './resource.js';
+import * as tabs from './screenSessions.js';
 import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orders.service.js';
 import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production-assignments/production-assignments.service.js';
 
@@ -42,7 +43,15 @@ async function getSpec(req, res) {
   const spec = await load(req, res);
   if (!spec) return;
   try {
-    res.json(await specPayload(spec, ctxOf(req)));
+    const payload = await specPayload(spec, ctxOf(req));
+    // a screen whose page state the server keeps: this tab starts afresh (a page load, as the original's)
+    const path = netString(req.query.path).toLowerCase();
+    if (tabs.SERVER_STATE.has(path)) {
+      const tab = tabs.tabOf(req.query.tab);
+      if (!tab) return void res.status(400).json({ message: 'Reload the page.' });
+      tabs.start(req.session.userCode, path, tab, payload);
+    }
+    res.json(payload);
   } catch (e) {
     fail(res, e);
   }
@@ -102,10 +111,25 @@ async function postEvent(req, res) {
   const handler = PAGE_EVENTS[spec.file]?.[netString(req.body?.control)];
   if (!handler) return void res.status(404).json({ message: 'No such event' });
   const v = Object.fromEntries(Object.entries(await posted(req, spec)).map(([k, x]) => [k, x !== null && typeof x === 'object' ? x : netString(x)]));
-  const vs = req.body?.viewState && typeof req.body.viewState === 'object' ? Object.fromEntries(Object.entries(req.body.viewState).map(([k, x]) => [k, x !== null && typeof x === 'object' ? x : netString(x)])) : {};
+  // a screen whose page state the server keeps: the tab's own copy, never the request's (screenSessions.js)
+  const path = netString(req.body?.path).toLowerCase();
+  const kept = tabs.SERVER_STATE.has(path);
+  const tab = kept ? tabs.tabOf(req.body?.tab) : null;
+  if (kept && !tab) return void res.status(400).json({ message: 'Reload the page.' });
+  let state = kept ? tabs.stateOf(req.session.userCode, path, tab) : null;
+  // nothing kept (the server restarted, or a shift went by): the tab starts afresh and the screen says so
+  const restarted = kept && !state;
+  if (restarted) state = tabs.start(req.session.userCode, path, tab, await specPayload(spec, ctxOf(req)));
+  const vs = kept
+    ? state.viewState
+    : req.body?.viewState && typeof req.body.viewState === 'object'
+      ? Object.fromEntries(Object.entries(req.body.viewState).map(([k, x]) => [k, x !== null && typeof x === 'object' ? x : netString(x)]))
+      : {};
   try {
-    const ui = req.body?.ui && typeof req.body.ui === 'object' ? req.body.ui : {};
+    const ui = kept ? state.ui : req.body?.ui && typeof req.body.ui === 'object' ? req.body.ui : {};
+    if (restarted) return void res.json({ restarted: true, alert: 'The station was reset (the server restarted or the shift ended). Scan the station again.', viewState: vs });
     const r = await handler(v, eventHelpers(spec, ctxOf(req), v, { viewState: vs, arg: req.body?.arg, index: Number(req.body?.index ?? -1), ui }));
+    if (kept) tabs.save(req.session.userCode, path, tab, tabs.applyAnswer(state, r));
     // page code that sets a session value (WrapperAvatar.Department = ...): only the department is allowed
     if (r.session && 'department' in r.session) writeSession(res, { ...req.session, department: netString(r.session.department) });
     const { session: _, ...rest } = r;
