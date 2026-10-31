@@ -1,5 +1,6 @@
 // The form design every screen shares (first made for Production Order): numbered steps with a coloured title bar, and
 // the fields the screen keeps read-only shown locked.
+import { useId } from 'react';
 import { Lock } from 'lucide-react';
 import { Field } from '@/components/shared/FormField.jsx';
 import { Input } from '@/components/ui/input.jsx';
@@ -66,6 +67,19 @@ export function LockedField({ c, label, value }) {
         <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         {/* a new record's key is 0 until it is saved (the server gives it the next number) */}
         <Input id={id} readOnly value={c.id === 'PrimaryKey' && /^0?$/.test(String(value ?? '').trim()) ? '' : (value ?? '')} placeholder={c.id === 'PrimaryKey' ? 'Auto-generated' : undefined} className="bg-muted/60 pl-9 text-muted-foreground" />
+      </div>
+    </Field>
+  );
+}
+
+/** a value the server sets and keeps (an order's number, today's date, the order's own unit), shown locked */
+export function LockedValue({ label, value, placeholder, className }) {
+  const id = useId();
+  return (
+    <Field label={label} id={id} className={cn('min-w-0', className)}>
+      <div className="relative">
+        <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input id={id} readOnly value={value ?? ''} placeholder={placeholder} className="bg-muted/60 pl-9 text-muted-foreground" />
       </div>
     </Field>
   );

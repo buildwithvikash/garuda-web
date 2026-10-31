@@ -1,6 +1,7 @@
 // /api/production/assignments: start a production order at its first stage and print the job cards.
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
+import { idempotent } from '../../middlewares/idempotency.js';
 import { portedErrors } from '../../middlewares/errorHandler.js';
 import { operatorMessages } from '../../middlewares/operatorMessages.js';
 import { validate } from '../../middlewares/validate.js';
@@ -17,7 +18,8 @@ router.get('/new', async (req, res) => ok(res, await assignments.blank(ctx(req))
 router.post('/changes/:field', validate(validateAssignment), async (req, res) => {
   ok(res, await assignments.change(ctx(req), netString(req.params.field), req.valid.body)); // department | order | routing | process | station
 });
-router.post('/print', validate(validateAssignment), async (req, res) => ok(res, await assignments.print(ctx(req), req.valid.body))); // job cards + labels
+// Idempotency-Key: a repeated print (double click, retry) gets the first answer: no second batch of job cards / labels
+router.post('/print', idempotent, validate(validateAssignment), async (req, res) => ok(res, await assignments.print(ctx(req), req.valid.body))); // job cards + labels
 
 router.use(portedErrors);
 

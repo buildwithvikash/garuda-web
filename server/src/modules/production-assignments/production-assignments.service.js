@@ -71,23 +71,14 @@ function put(form, field, value) {
   form.values[id] = value;
 }
 
-/** What a choice (department, order, routing, process, station) fills: the whole screen after the screen's handler */
-export async function change(ctx, field, draft) {
-  const control = CHANGES[field];
-  if (!control) throw AppError.badRequest(`Nothing depends on ${field}`);
-  let { form } = await opened(ctx);
-  for (const [f, id] of Object.entries(FIELDS)) if (draft[f] !== undefined) form.values[id] = draft[f];
-  const r = await runEvent(spec, ctx, control, form);
-  form = r.form;
-  return toApi(form, r.result.alert ?? null);
-}
-
-/** Prints the job cards: replays the choices, then the screen's Print (one job card, barcode and label per piece).
- *  { message, alerts, left, ...the screen after it } */
-export async function print(ctx, draft) {
+/** The choices replayed through the screen's own handlers, in the order the user makes them, each checked against
+ *  the list the server built just before (another department's or business unit's order is never on it). upTo: stop
+ *  before this field (it is the one being changed). { form } after the replay */
+async function replay(ctx, draft, upTo = null) {
   let { form, alert } = await opened(ctx);
   if (alert) throw AppError.badRequest(alert);
   for (const field of PATH) {
+    if (field === upTo) break;
     if (draft[field] === undefined || draft[field] === '') continue;
     put(form, field, draft[field]);
     const r = await runEvent(spec, ctx, CHANGES[field], form);
@@ -102,6 +93,28 @@ export async function print(ctx, draft) {
       }
     }
   }
+  return form;
+}
+
+/** What a choice (department, order, routing, process, station) fills: the whole screen after the screen's handler.
+ *  The choices before it are replayed and checked first, so only what the server offered can be looked at. */
+export async function change(ctx, field, draft) {
+  const control = CHANGES[field];
+  if (!control) throw AppError.badRequest(`Nothing depends on ${field}`);
+  let form = await replay(ctx, draft, field);
+  // the printer chosen stays while it is on the list (a department change brings its own printers)
+  if (draft.printer && form.options[FIELDS.printer]?.some((o) => o.value === draft.printer)) form.values[FIELDS.printer] = draft.printer;
+  if (draft.qty !== undefined) form.values[FIELDS.qty] = draft.qty; // the quantity as typed (a stage's handler resets it)
+  put(form, field, draft[field] ?? '');
+  const r = await runEvent(spec, ctx, control, form);
+  form = r.form;
+  return toApi(form, r.result.alert ?? null);
+}
+
+/** Prints the job cards: replays the choices, then the screen's Print (one job card, barcode and label per piece).
+ *  { message, alerts, left, ...the screen after it } */
+export async function print(ctx, draft) {
+  const form = await replay(ctx, draft);
   if (draft.printer) put(form, 'printer', draft.printer);
   // what is assigned now: quantity typed; the order quantity and what is left come from the server's replay
   if (draft.qty !== undefined) form.values[FIELDS.qty] = draft.qty;

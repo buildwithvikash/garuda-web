@@ -70,6 +70,14 @@ Not "same pages, new transport": the page no longer draws from the control list.
   lines (hidden by the page's texts).
 - To check before it ships: the parity runs through the API (`--api`) and an owner check in the browser on TEST.
 
+## Second: Production Assignment (same branch, awaiting the owner)
+
+The same way: `pages/production/ProductionAssignment/` (`assignmentsApi.js`, `useAssignment.js`, `Form.jsx`) on
+`/api/production/assignments`; no list (the original screen has none). Only the newest answer to a choice is applied and
+what was typed meanwhile is kept; one print per click (Idempotency-Key, a new key after each print). Server: a choice
+is now checked like Print checks it (replayed, only what the server offered); `/api/forms` no longer serves the screen.
+Check: print-parity `--api` (goes through `assignments.print`) and the browser (the choices, a print, a double click).
+
 ## Rollout: one screen at a time
 
 A list in the client, `API_SCREENS` (routes that use their API), decides which transport a page uses. A screen

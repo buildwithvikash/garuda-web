@@ -16,10 +16,12 @@ import { collect, insert, update, cancel } from './write.js';
 import { FORMS } from './specs.js';
 import { specPayload } from './resource.js';
 import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orders.service.js';
+import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production-assignments/production-assignments.service.js';
 
 /** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
- *  (Production Order: no change or cancel after create, one business unit's orders only) cannot be gone around. */
-const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders' };
+ *  (Production Order: no change or cancel after create, one business unit's orders only; Production Assignment: every
+ *  choice checked, one print per click) cannot be gone around. */
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments' };
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();

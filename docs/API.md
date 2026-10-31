@@ -46,6 +46,12 @@ priority, unit, sales order, material, and a BOM of the chosen material), and ig
 | `POST /changes/:field` | `department` / `order` / `routing` / `process` / `station` chosen: what changes |
 | `POST /print` | starts the order at its first stage and prints the job cards (only values the server offered) |
 
+Every call replays the choices made before it (department, order, routing, process, station) through the screen's own
+handlers and refuses one the server did not offer, so another department's or business unit's order cannot be looked
+at or started. `POST /print` takes an `Idempotency-Key` header: the same key again (a double click, a retry) gets the
+first answer, not a second batch of job cards and labels. The screen engine (`/api/forms`) no longer serves this
+screen (410).
+
 ## Setup and quality screens — /api/masters/<name>, /api/quality/<name>
 
 Each of these screens is a resource. The screen's own code runs underneath (parity-tested against the original); the

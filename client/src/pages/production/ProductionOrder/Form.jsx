@@ -1,33 +1,18 @@
 // Production Order: one order (new or saved). Plain React: the fields are this screen's own, the state and server
 // calls are in ./useOrderForm.js.
 import { useEffect, useId } from 'react';
-import { ArrowLeft, Barcode, ClipboardList, Lock, Package, RotateCw, Save, Tag } from 'lucide-react';
+import { ArrowLeft, Barcode, ClipboardList, Package, RotateCw, Save, Tag } from 'lucide-react';
 import { askConfirm } from '@/app/confirm.js';
-import { Field, Select, TextInput } from '@/components/shared/FormField.jsx';
-import { Step } from '@/components/shared/FormStep.jsx';
+import { Select, TextInput } from '@/components/shared/FormField.jsx';
+import { LockedValue, Step } from '@/components/shared/FormStep.jsx';
 import Loader from '@/components/shared/Loader.jsx';
 import Page from '@/components/shared/Page.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { Input } from '@/components/ui/input.jsx';
-import { cn } from '@/lib/utils';
 import OrderSerials from './Serials.jsx';
 import { useOrderForm } from './useOrderForm.js';
 
 const GRID_2 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4';
-
-/** a field the server sets and keeps (the order's number, its alias, today's date) */
-function LockedValue({ label, value, placeholder, className }) {
-  const id = useId();
-  return (
-    <Field label={label} id={id} className={cn('min-w-0', className)}>
-      <div className="relative">
-        <Lock className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-        <Input id={id} readOnly value={value ?? ''} placeholder={placeholder} className="bg-muted/60 pl-9 text-muted-foreground" />
-      </div>
-    </Field>
-  );
-}
 
 /** prodNo: the saved order to open (shown read-only: an order cannot be changed once created), or null for a new one.
  *  onSaved(message) after the order is created. */
