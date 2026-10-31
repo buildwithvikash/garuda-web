@@ -1,11 +1,17 @@
 {
   "name": "garuda-web",
   "private": true,
-  "workspaces": ["server", "client"],
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "npm run build -w client",
     "start": "npm start -w server",
     "test": "npm test -w server"
+  },
+  "dependencies": {
+    "zpl-renderer-js": "^5.0.0"
   }
 }

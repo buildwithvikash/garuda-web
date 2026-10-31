@@ -136,7 +136,7 @@ export default function BulkReprint() {
                   <Button type="button" size="sm" variant="outline" onClick={() => (setRows((rs) => rs.filter((r) => r.barcodeNo)), setText(found.map((r) => r.serial).join('\n')))}>Remove not found</Button>
                 )}
               </div>
-              <div className="max-h-[26rem] overflow-auto rounded-lg border">
+              <div className="max-h-104 overflow-auto rounded-lg border">
                 <table className="w-full text-[13px]">
                   <thead className="sticky top-0 bg-muted">
                     <tr className="text-left text-xs text-foreground/80">

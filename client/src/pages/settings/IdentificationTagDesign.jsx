@@ -28,6 +28,7 @@ import { useMe } from '@/layouts/AppLayout.jsx';
 import { screenOf } from '@/layouts/Sidebar.jsx';
 import RecordList from './IdentificationTagDesign/List.jsx';
 import RecordForm from './IdentificationTagDesign/Form.jsx';
+import PrnPreview from "@/components/shared/PrnPreview.jsx";
 
 // ────────────────────────────────────────────────────────────────────────────
 // 1. SETTINGS
@@ -35,11 +36,13 @@ import RecordForm from './IdentificationTagDesign/Form.jsx';
 // ────────────────────────────────────────────────────────────────────────────
 export const route = '/settings/materialtagform';
 
-// const layout = { icon, subtitle, sections: [{ title, icon, ids: ['ControlId', { id: 'ControlId', label: 'Caption' }] }] };
 const layout = undefined;
 
-// const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = {};
+const page = {
+  renderPrnPreview: (values) => (
+    <PrnPreview command={String(values?.TextBox1 ?? "")} />
+  ),
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // TEXTS
@@ -138,6 +141,7 @@ export default function IdentificationTagDesign() {
             print={spec.print}
             printers={spec.printers}
             onReload={(key, notice) => open(key, notice)}
+            
             events={spec.events ?? []}
             onCopy={copy}
             onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}

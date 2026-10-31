@@ -67,9 +67,9 @@ const texts = {
   list: {
     RECNO: { header: 'Rec No', hidden: false },
     NAME: { header: 'Name', hidden: false },
-    DRIVER: { header: 'Driver', hidden: false },
-    IP: { header: 'IP', hidden: false },
     DEPARTMENT: { header: 'Department', hidden: false },
+    IP: { header: 'IP', hidden: false },
+    DRIVER: { header: 'Driver', hidden: false },
   },
 };
 

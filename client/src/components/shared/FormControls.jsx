@@ -185,7 +185,8 @@ export function RoleTree({ c, label, value, onChange }) {
     for (const n of all(node)) checked ? next.add(n.value) : next.delete(n.value);
     let state = checked;
     for (let p = parents.get(node.value); p; p = parents.get(p.value)) {
-      state = state || p.children.some((s) => next.has(s.value));
+      // a folder stays ticked while one of its pages is, shown or not (p.others: the ones the tree does not show)
+      state = state || p.children.some((s) => next.has(s.value)) || (p.others ?? []).some((x) => next.has(x));
       state ? next.add(p.value) : next.delete(p.value);
     }
     onChange([...next]);

@@ -54,11 +54,11 @@ export default function ScreenNotAvailable({ pathname }) {
       {/* backdrop: faint grid that fades out toward the edges, and a soft brand glow */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-60 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_42%,black,transparent)]"
+        className="pointer-events-none absolute inset-0 opacity-60 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_70%_60%_at_50%_42%,black,transparent)]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-[12%] left-1/2 size-[460px] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+        className="pointer-events-none absolute top-[12%] left-1/2 size-115 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
       />
 
       <div className="relative my-auto flex w-full max-w-3xl flex-col items-center text-center">
@@ -109,7 +109,7 @@ export default function ScreenNotAvailable({ pathname }) {
               className="rounded-xl border bg-card/80 p-4 text-left shadow-xs backdrop-blur"
             >
               <span className="mb-3 grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                <Icon className="size-[18px]" />
+                <Icon className="size-4.5" />
               </span>
               <p className="text-sm font-semibold">{title}</p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">

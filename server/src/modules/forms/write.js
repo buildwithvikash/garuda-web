@@ -35,7 +35,7 @@ export async function collect(spec, values, ctx, { encryptPass = 0 } = {}) {
     // Role tree (TreeView Tag[0] = table)
     const tree = controls.find((c) => c.type === 'TreeView' && same(c.tag[0], t.name) && c.tag[2].toLowerCase().trim() !== 'e');
     if (tree) {
-      const rows = treeRows(await roleTree(), values[tree.id]).map((r) => new Map(Object.entries(r).map(([k, v]) => [t.col(k)?.name ?? k, v])));
+      const rows = treeRows(await roleTree({ all: true }), values[tree.id]).map((r) => new Map(Object.entries(r).map(([k, v]) => [t.col(k)?.name ?? k, v])));
       out.push({ schema: t, prefix: tree.tag[2], rows });
       continue;
     }

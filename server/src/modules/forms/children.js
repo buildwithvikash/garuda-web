@@ -30,8 +30,9 @@ export async function gridRows(c, pkValue) {
   return textRows(sql, { pk: netString(pkValue) }, c);
 }
 
-/** ControlA.SetUserRoleTreeView: three levels of Modules. */
-export async function roleTree() {
+/** ControlA.SetUserRoleTreeView: three levels of Modules. all: every module (the save walks it, so a role keeps its
+ *  grants for the pages the screen does not show); else the screen's tree, only this app's pages */
+export async function roleTree({ all = false } = {}) {
   // one query instead of the original's query per node; same order ("where ParentId=@p order by ModuleId,ParentId")
   const byParent = new Map();
   for (const r of await query('Select ModuleId,Caption,ParentId from Modules order by ModuleId,ParentId')) {
@@ -40,12 +41,23 @@ export async function roleTree() {
     byParent.get(p).push(r);
   }
   // only the pages this app offers and their folders (owner, 29 Oct 2026; menu.service.js KEPT_MODULES): the original
-  // listed every module. A role's grants for the others are kept: the tree's value holds them, and a save writes them
-  const level = (parent, depth) =>
-    (byParent.get(netString(parent)) ?? [])
-      .map((r) => ({ value: netString(r.ModuleId), text: netString(r.Caption), children: depth < 2 ? level(r.ModuleId, depth + 1) : [] }))
-      .filter((n) => KEPT_MODULES.has(n.value) || n.children.length > 0);
-  return level(0, 0);
+  // listed every module. A role's grants for the others are kept: the tree's value holds them, and the save walks the
+  // whole tree (all)
+  const full = (parent, depth) =>
+    (byParent.get(netString(parent)) ?? []).map((r) => ({ value: netString(r.ModuleId), text: netString(r.Caption), children: depth < 2 ? full(r.ModuleId, depth + 1) : [] }));
+  if (all) return full(0, 0);
+  // the screen's tree: a folder also lists the ids of its pages it does not show (`others`), so ticking stays on while
+  // the role still has one of them (the original's menu hides a folder's pages when the folder is not granted)
+  const ids = (n) => [n.value, ...n.children.flatMap(ids)];
+  const keep = (nodes) =>
+    nodes.flatMap((n) => {
+      const children = keep(n.children);
+      if (!KEPT_MODULES.has(n.value) && !children.length) return [];
+      const shown = new Set(children.flatMap(ids));
+      const others = n.children.flatMap(ids).filter((x) => !shown.has(x));
+      return [{ ...n, children, ...(others.length ? { others } : {}) }];
+    });
+  return keep(full(0, 0));
 }
 
 // ---- The grid's DataTable (ViewState "TransData") as page code changes it -----------------------------------------
