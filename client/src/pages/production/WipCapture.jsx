@@ -373,6 +373,29 @@ function Cabinet({ unit, e, line, className }) {
 }
 
 /** the whole route (done / in process / pending); before /forms/unit answers, the stages started so far */
+/** a stage's time as "date time" text: { date, time } (the date alone when there is no time) */
+function splitWhen(v) {
+  const t = when(v);
+  if (!t || t === "-") return null;
+  const k = t.indexOf(" ");
+  return k < 0 ? { date: t, time: "" } : { date: t.slice(0, k), time: t.slice(k + 1) };
+}
+
+/** started → completed on one line; the date once when both are the same day */
+function StageTimes({ startedOn, completedOn }) {
+  const a = splitWhen(startedOn);
+  const b = splitWhen(completedOn);
+  if (!a && !b) return <span>Not started</span>;
+  if (!b) return <span>{a.date} · {a.time} → <span className="text-muted-foreground">…</span></span>;
+  if (!a) return <span>→ {b.date} · {b.time}</span>;
+  return a.date === b.date ? (
+    <span>{a.date} · {a.time} → {b.time}</span>
+  ) : (
+    <span>{a.date} {a.time} → {b.date} {b.time}</span>
+  );
+}
+
+/** the unit's route as a timeline: each stage's work station, its start → completion, and its status */
 function ProcessHistory({ route, e, className }) {
   const { values, vis } = e;
   const steps =
@@ -387,11 +410,23 @@ function ProcessHistory({ route, e, className }) {
         }))
       : []);
   const done = steps.filter((s) => s.status === 2).length;
+  // the dot of a stage: done (a tick), in process (ringed), pending (empty)
+  const dot = (status) =>
+    status === 2 ? (
+      <span className="grid size-6 place-items-center rounded-full bg-emerald-600 text-white ring-4 ring-card">
+        <CheckCircle2 className="size-4" aria-hidden="true" />
+      </span>
+    ) : status === 1 ? (
+      <span className="grid size-6 place-items-center rounded-full bg-primary/15 ring-4 ring-card">
+        <span className="size-2.5 animate-pulse rounded-full bg-primary" />
+      </span>
+    ) : (
+      <span className="grid size-6 place-items-center rounded-full border-2 border-border bg-card ring-4 ring-card" />
+    );
   return (
     <SectionCard
       icon={History}
       title="Process history"
-      flush
       className={className}
       actions={
         steps.length > 0 && (
@@ -402,40 +437,34 @@ function ProcessHistory({ route, e, className }) {
       }
     >
       {steps.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">
+        <p className="py-6 text-center text-sm text-muted-foreground">
           The unit's route shows here after a serial scan.
         </p>
       ) : (
-        <div className="max-h-80 overflow-auto">
-          <table className="w-full min-w-160">
-            <thead className="sticky top-0 bg-muted/80 backdrop-blur">
-              <tr>
-                <th className={th}>#</th>
-                <th className={th}>Process</th>
-                <th className={th}>Work station</th>
-                <th className={th}>Started on</th>
-                <th className={th}>Completed on</th>
-                <th className={th}>Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {steps.map((s, i) => (
-                <tr key={i} className={s.status === 1 ? "bg-primary/5" : ""}>
-                  <td className={`${td} tabular text-muted-foreground`}>
-                    {i + 1}
-                  </td>
-                  <td className={`${td} font-medium`}>{s.process}</td>
-                  <td className={td}>{s.station}</td>
-                  <td className={`${td} tabular`}>{when(s.startedOn)}</td>
-                  <td className={`${td} tabular`}>{when(s.completedOn)}</td>
-                  <td className={td}>
-                    <StatusPill status={s.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ol className="relative max-h-[32rem] overflow-auto pr-1">
+          {steps.map((s, i) => (
+            <li key={i} className="relative flex gap-3 pb-5 last:pb-0">
+              {/* the line down to the next stage */}
+              {i < steps.length - 1 && (
+                <span className={`absolute top-6 left-3 h-full w-0.5 -translate-x-1/2 ${s.status === 2 ? "bg-emerald-600/60" : "bg-border"}`} aria-hidden="true" />
+              )}
+              <span className="relative z-10 shrink-0">{dot(s.status)}</span>
+              <div className={`min-w-0 flex-1 rounded-lg px-3 py-2 ${s.status === 1 ? "bg-primary/5" : ""}`}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <p className="font-semibold leading-tight">
+                    <span className="mr-1.5 text-xs text-muted-foreground tabular">{i + 1}.</span>
+                    {s.process}
+                  </p>
+                  <StatusPill status={s.status} />
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{s.station || "—"}</p>
+                <p className="mt-0.5 text-xs tabular text-muted-foreground">
+                  <StageTimes startedOn={s.startedOn} completedOn={s.completedOn} />
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
       )}
     </SectionCard>
   );
@@ -1003,11 +1032,14 @@ function Station({ spec }) {
         </div>
       </SectionCard>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <Cabinet unit={unit} e={e} line={line} />
-        <ProcessHistory route={unit?.route} e={e} className="xl:col-span-2" />
+      {/* the scanned unit: cabinet and components on the left, its route as a timeline on the right */}
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="min-w-0 space-y-4">
+          <Cabinet unit={unit} e={e} line={line} />
+          <ComponentDetails e={e} />
+        </div>
+        <ProcessHistory route={unit?.route} e={e} className="xl:sticky xl:top-2" />
       </div>
-      <ComponentDetails e={e} />
 
       {vis("InputMaterialPanel") && <ComponentScan e={e} />}
       {vis("QCPanel") && <Inspection e={e} fg={result === 40} />}
