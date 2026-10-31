@@ -53,7 +53,8 @@ Not "same pages, new transport": the page no longer draws from the control list.
 
 - `pages/production/ProductionOrder/ordersApi.js` the server calls; `useOrderForm.js` the form's state (only the
   newest answer to a choice is applied, one save at a time, field errors from a 422 shown beside their fields);
-  `Form.jsx` / `List.jsx` the views, laid out in JSX; `texts.js` every text the screen shows.
+  `Form.jsx` / `List.jsx` the views, laid out in JSX with their texts written where they show (a separate texts
+  file only if a second language is added).
 - Server: create / update ignore the fields the screen locks (`prodNo`, `alias`, `businessUnit`, `orderDate`); the
   server keeps the values it built (`production-orders.validation.js`, `server/tests/production-orders.test.js`).
 - Same as before: steps, fields, what material / order type / sales order change (the screen's own handlers), a new

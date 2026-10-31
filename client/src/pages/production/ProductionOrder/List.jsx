@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
 import { ordersApi } from './ordersApi.js';
-import { TEXTS } from './texts.js';
 
 const sel = 'h-8 w-auto min-w-44 text-[13px]';
 const inp = 'h-8 w-auto text-[13px]';
@@ -16,7 +15,19 @@ const NO_SEARCH = { column: '', op: '', value: '' };
 
 /** coded list columns shown by name, from the order's own lists (Status 1 -> Active) */
 const NAMED = { STATUS: 'status', MATERIAL: 'material', UOM: 'uom' };
-const order = Object.keys(TEXTS.listColumns);
+/** the list's columns as the server names them -> their headers (in this order; others follow) */
+const HEADERS = {
+  RECNO: 'Rec No',
+  ORDER: 'Order',
+  ORDERDATE: 'Order Date',
+  REMARK: 'Remark',
+  MATERIAL: 'Material',
+  'PRODUCT CODE': 'Product Code',
+  QTY: 'Qty',
+  UOM: 'UOM',
+  STATUS: 'Status',
+};
+const order = Object.keys(HEADERS);
 const placeOf = (name) => order.indexOf(name) + 1 || order.length + 1;
 
 export default function OrderList({ onOpen, onNew }) {
@@ -74,7 +85,7 @@ export default function OrderList({ onOpen, onNew }) {
       (data?.columns ?? [])
         .map((name, i) => {
           const shown = (r) => names[name]?.[String(r[`c${i}`] ?? '')] ?? r[`c${i}`];
-          return { key: `c${i}`, name, header: TEXTS.listColumns[name] ?? name, exactHeader: name in TEXTS.listColumns, text: shown, render: (r) => shown(r) ?? '—' };
+          return { key: `c${i}`, name, header: HEADERS[name] ?? name, exactHeader: name in HEADERS, text: shown, render: (r) => shown(r) ?? '—' };
         })
         .sort((x, y) => placeOf(x.name) - placeOf(y.name)),
     [data, names],
@@ -118,7 +129,7 @@ export default function OrderList({ onOpen, onNew }) {
   );
 
   return (
-    <Page icon={ClipboardList} title={TEXTS.title} subtitle={TEXTS.listSubtitle} actions={<Button size="sm" icon={Plus} onClick={onNew}>{TEXTS.addNew}</Button>}>
+    <Page icon={ClipboardList} title="Production Order" subtitle="Saved orders — click one to open it" actions={<Button size="sm" icon={Plus} onClick={onNew}>Add new</Button>}>
       <DataTable
         tableId="production-orders"
         columns={columns}

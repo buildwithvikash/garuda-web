@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ordersApi } from './ordersApi.js';
-import { TEXTS } from './texts.js';
 
 /** the choices the server reacts to (it refills other lists or fields) */
 const DEPENDENT = ['material', 'orderType', 'salesOrder'];
@@ -14,8 +13,8 @@ const alertText = (m) => String(m ?? '').replaceAll('&#44', ',');
 /** what can be checked before the round trip; the server checks again (and everything else) */
 function check(order) {
   const errors = {};
-  for (const f of ['department', 'status', 'qty']) if (String(order[f] ?? '').trim() === '') errors[f] = TEXTS.required;
-  if (!errors.qty && !/^-?\d+(\.\d+)?$/.test(String(order.qty).trim())) errors.qty = TEXTS.notNumber;
+  for (const f of ['department', 'status', 'qty']) if (String(order[f] ?? '').trim() === '') errors[f] = 'is required';
+  if (!errors.qty && !/^-?\d+(\.\d+)?$/.test(String(order.qty).trim())) errors.qty = 'must be a number';
   return errors;
 }
 

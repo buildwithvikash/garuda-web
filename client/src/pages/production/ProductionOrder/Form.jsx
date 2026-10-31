@@ -1,5 +1,5 @@
 // Production Order: one order (new or saved). Plain React: the fields are this screen's own, the state and server
-// calls are in ./useOrderForm.js, every text is in ./texts.js.
+// calls are in ./useOrderForm.js.
 import { useEffect, useId } from 'react';
 import { ArrowLeft, ClipboardList, Lock, Package, RotateCw, Save, Tag } from 'lucide-react';
 import { askConfirm } from '@/app/confirm.js';
@@ -11,10 +11,8 @@ import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { cn } from '@/lib/utils';
-import { TEXTS } from './texts.js';
 import { useOrderForm } from './useOrderForm.js';
 
-const L = TEXTS.fields;
 const GRID_2 = 'grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4';
 
 /** a field the server sets and keeps (the order's number, its alias, today's date) */
@@ -45,24 +43,24 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
   }, [dirty]);
 
   async function back() {
-    if (dirty && !(await askConfirm({ title: TEXTS.leaveTitle, message: TEXTS.leaveMessage, confirmLabel: TEXTS.leave, variant: 'danger' }))) return;
+    if (dirty && !(await askConfirm({ title: 'Leave without saving?', message: 'Your changes on this form will be lost.', confirmLabel: 'Leave', variant: 'danger' }))) return;
     onBack();
   }
 
   async function submit(e) {
     e.preventDefault();
     const r = await save();
-    if (r) onSaved(r.message || (isNew ? TEXTS.created : TEXTS.updated));
+    if (r) onSaved(r.message || (isNew ? 'Record Created Successfully' : 'Record Updated Successfully'));
   }
 
   const shell = (children, actions) => (
-    <Page icon={ClipboardList} title={TEXTS.title} subtitle={TEXTS.formSubtitle} actions={actions}>
+    <Page icon={ClipboardList} title="Production Order" subtitle="Create a production order: product, quantity and materials" actions={actions}>
       {children}
     </Page>
   );
   const backButton = (
     <Button type="button" variant="outline" icon={ArrowLeft} className="h-10" onClick={back}>
-      {TEXTS.back}
+      Back to list
     </Button>
   );
 
@@ -79,60 +77,60 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
   const { order, options, ui } = form;
   // the server's lists ({ value, text }) as the Select takes them
   const opts = (field) => (options[field] ?? []).map((o) => ({ value: o.value, label: o.text }));
-  const select = (field, extra = {}) => (
-    <Select label={L[field]} value={order[field]} options={opts(field)} onChange={(v) => setField(field, v ?? '')} error={errors[field]} {...extra} />
+  const select = (field, label, extra = {}) => (
+    <Select label={label} value={order[field]} options={opts(field)} onChange={(v) => setField(field, v ?? '')} error={errors[field]} {...extra} />
   );
-  const text = (field, extra = {}) => (
-    <TextInput label={L[field]} value={order[field] ?? ''} onChange={(e) => setField(field, e.target.value)} error={errors[field]} {...extra} />
+  const text = (field, label, extra = {}) => (
+    <TextInput label={label} value={order[field] ?? ''} onChange={(e) => setField(field, e.target.value)} error={errors[field]} {...extra} />
   );
 
   const actions = (
     <div className="flex flex-wrap items-end gap-3">
       <span className="hidden items-center gap-2 self-center xl:inline-flex">
-        <Badge variant={isNew ? 'info' : 'neutral'} dot>{isNew ? TEXTS.newRecord : TEXTS.savedRecord}</Badge>
-        {dirty && <Badge variant="warning" dot>{TEXTS.unsaved}</Badge>}
+        <Badge variant={isNew ? 'info' : 'neutral'} dot>{isNew ? 'New record' : 'Saved record'}</Badge>
+        {dirty && <Badge variant="warning" dot>Unsaved changes</Badge>}
       </span>
       {backButton}
-      <div className="w-56">{select('department', { required: true })}</div>
+      <div className="w-56">{select('department', 'Department', { required: true })}</div>
       {/* a new order takes the default status (Active); it shows once the order is saved */}
-      {!isNew && <div className="w-56">{select('status', { required: true })}</div>}
+      {!isNew && <div className="w-56">{select('status', 'Record status', { required: true })}</div>}
       <Button type="submit" form={formId} icon={Save} loading={busy === 'save'} disabled={busy !== null} className="h-10 px-5">
-        {isNew ? TEXTS.create : TEXTS.update}
+        {isNew ? 'Create Order' : 'Update Order'}
       </Button>
     </div>
   );
 
   return shell(
     <form id={formId} onSubmit={submit} className="grid items-start gap-2" noValidate>
-      <Step n={1} tone="blue" icon={ClipboardList} title={TEXTS.steps.details.title} subtitle={TEXTS.steps.details.subtitle}>
+      <Step n={1} tone="blue" icon={ClipboardList} title="Order Details" subtitle="Basic information about the production order">
         <div className={GRID_2}>
-          <LockedValue label={L.prodNo} value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder={TEXTS.autoGenerated} className="sm:col-span-2" />
-          <LockedValue label={L.alias} value={order.alias} className="sm:col-span-2" />
-          <LockedValue label={L.orderDate} value={order.orderDate} />
-          {select('orderType')}
-          {select('priority')}
-          {ui.salesOrder && select('salesOrder')}
+          <LockedValue label="Order code" value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder="Auto-generated" className="sm:col-span-2" />
+          <LockedValue label="Alias" value={order.alias} className="sm:col-span-2" />
+          <LockedValue label="Order date" value={order.orderDate} />
+          {select('orderType', 'Order Type')}
+          {select('priority', 'Priority')}
+          {ui.salesOrder && select('salesOrder', 'Sales Order')}
         </div>
       </Step>
 
-      <Step n={2} tone="emerald" icon={Package} title={TEXTS.steps.product.title} subtitle={TEXTS.steps.product.subtitle}>
+      <Step n={2} tone="emerald" icon={Package} title="Product & Quantity" subtitle="Select the product and define the production quantity">
         <div className={GRID_2}>
-          {select('material')}
-          {select('bom')}
+          {select('material', 'Material')}
+          {select('bom', 'BOM')}
           {/* a sales order's own quantity: shown, never saved */}
-          {ui.orderQty && <LockedValue label={L.totalQty} value={order.totalQty} />}
-          {ui.orderQty && <LockedValue label={L.totalUom} value={opts('totalUom').find((o) => o.value === order.totalUom)?.label ?? order.totalUom} />}
-          {text('qty', { required: true, inputMode: 'decimal', disabled: !ui.qtyEditable })}
-          {select('uom')}
+          {ui.orderQty && <LockedValue label="Order quantity" value={order.totalQty} />}
+          {ui.orderQty && <LockedValue label="Order unit" value={opts('totalUom').find((o) => o.value === order.totalUom)?.label ?? order.totalUom} />}
+          {text('qty', 'Production quantity', { required: true, inputMode: 'decimal', disabled: !ui.qtyEditable })}
+          {select('uom', 'Unit')}
         </div>
       </Step>
 
       {/* a serial-tracked material (or a sales order) has a track ID */}
       {ui.track && (
-        <Step n={3} tone="violet" icon={Tag} title={TEXTS.steps.tracking.title} subtitle={TEXTS.steps.tracking.subtitle}>
+        <Step n={3} tone="violet" icon={Tag} title="Tracking" subtitle="Tracking information for this order">
           <div className={GRID_2}>
-            {text('trackId', { className: 'sm:col-span-2', maxLength: 50 })}
-            {text('custId', { className: 'sm:col-span-2', maxLength: 50 })}
+            {text('trackId', 'Track ID', { className: 'sm:col-span-2', maxLength: 50 })}
+            {text('custId', 'Customer ID', { className: 'sm:col-span-2', maxLength: 50 })}
           </div>
         </Step>
       )}

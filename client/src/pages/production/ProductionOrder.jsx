@@ -3,7 +3,6 @@
 //   ProductionOrder/Form.jsx         one order (new or saved)
 //   ProductionOrder/useOrderForm.js  the form's state and server calls
 //   ProductionOrder/ordersApi.js     /api/production/orders
-//   ProductionOrder/texts.js         every text the screen shows
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { openedRecord, useRememberView } from '@/lib/recordParam.js';
