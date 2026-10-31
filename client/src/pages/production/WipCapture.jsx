@@ -997,12 +997,13 @@ function Station({ spec }) {
               </div>
               {vis("BtnRework") && (
                 <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    icon={RefreshCcw}
-                    onClick={() => scan("BtnRework")}
-                  >
-                    Move to rework
+                  {/* Rework Confirmation in a new tab, so this station stays as it is (the screen's BtnRework only
+                      redirected there) */}
+                  <Button asChild variant="outline">
+                    <a href="/quality/reworkconfirmationnew" target="_blank" rel="noopener noreferrer">
+                      <RefreshCcw />
+                      Open rework page
+                    </a>
                   </Button>
                 </div>
               )}
