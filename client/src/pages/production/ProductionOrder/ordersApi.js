@@ -16,7 +16,7 @@ export const ordersApi = {
   /** { order, options, ui } */
   blank: () => api(`${BASE}/new`),
   get: (prodNo) => api(`${BASE}/${enc(prodNo)}`),
-  /** the serials generated for a saved order: [{ serial, jobCard, process, station, material, assignedOn }] */
+  /** the serials generated for a saved order: [{ serial, jobCard, process, station, material, printedOn }] */
   serials: (prodNo) => api(`${BASE}/${enc(prodNo)}/serials`),
   /** what choosing a material / order type / sales order changes: { order, options, ui, message } */
   change: (field, order) => api(`${BASE}/changes/${field}`, { method: 'POST', body: order }),

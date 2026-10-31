@@ -13,15 +13,18 @@ export const exists = async (prodNo, businessUnit) =>
 /** the list rows of one business unit (a condition on the list's row X; lists.js listPage scope) */
 export const businessUnitScope = (businessUnit) => ({ where: 'X.PRODNO in (select PRODNo from PRODHeader where BusinessUnit = @scopeBu)', params: { scopeBu: Number(businessUnit) } });
 
-/** The serials generated for the order: each job card's stage label (Production Assignment's print), oldest first. */
+/** The serials generated for the order: each job card's stage label (Production Assignment's print), oldest first, with
+ *  when it was printed (the job card's barcode: MaterialBarcode.CreatedOn, date and time; ProcessOrder.AssignDate is the
+ *  date only). */
 export const serials = (prodNo) =>
   query(
-    `select psl.BarcodeNo [serial], po.Alias [jobCard], pp.Name [process], wc.Name [station], m.Name [material], po.AssignDate [assignedOn]
+    `select psl.BarcodeNo [serial], po.Alias [jobCard], pp.Name [process], wc.Name [station], m.Name [material], mb.CreatedOn [printedOn]
        from ProcessOrder po
        inner join ProcessStageLabel psl on psl.PSNo = po.PSNo
        left join ProductionProcess pp on pp.ProcessCode = psl.ProcessCode
        left join WorkCenter wc on wc.StationCode = psl.StationCode
        left join Material m on m.MatCode = po.Material
+       outer apply (select top 1 b.CreatedOn from MaterialBarcode b where b.DocNo = po.PSNo and b.DocType = 4001 order by b.BarcodeNo) mb
       where po.PRODNo = @k
       order by po.PSNo, psl.SeqNo`,
     { k: Number(prodNo) },

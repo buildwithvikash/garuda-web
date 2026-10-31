@@ -22,7 +22,7 @@ const ROUTE = columns([['seq', 'Step'], ['process', 'Process'], ['station', 'Sta
 const BOM_INPUT = columns([['material', 'Material'], ['qty', 'Quantity'], ['unit', 'Unit'], ['process', 'Used at'], ['scanRequired', 'Scan needed'], ['outputScan', 'Output scanned']]);
 const BOM_OUTPUT = columns([['material', 'Material'], ['qty', 'Quantity'], ['unit', 'Unit'], ['yieldQty', 'Yield'], ['process', 'Made at']]);
 
-/** how much of an order is printed: started of total, as a bar; green once all of it is */
+/** how much of an order is printed: started of total, and what is left (green once all of it is) */
 function OrderProgress({ started, total, unit = '' }) {
   const [s, t] = [Number(started) || 0, Number(total) || 0];
   if (t <= 0) return null;
@@ -30,7 +30,7 @@ function OrderProgress({ started, total, unit = '' }) {
   const u = unit ? ` ${unit}` : '';
   return (
     <div className="sm:col-span-2 lg:col-span-4">
-      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
         <span className="font-medium">
           Printed {s} of {t}
           {u}
@@ -45,9 +45,6 @@ function OrderProgress({ started, total, unit = '' }) {
             {u} left to print
           </span>
         )}
-      </div>
-      <div className="h-2.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={t} aria-valuenow={Math.min(s, t)} aria-label="Printed so far">
-        <div className={cn('h-full rounded-full transition-all', all ? 'bg-emerald-600' : 'bg-primary')} style={{ width: `${Math.min(100, (s / t) * 100)}%` }} />
       </div>
     </div>
   );

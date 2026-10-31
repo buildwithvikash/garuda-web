@@ -11,7 +11,7 @@ const COLUMNS = [
   { key: 'process', header: 'Process', exactHeader: true, text: (r) => r.process, render: (r) => r.process || '—' },
   { key: 'station', header: 'Station', exactHeader: true, text: (r) => r.station, render: (r) => r.station || '—' },
   { key: 'material', header: 'Material', exactHeader: true, text: (r) => r.material, render: (r) => r.material || '—' },
-  { key: 'assignedOn', header: 'Assigned on', exactHeader: true, text: (r) => r.assignedOn, render: (r) => r.assignedOn || '—' }, // the server's text (dd-MM-yyyy hh:mm:ss AM)
+  { key: 'printedOn', header: 'Printed on', exactHeader: true, text: (r) => r.printedOn, render: (r) => r.printedOn || '—' }, // the server's text (dd-MM-yyyy hh:mm:ss AM)
 ];
 
 export default function OrderSerials({ prodNo }) {

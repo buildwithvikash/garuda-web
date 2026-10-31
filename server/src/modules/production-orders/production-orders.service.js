@@ -155,7 +155,7 @@ export async function serials(ctx, prodNo) {
     process: netString(r.process),
     station: netString(r.station),
     material: netString(r.material),
-    assignedOn: r.assignedOn instanceof Date ? enInDateTime(r.assignedOn) : netString(r.assignedOn), // as the lists show dates
+    printedOn: r.printedOn instanceof Date ? enInDateTime(r.printedOn) : netString(r.printedOn), // as the lists show dates
   }));
 }
 

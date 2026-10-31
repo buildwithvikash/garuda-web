@@ -26,7 +26,7 @@ such record / event; 500 `{ message }` with the request reference that is in the
 | `POST /changes/:field` | `material` / `orderType` / `salesOrder` chosen: what changes |
 | `POST /service-requests` | adds the picked service request as a line |
 | `GET /:prodNo` · `POST /` | read, create |
-| `GET /:prodNo/serials` | the serials generated for the order (its job cards' stage labels): `[{ serial, jobCard, process, station, material, assignedOn }]` |
+| `GET /:prodNo/serials` | the serials generated for the order (its job cards' stage labels): `[{ serial, jobCard, process, station, material, printedOn }]` (printedOn: date and time the job card was printed) |
 | `PUT /:prodNo` · `DELETE /:prodNo` | refused, 409: an order cannot be changed or cancelled once it is created (owner, 31 Oct 2026) |
 
 Only the user's business unit: the list, its filter values, a single order and its serials show that unit's orders;
