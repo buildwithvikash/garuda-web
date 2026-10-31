@@ -21,7 +21,7 @@ import { collect, insert, update, cancel } from '../../src/modules/forms/write.j
 import { formTables, tableSchema } from '../../src/modules/forms/schema.js';
 import { toText } from '../../src/shared/values.js';
 import * as ordersApi from '../../src/modules/production-orders/production-orders.service.js';
-import { validateOrder } from '../../src/modules/production-orders/production-orders.validation.js';
+import { NO_CHANGE_AFTER_CREATE, validateOrder } from '../../src/modules/production-orders/production-orders.validation.js';
 import { MASTERS } from '../../src/modules/masters/masters.routes.js';
 import { QUALITY } from '../../src/modules/quality/quality.routes.js';
 import { validateBody } from '../../src/modules/forms/resource.validation.js';
@@ -32,6 +32,12 @@ const viaApi = rest.includes('--api');
 const only = rest.filter((a) => a !== '--api');
 
 // screens with a domain API: control values -> the API's JSON (its field map), then its validator and service
+/** Intended differences: screens whose saved records are never changed (owner's rule, 31 Oct 2026). With --api the
+ *  update step expects this refusal from the new side and skips the original's update, so the cancel step still
+ *  compares like with like. */
+const NO_UPDATE = { [ordersApi.SCREEN]: NO_CHANGE_AFTER_CREATE };
+const INTENDED = 'IDENTICAL (intended: update refused, no change after create)';
+
 const API = {
   [ordersApi.SCREEN]: { fields: ordersApi.FIELDS, grid: ordersApi.GRID, lines: (r) => ({ prodNo: r.PRODNo, seqNo: r.SeqNo, orderCode: r.OrderCode, orderNo: r.OrderNo }), list: 'orders', validate: validateOrder, create: ordersApi.create, save: ordersApi.save, cancel: ordersApi.cancel },
 };
@@ -298,21 +304,34 @@ for (const route of routes) {
     };
     await cmp('save');
     // --- update (load each record as displayed, change values)
-    const uO = await withEvents(spec, state, { ...values(state, 'ZZPO', 1), ...(await childValues(spec, state, 'ZZPO', 1, (await displayState(spec, ctx, keyO)).controls)) });
-    const uN = await withEvents(spec, state, { ...values(state, 'ZZPN', 1), ...(await childValues(spec, state, 'ZZPN', 1, (await displayState(spec, ctx, keyN)).controls)) });
-    const uo = original({ id: 0, mode: 'update', key: keyO, spec: { top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits }, ctx, values: uO });
-    const disp = await displayState(spec, ctx, keyN);
-    const cur = sent(disp);
-    let un = null;
-    try {
-      const api = viaApi && API[route];
-      if (api) await apiCall(api, 'update', apiBody(api, { ...cur, ...uN }), (b) => api.save(ctx, keyN, b));
-      else await update(spec, await collect(spec, { ...cur, ...uN }, ctx), ctx);
-    } catch (e) {
-      un = e.message;
+    let intended = false;
+    if (viaApi && NO_UPDATE[route]) {
+      // the new side must refuse the update with the rule's message; the original's update is not run
+      let refusal = null;
+      try {
+        await API[route].save(ctx, keyN, {});
+      } catch (e) {
+        refusal = e.message;
+      }
+      if (refusal === NO_UPDATE[route]) intended = true;
+      else report.push(`update: expected the refusal "${NO_UPDATE[route]}" / new ${refusal ? `ERROR ${refusal}` : 'ok'}`);
+    } else {
+      const uO = await withEvents(spec, state, { ...values(state, 'ZZPO', 1), ...(await childValues(spec, state, 'ZZPO', 1, (await displayState(spec, ctx, keyO)).controls)) });
+      const uN = await withEvents(spec, state, { ...values(state, 'ZZPN', 1), ...(await childValues(spec, state, 'ZZPN', 1, (await displayState(spec, ctx, keyN)).controls)) });
+      const uo = original({ id: 0, mode: 'update', key: keyO, spec: { top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits }, ctx, values: uO });
+      const disp = await displayState(spec, ctx, keyN);
+      const cur = sent(disp);
+      let un = null;
+      try {
+        const api = viaApi && API[route];
+        if (api) await apiCall(api, 'update', apiBody(api, { ...cur, ...uN }), (b) => api.save(ctx, keyN, b));
+        else await update(spec, await collect(spec, { ...cur, ...uN }, ctx), ctx);
+      } catch (e) {
+        un = e.message;
+      }
+      if (!uo.ok || un) report.push(`update: original ${uo.ok ? 'ok' : `ERROR ${uo.error}`} / new ${un ? `ERROR ${un}` : 'ok'}`);
+      await cmp('update');
     }
-    if (!uo.ok || un) report.push(`update: original ${uo.ok ? 'ok' : `ERROR ${uo.error}`} / new ${un ? `ERROR ${un}` : 'ok'}`);
-    await cmp('update');
     // --- cancel
     const co = original({ id: 0, mode: 'cancel', key: keyO, remark: 'parity', spec: { top: spec.top, view: spec.view, controls: spec.controls, formModuleId: spec.formModuleId, file: spec.file, titleBar: spec.titleBar, inherits: spec.inherits }, ctx });
     const d2 = await displayState(spec, ctx, keyN);
@@ -326,7 +345,7 @@ for (const route of routes) {
     }
     if (!co.ok || cn) report.push(`cancel: original ${co.ok ? 'ok' : `ERROR ${co.error}`} / new ${cn ? `ERROR ${cn}` : 'ok'}`);
     await cmp('cancel');
-    results.push([route, report.length ? report.join(' | ') : 'IDENTICAL']);
+    results.push([route, report.length ? report.join(' | ') : intended ? INTENDED : 'IDENTICAL']);
   } catch (e) {
     results.push([route, `harness error: ${e.message}`]);
   } finally {
@@ -347,6 +366,6 @@ for (const route of routes) {
     }
   }
 }
-for (const [r, m] of results) console.log(`${m === 'IDENTICAL' ? 'OK  ' : 'DIFF'} ${r}: ${m}`.slice(0, process.env.PARITY_DEBUG ? Infinity : 500));
-console.log(`pages: ${results.length}, identical: ${results.filter(([, m]) => m === 'IDENTICAL').length}`);
+for (const [r, m] of results) console.log(`${m.startsWith('IDENTICAL') ? 'OK  ' : 'DIFF'} ${r}: ${m}`.slice(0, process.env.PARITY_DEBUG ? Infinity : 500));
+console.log(`pages: ${results.length}, identical: ${results.filter(([, m]) => m.startsWith('IDENTICAL')).length}`);
 process.exit(0);

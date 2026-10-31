@@ -151,6 +151,9 @@ node --env-file=.env scripts/parity/client-switch-parity.js   # the API forms vs
 `--api` (forms-write, events, page-writes, print) runs the new side through the screens' REST APIs (Production
 Order / Assignment, `/api/masters`, `/api/quality`, `/api/production/<screen>`; also rework-new, wip, production-writes,
 upload) instead of the page code directly; the results must match the run without it.
+Intended difference: Production Order's saved orders cannot be changed (owner, 31 Oct 2026), so with `--api`
+forms-write skips the update step for it, checks that the new side refuses it, and reports
+`IDENTICAL (intended: update refused, no change after create)`.
 
 Baselines (26 Oct 2026): events 188/202 identical (5 fail alike, 1 harness limit: ParameterForm's duplicate
 `ctl00`, 8 intended: Production Order's material lists show the name only, not "Name - Alias"); forms 127/138 identical, 0 different; WIP comp/qc/fg, rework, production writes identical; print 9/10
