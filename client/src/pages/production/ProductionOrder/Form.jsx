@@ -95,8 +95,8 @@ export default function OrderForm({ prodNo, onBack, onSaved }) {
       <fieldset disabled={!isNew} className="grid min-w-0 items-start gap-2">
       <Step n={1} tone="blue" icon={ClipboardList} title="Order details" subtitle="What the order is and when it was made">
         <div className={GRID_2}>
-          <LockedValue label="Order ID" value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder="Given when created" className="sm:col-span-2" />
-          <LockedValue label="Order number" value={order.alias} placeholder="Given when created" className="sm:col-span-2" />
+          <LockedValue label="Order number" value={/^0?$/.test(order.prodNo) ? '' : order.prodNo} placeholder="Given when created" className="sm:col-span-2" />
+          <LockedValue label="Reference" value={order.alias} placeholder="Given when created" className="sm:col-span-2" />
           <LockedValue label="Order date" value={order.orderDate} />
           {select('orderType', 'Order type')}
           {select('priority', 'Priority')}
