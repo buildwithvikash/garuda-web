@@ -342,19 +342,21 @@ function Cabinet({ unit, e, line, className }) {
   // Up to the assembly label (the unit still carries its foaming serial): the artwork, large, with only what the
   // operator matches it against (owner, 31 Oct 2026). Graphics and customer are the model's own variant fields.
   if (c?.kind === "Foaming") {
+    // the FG material's (the artwork is uploaded there, not on the in-process material)
+    const a = c.artwork ?? {};
     const facts = [
-      ["Model", c.name || model],
-      ["Category", c.category],
-      ["Graphics", c.graphics],
-      ["Customer", c.customerName],
+      ["Model", a.name || model],
+      ["Category", a.category],
+      ["Graphics", a.graphics],
+      ["Customer", a.customer],
     ];
     return (
       <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
         <div className="flex flex-col gap-5 sm:flex-row">
-          {c.image ? (
+          {a.image ? (
             <img
-              src={c.image}
-              alt={`Artwork of ${c.name}`}
+              src={a.image}
+              alt={`Artwork of ${a.name}`}
               className="max-h-72 w-full rounded-lg border bg-muted/30 object-contain p-2 sm:w-1/2"
             />
           ) : (

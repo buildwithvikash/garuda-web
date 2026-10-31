@@ -542,25 +542,36 @@ export async function routeByLabel(label) {
  *  alias, category, model, image), the material's variant values (colour, dimension...) and the sales order's customer.
  *  Null when the label has no job card. */
 export async function cabinetByLabel(label) {
-  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo],lp.ProdcutionStage[LabelStage] from ProcessStageLabel psl left join ProductionProcess lp on lp.ProcessCode=psl.ProcessCode inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
+  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo],lp.ProdcutionStage[LabelStage],fg.MatCode[FgCode],fg.Name[FgName],fmc.Name[FgCategory],fg.MaterialImage[FgImage] from ProcessStageLabel psl left join ProductionProcess lp on lp.ProcessCode=psl.ProcessCode inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join Material fg on fg.MatCode=ph.Material left join MaterialCategory fmc on fg.Category=fmc.CategoryCode left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
   if (!rows.length) return null;
   const r = rows[0];
-  const variants = await query(`Select vf.Name,vfv.Name[Value] from MaterialVariant mv inner join VariantFieldValue vfv on mv.ValueCode=vfv.Code inner join VariantField vf on vfv.Field=vf.FieldCode where mv.MatCode=@mat order by mv.RowID`, { mat: r.MatCode });
+  const variantsOf = async (mat) =>
+    (await query(`Select vf.Name,vfv.Name[Value] from MaterialVariant mv inner join VariantFieldValue vfv on mv.ValueCode=vfv.Code inner join VariantField vf on vfv.Field=vf.FieldCode where mv.MatCode=@mat order by mv.RowID`, { mat })).map((v) => ({ name: str(v.Name), value: str(v.Value) }));
+  const named = await variantsOf(r.MatCode);
+  // the FG material (the production order's): its artwork and its own variant fields; the job card's material is an
+  // in-process one at the foaming stages, with no artwork uploaded (owner, 31 Oct 2026)
+  const fgNamed = r.FgCode && String(r.FgCode) !== String(r.MatCode) ? await variantsOf(r.FgCode) : named;
+  const pic = (img) => (Buffer.isBuffer(img) && img.length ? `data:image/png;base64,${img.toString('base64')}` : typeof img === 'string' && img.startsWith('data:image/') ? img : null);
   const img = r.MaterialImage;
-  const named = variants.map((v) => ({ name: str(v.Name), value: str(v.Value) }));
   return {
     // the label the unit carries: up to the assembly label (a foaming serial) the screen shows the artwork view
     kind: labelKind(label, r.LabelStage),
-    // the graphics and customer variant fields, whatever the model names them (else the sales order's customer)
-    graphics: variantValue(named, GRAPHICS),
-    customerName: variantValue(named, CUSTOMER) || str(r.Customer),
+    // the artwork view: the FG material's image, model, category, and its graphics / customer variant fields whatever
+    // the model names them (else the job card material's, else the sales order's customer)
+    artwork: {
+      image: pic(r.FgImage) ?? pic(img),
+      name: str(r.FgName) || str(r.Name),
+      category: str(r.FgCategory) || str(r.Category),
+      graphics: variantValue(fgNamed, GRAPHICS) || variantValue(named, GRAPHICS),
+      customer: variantValue(fgNamed, CUSTOMER) || variantValue(named, CUSTOMER) || str(r.Customer),
+    },
     name: str(r.Name),
     alias: str(r.Alias),
     category: str(r.Category),
     model: str(r.Model),
     customer: str(r.Customer),
     order: str(r.OrderNo),
-    image: Buffer.isBuffer(img) && img.length ? `data:image/png;base64,${img.toString('base64')}` : typeof img === 'string' && img.startsWith('data:image/') ? img : null,
+    image: pic(r.FgImage) ?? pic(img), // the artwork is uploaded on the FG material
     variants: named,
   };
 }
