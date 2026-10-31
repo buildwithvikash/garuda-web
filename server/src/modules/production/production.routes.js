@@ -9,7 +9,7 @@ import { netString } from '../../shared/net.js';
 import { log } from '../../config/logger.js';
 import { sessionContext } from '../auth/context.js';
 import { screensRouter } from '../forms/resource.routes.js';
-import { cabinetByLabel, routeByLabel } from './wip.service.js';
+import { artworkByLabel, cabinetByLabel, routeByLabel } from './wip.service.js';
 import { replacementHistory, scrapHistory } from './production.service.js';
 import { checkTransfer, transferMany } from './model-transfer-bulk.js';
 
@@ -33,6 +33,18 @@ router.get('/wip-capture/units/:label', requireAuth, authorizeScreen(PRODUCTION[
   const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
   for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} production/units: ${r.reason?.message}`);
   ok(res, { route: route.value ?? null, cabinet: cabinet.value ?? null });
+});
+// WIP Capture's cabinet: the scanned unit's FG material Artwork (the Material screen's "Artwork & Packing Images"),
+// served to the screen's operators (the Material screen's own image route needs that screen's access)
+router.get('/wip-capture/units/:label/artwork', requireAuth, authorizeScreen(PRODUCTION['wip-capture']), async (req, res) => {
+  const label = netString(req.params.label).trim();
+  if (label === '' || label.length > 100) throw AppError.badRequest('Scan a unit serial');
+  const img = await artworkByLabel(label);
+  if (!img) throw AppError.notFound('Artwork');
+  res.set('Content-Type', img.mimeType);
+  res.set('Cache-Control', 'private, max-age=300');
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.send(img.image);
 });
 /** a history's optional time range: ?start=&end= as a date-time box sends them (YYYY-MM-DDTHH:mm), else refused */
 export function rangeOf(q) {

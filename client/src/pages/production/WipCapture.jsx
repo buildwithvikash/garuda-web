@@ -24,7 +24,6 @@ import {
   Boxes,
   CheckCircle2,
   ClipboardList,
-  History,
   Info,
   ListChecks,
   MessageSquare,
@@ -48,7 +47,6 @@ import Ctl from "@/components/shopfloor/Ctl.jsx";
 import MuteButton from "@/components/shopfloor/MuteButton.jsx";
 import ScanBox from "@/components/shopfloor/ScanBox.jsx";
 import SectionCard from "@/components/shopfloor/SectionCard.jsx";
-import StatusPill from "@/components/shopfloor/StatusPill.jsx";
 import { Button } from "@/components/ui/button.jsx";
 import { Badge } from "@/components/ui/badge.jsx";
 import { when } from "@/utils/dates.js";
@@ -312,7 +310,7 @@ function useUnit(label, tick) {
 // 5. CARDS
 // The panels of the screen: cabinet, route history, components, inspection, guide.
 // ────────────────────────────────────────────────────────────────────────────
-function Cabinet({ unit, e, line, className }) {
+function Cabinet({ unit, label, e, line, className }) {
   const { values, ctl } = e;
   const c = unit?.cabinet;
   const [model, serial] = String(values.tbFG ?? "").split("|");
@@ -353,12 +351,26 @@ function Cabinet({ unit, e, line, className }) {
     return (
       <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
         <div className="flex flex-col gap-5 sm:flex-row">
-          {a.image ? (
-            <img
-              src={a.image}
-              alt={`Artwork of ${a.name}`}
-              className="max-h-72 w-full rounded-lg border bg-muted/30 object-contain p-2 sm:w-1/2"
-            />
+          {/* the FG material's Artwork ("Artwork & Packing Images" on the Material screen): an image, or a PDF */}
+          {a.hasArtwork && label ? (
+            a.artworkType === "application/pdf" ? (
+              <object
+                data={`/api/production/wip-capture/units/${encodeURIComponent(label)}/artwork#toolbar=0&view=FitH`}
+                type="application/pdf"
+                aria-label={`Artwork of ${a.name}`}
+                className="h-72 w-full rounded-lg border bg-muted/30 sm:w-1/2"
+              >
+                <a className="text-sm underline" href={`/api/production/wip-capture/units/${encodeURIComponent(label)}/artwork`} target="_blank" rel="noreferrer">
+                  Open the artwork
+                </a>
+              </object>
+            ) : (
+              <img
+                src={`/api/production/wip-capture/units/${encodeURIComponent(label)}/artwork`}
+                alt={`Artwork of ${a.name}`}
+                className="max-h-72 w-full rounded-lg border bg-muted/30 object-contain p-2 sm:w-1/2"
+              />
+            )
           ) : (
             <div className="grid h-48 w-full place-items-center rounded-lg border border-dashed text-sm text-muted-foreground sm:w-1/2">
               No artwork for this model
@@ -410,111 +422,6 @@ function Cabinet({ unit, e, line, className }) {
 }
 
 /** the whole route (done / in process / pending); before /forms/unit answers, the stages started so far */
-/** a stage's time as "date time" text: { date, time } (the date alone when there is no time) */
-function splitWhen(v) {
-  const t = when(v);
-  if (!t || t === "-") return null;
-  const k = t.indexOf(" ");
-  return k < 0 ? { date: t, time: "" } : { date: t.slice(0, k), time: t.slice(k + 1) };
-}
-
-/** a stage's Start Time / End Time, side by side: each its date, then its time ("—" when there is none yet) */
-function StageTimes({ startedOn, completedOn }) {
-  const cell = (label, v) => {
-    const t = splitWhen(v);
-    return (
-      <div className="min-w-0 px-3 py-2">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="mt-0.5 text-sm tabular">{t?.date ?? "—"}</p>
-        <p className="text-sm tabular">{t?.time || "—"}</p>
-      </div>
-    );
-  };
-  return (
-    <div className="mt-2 grid grid-cols-2 divide-x divide-border rounded-lg bg-muted/50">
-      {cell("Start Time", startedOn)}
-      {cell("End Time", completedOn)}
-    </div>
-  );
-}
-
-/** the unit's route as a timeline: each stage's work station, its start → completion, and its status */
-function ProcessHistory({ route, e, className }) {
-  const { values, vis } = e;
-  const steps =
-    route ??
-    (vis("PnlHistory")
-      ? (values.GVHistory ?? []).map((r) => ({
-          process: r.Process,
-          station: r.Station,
-          startedOn: r.StartedOn,
-          completedOn: r.CompletedOn,
-          status: r.CompletedOn ? 2 : 1,
-        }))
-      : []);
-  const done = steps.filter((s) => s.status === 2).length;
-  // the dot of a stage: done (a tick), in process (ringed), pending (empty)
-  const dot = (status) =>
-    status === 2 ? (
-      <span className="grid size-7 place-items-center rounded-full bg-emerald-600 text-white ring-4 ring-card">
-        <CheckCircle2 className="size-5" aria-hidden="true" />
-      </span>
-    ) : status === 1 ? (
-      <span className="grid size-7 place-items-center rounded-full bg-primary/15 ring-4 ring-card">
-        <span className="size-3.5 animate-pulse rounded-full bg-primary" />
-      </span>
-    ) : (
-      <span className="grid size-7 place-items-center rounded-full border-2 border-border bg-card ring-4 ring-card" />
-    );
-  return (
-    <SectionCard
-      icon={History}
-      title="Process history"
-      className={className}
-      actions={
-        steps.length > 0 && (
-          <span className="text-xs text-muted-foreground tabular">
-            {done} of {steps.length} completed
-          </span>
-        )
-      }
-    >
-      {steps.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          The unit's route shows here after a serial scan.
-        </p>
-      ) : (
-        <ol className="max-h-[36rem] overflow-auto">
-          {steps.map((s, i) => (
-            <li
-              key={i}
-              className={`relative flex gap-3 border-b border-border px-3 py-4 last:border-b-0 ${s.status === 1 ? "rounded-xl border-transparent bg-primary/5" : ""}`}
-            >
-              {/* the line down to the next stage (green while the stages are done) */}
-              {i < steps.length - 1 && (
-                <span className={`absolute top-11 left-[1.625rem] h-full w-0.5 -translate-x-1/2 ${s.status === 2 ? "bg-emerald-600/70" : "bg-border"}`} aria-hidden="true" />
-              )}
-              <span className="relative z-10 mt-0.5 shrink-0">{dot(s.status)}</span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="min-w-0 text-base font-bold leading-tight break-words">
-                    <span className="mr-1.5 font-semibold text-muted-foreground tabular">{i + 1}.</span>
-                    {s.process}
-                  </p>
-                  <span className="shrink-0">
-                    <StatusPill status={s.status} />
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{s.station || "—"}</p>
-                <StageTimes startedOn={s.startedOn} completedOn={s.completedOn} />
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
-    </SectionCard>
-  );
-}
 
 /** the components scanned into the unit so far (GVComponents) */
 function ComponentDetails({ e, className }) {
@@ -953,10 +860,8 @@ function Station({ spec }) {
   const stationLocked = text("BtnWorkStationScan") === "Clr";
   const serialLocked = text("BtnWorderScan") === "Clr" || vis("QCPanel");
   const result = Number(vs.I ?? 0);
-  const unit = useUnit(
-    serialLocked ? String(values.TBJobCoard ?? "").trim() : "",
-    unitTick,
-  );
+  const unitLabel = serialLocked ? String(values.TBJobCoard ?? "").trim() : "";
+  const unit = useUnit(unitLabel, unitTick);
 
   // the scanner always types into the box the operator needs next
   useEffect(() => {
@@ -1003,9 +908,8 @@ function Station({ spec }) {
         </div>
       }
     >
-      {/* scan (40 %) and the scanned unit's cabinet (60 %) side by side, components under them; the unit's route as
-          a timeline on the right */}
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      {/* scan (40 %) and the scanned unit's cabinet (60 %) side by side, components under them */}
+      <div>
         <div className="min-w-0 space-y-4">
           <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <SectionCard
@@ -1082,11 +986,10 @@ function Station({ spec }) {
               )}
             </div>
           </SectionCard>
-            <Cabinet unit={unit} e={e} line={line} className="h-full" />
+            <Cabinet unit={unit} label={unitLabel} e={e} line={line} className="h-full" />
           </div>
           <ComponentDetails e={e} />
         </div>
-        <ProcessHistory route={unit?.route} e={e} className="xl:sticky xl:top-2" />
       </div>
 
       {vis("InputMaterialPanel") && <ComponentScan e={e} />}
