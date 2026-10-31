@@ -1,4 +1,4 @@
-// A printer dropdown with two quick buttons (owner, 31 Oct 2026): the operator saves up to two of the list's printers as
+// A printer dropdown with three quick buttons (owner, 31 Oct 2026): the operator saves up to three of the list's printers as
 // buttons and picks one with a tap instead of the dropdown. The buttons, and the printer used last, are kept on this
 // device per department (each department has its own printers); with nothing chosen yet, the last one is picked.
 import { useEffect, useState } from 'react';
@@ -7,7 +7,7 @@ import { EngineField } from '@/components/shared/FormControls.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { loadPref, savePref } from '@/utils/prefs.js';
 
-const SLOTS = 2;
+const SLOTS = 3;
 
 /** e: the screen's engine; id: the printer dropdown's control; scope: what the printers belong to (the department) */
 export default function QuickPrinters({ e, id, label, scope, className = '' }) {
@@ -42,38 +42,38 @@ export default function QuickPrinters({ e, id, label, scope, className = '' }) {
   };
   const chosen = options.find((o) => String(o.value) === value);
   const saved = slots.some((s) => String(s.value) === value);
-  // a third printer saved replaces the older button
+  // a printer saved when the buttons are full replaces the oldest button
   const save = () => chosen && keep([...slots.filter((s) => String(s.value) !== value), { value: String(chosen.value), text: chosen.text }].slice(-SLOTS));
 
   return (
     <div className={className}>
       <EngineField c={e.ctl(id)} label={label} value={e.values[id]} onChange={(v) => e.change(id, v)} />
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         {slots.map((s, i) => {
           const on = String(s.value) === value;
           return (
             <span key={s.value} className="inline-flex items-center">
               <Button
                 type="button"
-                size="sm"
+                size="lg"
                 variant={on ? 'default' : 'outline'}
                 icon={Printer}
                 disabled={!listed(s.value)}
                 title={listed(s.value) ? `Printer button ${i + 1}` : 'Not in this list of printers'}
                 onClick={() => e.change(id, String(s.value))}
-                className="rounded-r-none"
+                className="h-12 min-w-40 rounded-r-none px-5 text-base"
               >
                 {s.text}
               </Button>
-              <Button type="button" size="sm" variant="outline" aria-label={`Remove printer button ${i + 1}`} className="rounded-l-none border-l-0 px-2" onClick={() => keep(slots.filter((x) => x.value !== s.value))}>
+              <Button type="button" size="lg" variant="outline" aria-label={`Remove printer button ${i + 1}`} className="h-12 rounded-l-none border-l-0 px-3" onClick={() => keep(slots.filter((x) => x.value !== s.value))}>
                 <X />
               </Button>
             </span>
           );
         })}
         {chosen && !saved && (
-          <Button type="button" size="sm" variant="ghost" icon={Pin} onClick={save}>
-            {slots.length < SLOTS ? 'Save as button' : 'Save as button (replaces the older one)'}
+          <Button type="button" variant="ghost" icon={Pin} onClick={save} className="h-12">
+            {slots.length < SLOTS ? 'Save as button' : 'Save as button (replaces the oldest)'}
           </Button>
         )}
       </div>
