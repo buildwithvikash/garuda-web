@@ -34,6 +34,7 @@ import {
   ScanBarcode,
   ScanLine,
   X,
+  ZoomIn,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { api } from "@/api.js";
@@ -45,6 +46,7 @@ import QCPanel from "@/components/shared/QCPanel.jsx";
 import ComponentChecklist from "@/components/shopfloor/ComponentChecklist.jsx";
 import Ctl from "@/components/shopfloor/Ctl.jsx";
 import MuteButton from "@/components/shopfloor/MuteButton.jsx";
+import ImageZoom from "@/components/shopfloor/ImageZoom.jsx";
 import ScanBox from "@/components/shopfloor/ScanBox.jsx";
 import SectionCard from "@/components/shopfloor/SectionCard.jsx";
 import { Button } from "@/components/ui/button.jsx";
@@ -312,6 +314,7 @@ function useUnit(label, tick) {
 // ────────────────────────────────────────────────────────────────────────────
 function Cabinet({ unit, label, e, line, className }) {
   const { values, ctl } = e;
+  const [zoomed, setZoomed] = useState(false); // the artwork full screen
   const c = unit?.cabinet;
   const [model, serial] = String(values.tbFG ?? "").split("|");
   const rows = c
@@ -342,6 +345,7 @@ function Cabinet({ unit, label, e, line, className }) {
   if (c?.kind === "Foaming") {
     // the FG material's (the artwork is uploaded there, not on the in-process material)
     const a = c.artwork ?? {};
+    const artworkUrl = `/api/production/wip-capture/units/${encodeURIComponent(label ?? "")}/artwork`;
     const facts = [
       ["Model", a.name || model],
       ["Category", a.category],
@@ -350,41 +354,53 @@ function Cabinet({ unit, label, e, line, className }) {
     ];
     return (
       <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
-        <div className="flex flex-col gap-5 sm:flex-row">
-          {/* the FG material's Artwork ("Artwork & Packing Images" on the Material screen): an image, or a PDF */}
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-stretch">
+          {/* the FG material's Artwork ("Artwork & Packing Images" on the Material screen): an image (click to zoom),
+              or a PDF (opens in its own viewer, which zooms) */}
           {a.hasArtwork && label ? (
             a.artworkType === "application/pdf" ? (
-              <object
-                data={`/api/production/wip-capture/units/${encodeURIComponent(label)}/artwork#toolbar=0&view=FitH`}
-                type="application/pdf"
-                aria-label={`Artwork of ${a.name}`}
-                className="h-72 w-full rounded-lg border bg-muted/30 sm:w-1/2"
-              >
-                <a className="text-sm underline" href={`/api/production/wip-capture/units/${encodeURIComponent(label)}/artwork`} target="_blank" rel="noreferrer">
-                  Open the artwork
+              <div className="w-full sm:w-3/5">
+                <object
+                  data={`${artworkUrl}#toolbar=0&view=FitH`}
+                  type="application/pdf"
+                  aria-label={`Artwork of ${a.name}`}
+                  className="h-80 w-full rounded-lg border bg-muted/30"
+                >
+                  <a className="text-sm underline" href={artworkUrl} target="_blank" rel="noreferrer">Open the artwork</a>
+                </object>
+                <a className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline" href={artworkUrl} target="_blank" rel="noreferrer">
+                  <ZoomIn className="size-4" aria-hidden="true" /> Open full size
                 </a>
-              </object>
+              </div>
             ) : (
-              <img
-                src={`/api/production/wip-capture/units/${encodeURIComponent(label)}/artwork`}
-                alt={`Artwork of ${a.name}`}
-                className="max-h-72 w-full rounded-lg border bg-muted/30 object-contain p-2 sm:w-1/2"
-              />
+              <button
+                type="button"
+                onClick={() => setZoomed(true)}
+                className="group relative w-full cursor-zoom-in overflow-hidden rounded-lg border bg-muted/30 p-2 sm:w-3/5"
+                aria-label={`Artwork of ${a.name}: open full screen`}
+              >
+                <img src={artworkUrl} alt={`Artwork of ${a.name}`} className="mx-auto max-h-96 w-full object-contain" />
+                <span className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white opacity-90 group-hover:opacity-100">
+                  <ZoomIn className="size-4" aria-hidden="true" /> Click to zoom
+                </span>
+              </button>
             )
           ) : (
-            <div className="grid h-48 w-full place-items-center rounded-lg border border-dashed text-sm text-muted-foreground sm:w-1/2">
+            <div className="grid h-56 w-full place-items-center rounded-lg border border-dashed text-sm text-muted-foreground sm:w-3/5">
               No artwork for this model
             </div>
           )}
-          <dl className="grid min-w-0 flex-1 content-start gap-y-4">
+          {/* the details spread over the card's height, large enough to read from the line */}
+          <dl className="flex min-w-0 flex-1 flex-col justify-around gap-5 py-1">
             {facts.map(([k, v]) => (
               <div key={k} className="min-w-0">
-                <dt className="text-xs text-muted-foreground">{k}</dt>
-                <dd className="mt-0.5 text-base font-semibold break-words">{v || "—"}</dd>
+                <dt className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{k}</dt>
+                <dd className="mt-1 text-xl leading-snug font-bold break-words">{v || "—"}</dd>
               </div>
             ))}
           </dl>
         </div>
+        {zoomed && <ImageZoom src={artworkUrl} alt={`Artwork of ${a.name}`} onClose={() => setZoomed(false)} />}
       </SectionCard>
     );
   }
