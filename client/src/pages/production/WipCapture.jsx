@@ -848,7 +848,9 @@ function Station({ spec }) {
       setUnitTick((t) => t + 1); // a scan, a QC save or a consume can move the unit along its route
       if (r.alert) {
         beep(false);
-        notify("error", "Not accepted", r.alert);
+        // a refused scan explained (already completed here / not reached yet / not on its route, and where it is now)
+        if (r.explain) notify("error", r.explain.title, r.explain.text);
+        else notify("error", "Not accepted", r.alert);
       } else if (control === "BtnWorkStationScan")
         notify("success", "Station ready", "Scan a serial");
       else if (r.success) {

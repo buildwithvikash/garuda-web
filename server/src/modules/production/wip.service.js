@@ -5,6 +5,7 @@
 import { query, scalar, execute } from '../../db/pool.js';
 import { transaction } from '../../db/tx.js';
 import { netString, netInt, netLong, netDouble, netNum, netBool } from '../../shared/net.js';
+import { pendingText } from './wip-words.js';
 import { tableSchema } from '../forms/schema.js';
 import { insert, generateKey } from '../forms/write.js';
 import { num, lit } from '../../shared/sql.js';
@@ -356,6 +357,20 @@ export async function createBarcodeDw(psObj, nObj, sObj, pObj, wObj, printer, ct
 
 /** MaterialConfiguration(material, dw) */
 const materialConfiguration = async (material, tx) => first(await q(`select Batch,SupBatch,ManDate,GrossWeight, Serial, Expiry, ExipiryMonths, isPacket,CaptureMrp,Track,IsInspectionReq,InspectionType,[PurchaseUnit],VariantCode,[type],TrackNoType from Material where MatCode=${num(material)}`, tx));
+
+/** Where a unit is when its scan is refused with "Pending Process- <name>" (read only): this station's stage, the unit's
+ *  next pending stage, and whether this stage is already done for it, later in its route, or not in it at all.
+ *  { title, text } in plain words for the operator; null when the unit or station is not known. */
+export async function explainPending(barcodeStage, station) {
+  const ps = await q(`Select top 1 PSNo from ProcessStageLabel where BarcodeNo=${lit(barcodeStage)}`);
+  if (!ps.length || !/^\d+$/.test(str(station))) return null;
+  const psNo = num(ps[0].PSNo);
+  const [here] = await q(`Select top 1 wp.ProcessCode, pp.Name from WorkCenterProcesses wp left join ProductionProcess pp on pp.ProcessCode=wp.ProcessCode where wp.StationCode=${num(station)}`);
+  if (!here) return null;
+  const route = await q(`Select pr.ProcessCode, pr.Status, pr.SeqNo, pp.Name from ProcessRouting pr left join ProductionProcess pp on pp.ProcessCode=pr.ProcessCode where pr.PSNo=${psNo} order by pr.SeqNo`);
+  return pendingText({ code: str(here.ProcessCode), name: str(here.Name) }, route.map((r) => ({ code: str(r.ProcessCode), name: str(r.Name), status: netInt(r.Status) })));
+}
+
 
 /** ScanStageLabelNew(barcode, station, printer): the stage-label (serial) scanned at a station. Returns { code, rows }:
  *  -1 another station's stage, 30 / 40 a QC / FG-label stage (started), 10 more inputs to scan, 11 inputs done,

@@ -52,7 +52,11 @@ const RULES = [
 ];
 
 /** messages that carry a value (matched on the original text, which keeps its numbers) */
-const WITH_VALUE = [[/^\s*Quantity Can not be greater Than\s+(.+?)\s*$/i, (m) => `Only ${m[1]} can still be assigned at this stage.`]];
+const WITH_VALUE = [
+  [/^\s*Quantity Can not be greater Than\s+(.+?)\s*$/i, (m) => `Only ${m[1]} can still be assigned at this stage.`],
+  // WIP Capture: a unit scanned at a station that is not its next stage (the screen usually explains it better)
+  [/^\s*Pending Process-\s*(.+?)\s*$/i, (m) => `Not this stage: this unit is now at ${m[1]}.`],
+];
 
 /** misspellings in the original texts */
 const TYPOS = [

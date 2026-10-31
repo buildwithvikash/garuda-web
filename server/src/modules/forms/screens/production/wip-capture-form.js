@@ -7,7 +7,7 @@ import { fill } from '../../../../db/options.js';
 import { printerOnline } from '../../../production/labels.service.js';
 import { qcOpen } from '../../qc.js';
 import { guideData } from '../../../production/production.service.js';
-import { scanStageLabelNew, stageRMScanValidate, scanInputMaterialBarcode, displayInputBOMNew, historyByLabel, validateProductionBarcodeforQC, udListInProcess, displayProcessMaterial, componentHistory, isNextStageLabelPrint, saveQCChecklist, saveQCINProcess, getNextSerialNo, getNextAssetIDWRL, saveQCFinalProcess } from '../../../production/wip.service.js';
+import { explainPending, scanStageLabelNew, stageRMScanValidate, scanInputMaterialBarcode, displayInputBOMNew, historyByLabel, validateProductionBarcodeforQC, udListInProcess, displayProcessMaterial, componentHistory, isNextStageLabelPrint, saveQCChecklist, saveQCINProcess, getNextSerialNo, getNextAssetIDWRL, saveQCFinalProcess } from '../../../production/wip.service.js';
 import { reworkHistory } from '../../../quality/quality.service.js';
 import { NRE, alertMsg, errorMsg, gridDelete, guard, notInList, parseString, select, selectedText, withQC } from '../_shared.js';
 import { blankCells, deptPrinters, guideFile, guideStation } from './_shared.js';
@@ -235,6 +235,9 @@ Object.assign(PAGE_EVENTS, {
       } catch (e) {
         out.alert = exceptionAlert(e.message);
         out.set.TBJobCoard = { ...out.set.TBJobCoard, value: '' };
+        // the original's "Pending Process- <next stage>" explained in plain words beside it (where the unit is, and
+        // whether this stage is already done for it); the alert itself stays the original's
+        if (/^Pending Process-/.test(e.message)) out.explain = await explainPending(netString(v.TBJobCoard).trim(), tagOf(h, out, 'TBWorkStation')).catch(() => null);
       }
       return out;
     },
