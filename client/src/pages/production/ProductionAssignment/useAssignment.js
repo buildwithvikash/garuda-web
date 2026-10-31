@@ -100,11 +100,29 @@ export function useAssignment() {
       return true;
     } catch (e) {
       toast.error(alertText(e.message), { id: e.message, duration: 6000 });
+      // a print can stop part way (the printer went offline after some pieces): the pieces already done stay, so what
+      // is left at the stage is read again before anyone prints the rest
+      if (sent.process) {
+        try {
+          apply(await assignmentsApi.change('process', sent), sent);
+        } catch {
+          /* the error above is what the user needs to see */
+        }
+      }
       return false;
     } finally {
       setBusy(null);
     }
   }
+
+  // an order and a quantity ready and not printed yet: closing the tab asks first (after a print the quantity is cleared)
+  const unsaved = !!screen?.assignment?.order && String(screen.assignment.qty ?? '') !== '' && busy !== 'print';
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e) => e.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
 
   return { screen, loadError, errors, busy, setField, print };
 }
