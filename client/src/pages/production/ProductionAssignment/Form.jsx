@@ -30,21 +30,11 @@ function OrderProgress({ started, total, unit = '' }) {
   const u = unit ? ` ${unit}` : '';
   return (
     <div className="sm:col-span-2 lg:col-span-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-3 py-2 text-sm">
         <span className="font-medium">
           Printed {s} of {t}
           {u}
         </span>
-        {all ? (
-          <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 dark:text-emerald-300">
-            <CheckCircle2 className="size-4" aria-hidden="true" /> All printed
-          </span>
-        ) : (
-          <span className="text-muted-foreground">
-            {t - s}
-            {u} left to print
-          </span>
-        )}
       </div>
     </div>
   );
