@@ -6,6 +6,7 @@ import { query, scalar, execute } from '../../db/pool.js';
 import { transaction } from '../../db/tx.js';
 import { netString, netInt, netLong, netDouble, netNum, netBool } from '../../shared/net.js';
 import { pendingText } from './wip-words.js';
+import { CUSTOMER, GRAPHICS, labelKind, variantValue } from './cabinet-view.js';
 import { tableSchema } from '../forms/schema.js';
 import { insert, generateKey } from '../forms/write.js';
 import { num, lit } from '../../shared/sql.js';
@@ -541,12 +542,18 @@ export async function routeByLabel(label) {
  *  alias, category, model, image), the material's variant values (colour, dimension...) and the sales order's customer.
  *  Null when the label has no job card. */
 export async function cabinetByLabel(label) {
-  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo] from ProcessStageLabel psl inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
+  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo],lp.ProdcutionStage[LabelStage] from ProcessStageLabel psl left join ProductionProcess lp on lp.ProcessCode=psl.ProcessCode inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
   if (!rows.length) return null;
   const r = rows[0];
   const variants = await query(`Select vf.Name,vfv.Name[Value] from MaterialVariant mv inner join VariantFieldValue vfv on mv.ValueCode=vfv.Code inner join VariantField vf on vfv.Field=vf.FieldCode where mv.MatCode=@mat order by mv.RowID`, { mat: r.MatCode });
   const img = r.MaterialImage;
+  const named = variants.map((v) => ({ name: str(v.Name), value: str(v.Value) }));
   return {
+    // the label the unit carries: up to the assembly label (a foaming serial) the screen shows the artwork view
+    kind: labelKind(label, r.LabelStage),
+    // the graphics and customer variant fields, whatever the model names them (else the sales order's customer)
+    graphics: variantValue(named, GRAPHICS),
+    customerName: variantValue(named, CUSTOMER) || str(r.Customer),
     name: str(r.Name),
     alias: str(r.Alias),
     category: str(r.Category),
@@ -554,7 +561,7 @@ export async function cabinetByLabel(label) {
     customer: str(r.Customer),
     order: str(r.OrderNo),
     image: Buffer.isBuffer(img) && img.length ? `data:image/png;base64,${img.toString('base64')}` : typeof img === 'string' && img.startsWith('data:image/') ? img : null,
-    variants: variants.map((v) => ({ name: str(v.Name), value: str(v.Value) })),
+    variants: named,
   };
 }
 

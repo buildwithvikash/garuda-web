@@ -339,6 +339,41 @@ function Cabinet({ unit, e, line, className }) {
     ctl("DDLProdOrder")?.options?.find((o) => o.value === values.DDLProdOrder)
       ?.text;
   if (c && !c.order && order) rows.splice(rows.length - 2, 0, ["Order", order]);
+  // Up to the assembly label (the unit still carries its foaming serial): the artwork, large, with only what the
+  // operator matches it against (owner, 31 Oct 2026). Graphics and customer are the model's own variant fields.
+  if (c?.kind === "Foaming") {
+    const facts = [
+      ["Model", c.name || model],
+      ["Category", c.category],
+      ["Graphics", c.graphics],
+      ["Customer", c.customerName],
+    ];
+    return (
+      <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
+        <div className="flex flex-col gap-5 sm:flex-row">
+          {c.image ? (
+            <img
+              src={c.image}
+              alt={`Artwork of ${c.name}`}
+              className="max-h-72 w-full rounded-lg border bg-muted/30 object-contain p-2 sm:w-1/2"
+            />
+          ) : (
+            <div className="grid h-48 w-full place-items-center rounded-lg border border-dashed text-sm text-muted-foreground sm:w-1/2">
+              No artwork for this model
+            </div>
+          )}
+          <dl className="grid min-w-0 flex-1 content-start gap-y-4">
+            {facts.map(([k, v]) => (
+              <div key={k} className="min-w-0">
+                <dt className="text-xs text-muted-foreground">{k}</dt>
+                <dd className="mt-0.5 text-base font-semibold break-words">{v || "—"}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </SectionCard>
+    );
+  }
   return (
     <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
       {rows.length === 0 ? (
