@@ -49,6 +49,7 @@ import MuteButton from "@/components/shopfloor/MuteButton.jsx";
 import ImageZoom from "@/components/shopfloor/ImageZoom.jsx";
 import QuickPrinters from "@/components/shopfloor/QuickPrinters.jsx";
 import ScanBox from "@/components/shopfloor/ScanBox.jsx";
+import ScanFlashHost, { flashError } from "@/components/shopfloor/ScanFlash.jsx";
 import SectionCard from "@/components/shopfloor/SectionCard.jsx";
 import { Button } from "@/components/ui/button.jsx";
 import { Badge } from "@/components/ui/badge.jsx";
@@ -810,6 +811,11 @@ function Guide({ e }) {
 // ────────────────────────────────────────────────────────────────────────────
 /** One popup per scan result (a new result replaces the previous popup, so they never pile up). */
 function notify(kind, title, text) {
+  // a refused scan: large in the middle of the screen, without stopping the scanning (ScanFlash)
+  if (kind === "error") {
+    toast.dismiss("wip-scan");
+    return void flashError(title, text);
+  }
   const body = (
     <div>
       <p className="font-semibold">{title}</p>
@@ -939,6 +945,8 @@ function Station({ spec }) {
         </div>
       }
     >
+      {/* refused scans, large in the middle of the screen, without stopping the scanning */}
+      <ScanFlashHost />
       {/* the scan card only as wide as its boxes, the scanned unit's cabinet (its artwork) taking the rest. Frozen at
           the top of the page (owner, 31 Oct 2026): components, inspection and the rest scroll under it */}
       <div className="sticky top-0 z-20 -mx-2 -mt-2 bg-background px-2 pt-2 pb-2 sm:-mx-3 sm:-mt-3 sm:px-3 sm:pt-3">
