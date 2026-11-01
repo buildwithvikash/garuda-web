@@ -53,6 +53,7 @@ import ScanFlashHost, { flashError } from "@/components/shopfloor/ScanFlash.jsx"
 import SectionCard from "@/components/shopfloor/SectionCard.jsx";
 import { Button } from "@/components/ui/button.jsx";
 import { Badge } from "@/components/ui/badge.jsx";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog.jsx";
 import { when } from "@/utils/dates.js";
 import { loadPref } from "@/utils/prefs.js";
 
@@ -1049,24 +1050,39 @@ function Station({ spec }) {
 
       {vis("InputMaterialPanel") && <ComponentScan e={e} />}
       {vis("QCPanel") && <Inspection e={e} fg={result === 40} />}
-      {vis("InspectionCheckList") && (
-        <QCPanel
-          s={values.InspectionCheckList}
-          busy={busy}
-          onChange={(next) =>
-            e.setValues({ ...values, InspectionCheckList: next })
-          }
-          onEvent={(name, next = values.InspectionCheckList, arg, i) =>
-            fire(
-              name.replace(/^QC:/, "InspectionCheckList:"),
-              { ...values, InspectionCheckList: next },
-              arg,
-              e.controls,
-              i,
-            )
-          }
-        />
-      )}
+      {/* the checklist as a pop-up over the station (owner, 1 Nov 2026): the server opens it as soon as the serial is
+          scanned (when the stage has one); Close checklist or Esc closes it, a click outside does not */}
+      <Dialog
+        open={!!vis("InspectionCheckList")}
+        onOpenChange={(open) => !open && !busy && fire("InspectionCheckList:close", values)}
+      >
+        <DialogContent
+          showCloseButton={false}
+          onInteractOutside={(ev) => ev.preventDefault()}
+          className="w-[96vw] max-w-[96vw] gap-0 p-0 sm:max-w-[min(96vw,1400px)] [&>section]:rounded-lg [&>section]:border-0"
+        >
+          <DialogTitle className="sr-only">Checklist</DialogTitle>
+          <DialogDescription className="sr-only">Check each item of the stage, then close the checklist</DialogDescription>
+          {vis("InspectionCheckList") && values.InspectionCheckList && (
+            <QCPanel
+              s={values.InspectionCheckList}
+              busy={busy}
+              onChange={(next) =>
+                e.setValues({ ...values, InspectionCheckList: next })
+              }
+              onEvent={(name, next = values.InspectionCheckList, arg, i) =>
+                fire(
+                  name.replace(/^QC:/, "InspectionCheckList:"),
+                  { ...values, InspectionCheckList: next },
+                  arg,
+                  e.controls,
+                  i,
+                )
+              }
+            />
+          )}
+        </DialogContent>
+      </Dialog>
       {vis("DefectHistoryPanel") && (
         <Grid
           c={ctl("GVDefectHistory")}
