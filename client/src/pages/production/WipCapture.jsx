@@ -318,29 +318,19 @@ function Cabinet({ unit, label, e, line, className }) {
   const [zoomed, setZoomed] = useState(false); // the artwork full screen
   const c = unit?.cabinet;
   const [model, serial] = String(values.tbFG ?? "").split("|");
+  // only what the operator matches the unit against (owner, 1 Nov 2026): the FG material's model and category, its
+  // graphics and customer variant fields; before the cabinet answers, the model the scan gave
+  const a0 = c?.artwork ?? {};
   const rows = c
     ? [
-        ["Model", c.name || model],
-        ["Category", c.category],
-        ...c.variants.map((v) => [v.name, v.value]),
-        ["Customer", c.customer],
-        ["Order", c.order],
-        ["Line", line],
-        ["Work station", values.TBWorkStation],
+        ["Model", a0.name || c.name || model],
+        ["Category", a0.category || c.category],
+        ["Graphics", a0.graphics],
+        ["Customer", a0.customer || c.customer],
       ]
     : model
-      ? [
-          ["Model", model],
-          ["Serial", serial],
-          ["Line", line],
-          ["Work station", values.TBWorkStation],
-        ]
+      ? [["Model", model]]
       : [];
-  const order =
-    values.DDLProdOrder &&
-    ctl("DDLProdOrder")?.options?.find((o) => o.value === values.DDLProdOrder)
-      ?.text;
-  if (c && !c.order && order) rows.splice(rows.length - 2, 0, ["Order", order]);
   // The image the routing shows at this station's stage (Routing screen, "Images on WIP Capture": artwork, unit frame or
   // basket; owner, 1 Nov 2026), large, with only what the operator matches it against. Graphics and customer are the
   // model's own variant fields. A stage set to show no image: the details below, no picture.
@@ -414,19 +404,15 @@ function Cabinet({ unit, label, e, line, className }) {
           Scan a serial to see the cabinet.
         </p>
       ) : (
-        <div className="flex gap-5">
+        <div className="flex h-full gap-5">
           {/* no picture here: a stage shows an image only when its routing says so (above) */}
-          <dl className="grid min-w-0 flex-1 gap-x-6 gap-y-4 sm:grid-cols-2">
-            {rows
-              .filter(([, v]) => v)
-              .map(([k, v], i) => (
-                <div key={`${k}-${i}`} className="min-w-0">
-                  <dt className="text-xs text-muted-foreground">{k}</dt>
-                  <dd className="mt-0.5 truncate text-sm font-medium" title={v}>
-                    {v}
-                  </dd>
-                </div>
-              ))}
+          <dl className="grid min-w-0 flex-1 content-center gap-x-8 gap-y-8 py-2 sm:grid-cols-2">
+            {rows.map(([k, v]) => (
+              <div key={k} className="min-w-0">
+                <dt className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{k}</dt>
+                <dd className="mt-1 text-xl leading-snug font-bold break-words">{v || "—"}</dd>
+              </div>
+            ))}
           </dl>
         </div>
       )}
