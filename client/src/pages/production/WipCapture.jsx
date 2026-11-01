@@ -484,9 +484,11 @@ function ComponentScan({ e }) {
   const { values, busy, fire, vis } = e;
   const count = fittedCount(values.GVINMaterial);
   const ref = useRef(null);
+  // the component box keeps the cursor after every scan until all are fitted (then the page moves it to the serial)
+  const left = count.total > 0 && count.fitted < count.total;
   useEffect(() => {
-    if (!busy) ref.current?.focus();
-  }, [busy]);
+    if (!busy && left) ref.current?.focus();
+  }, [busy, left, count.fitted]);
   return (
     <SectionCard
       icon={Boxes}
@@ -883,11 +885,16 @@ function Station({ spec }) {
   const unitLabel = serialLocked ? String(values.TBJobCoard ?? "").trim() : "";
   const unit = useUnit(unitLabel, unitTick);
 
-  // the scanner always types into the box the operator needs next
+  // components still to fit at this stage: the scanner stays in the component box until the last one is fitted
+  const parts = fittedCount(values.GVINMaterial);
+  const scanningComponents = vis("InputMaterialPanel") && vis("ScanINbarcodePanel") && parts.total > 0 && parts.fitted < parts.total;
+
+  // the scanner always types into the box the operator needs next: the component box while components are left
+  // (ComponentScan keeps it there), then the serial, or the station before that
   useEffect(() => {
-    if (busy) return;
+    if (busy || scanningComponents) return;
     (stationLocked ? serialRef : stationRef).current?.focus();
-  }, [busy, stationLocked, serialLocked]);
+  }, [busy, stationLocked, serialLocked, scanningComponents]);
 
   const scan = (button) => {
     // a serial scan (not the box being cleared with Change): remember what was scanned for "Last scanned"
