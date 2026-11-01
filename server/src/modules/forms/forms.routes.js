@@ -18,11 +18,13 @@ import { specPayload } from './resource.js';
 import * as tabs from './screenSessions.js';
 import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orders.service.js';
 import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production-assignments/production-assignments.service.js';
+import { SCREEN as RM_REPLACEMENT } from '../rm-replacements/rm-replacements.service.js';
 
 /** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
  *  (Production Order: no change or cancel after create, one business unit's orders only; Production Assignment: every
- *  choice checked, one print per click) cannot be gone around. */
-const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments' };
+ *  choice checked, one print per click; RM Replacement: the job card and row looked up by the server, one replacement per
+ *  scan) cannot be gone around. */
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements' };
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();

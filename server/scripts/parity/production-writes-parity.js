@@ -2,6 +2,7 @@
 // are read and put back, then the same on the new app; rows, alerts and results compared, everything restored after.
 // Usage: node --env-file=.env scripts/parity/production-writes-parity.js <originalBinDir> [--api] [section name part...]
 import { query, execute } from '../../src/db/pool.js';
+import { replace as replaceComponent } from '../../src/modules/rm-replacements/rm-replacements.service.js';
 import { loadSettings } from '../../src/modules/settings/settings.service.js';
 import { PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
 import { SPECS, specOf, ctx, original as run } from './lib.js';
@@ -98,16 +99,19 @@ section('rm replacement', async () => {
     const [o] = original([{ id: 0, mode: 'event', key: null, viewState: {}, dataTables: tables, steps, ctx, spec: specOf(spec) }]);
     const afterO = await snap();
     await restore();
-    let vs = { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' };
-    let v = { TBBarcode: fg.Serial, GvDetails: [] };
-    for (const [id, patch] of [['Go', {}], ['btnexistScan', { TBExistingRM: comp.Serial }], ['btnNewScan', { TBNewRM: candidate }]]) {
-      v = { ...v, ...patch };
-      const r = viaApi && apiOf(spec) ? await apiEvent(spec, ctx, id, v, { viewState: vs }) : await PAGE_EVENTS[spec.file][id](v, eventHelpers(spec, ctx, v, { viewState: vs }));
-      for (const [k, p] of Object.entries(r.set ?? {})) {
-        if ('value' in p) v = { ...v, [k]: p.value };
-        if (p.rows) v = { ...v, [k]: p.rows };
+    if (viaApi) await replaceComponent({ unit: fg.Serial, existing: comp.Serial, replacement: candidate }, ctx); // the screen's own API (modules/rm-replacements)
+    else {
+      let vs = { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' };
+      let v = { TBBarcode: fg.Serial, GvDetails: [] };
+      for (const [id, patch] of [['Go', {}], ['btnexistScan', { TBExistingRM: comp.Serial }], ['btnNewScan', { TBNewRM: candidate }]]) {
+        v = { ...v, ...patch };
+        const r = await PAGE_EVENTS[spec.file][id](v, eventHelpers(spec, ctx, v, { viewState: vs }));
+        for (const [k, p] of Object.entries(r.set ?? {})) {
+          if ('value' in p) v = { ...v, [k]: p.value };
+          if (p.rows) v = { ...v, [k]: p.rows };
+        }
+        vs = r.viewState ?? vs;
       }
-      vs = r.viewState ?? vs;
     }
     const afterN = await snap();
     const problems = [];

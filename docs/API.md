@@ -255,9 +255,15 @@ Events: `go`, `btnSave`.
 
 ### Component Replacement — `/api/production/rm-replacements`
 
-Original: `View/Production/RMReplacementForm.aspx`. Fields: `tbDate`, `tbBarcode`, `gvDetails`, `tbExistingRM`, `tbNewRM`, `qc`.
+Original: `View/Production/RMReplacementForm.aspx`. Its own module (`modules/rm-replacements`), not a screen resource; the screen engine answers 410.
 
-Events: `go`, `btnexistScan`, `btnNewScan`.
+| Call | Does |
+|---|---|
+| `GET /units/:serial` | the unit and its components: `{ serial, components: [{ category, material, process, serial, replaceable }] }`; a scrapped or unknown unit is refused (400) |
+| `POST /` `{ unit, existing, replacement }` | replaces the component; `{ message, serial, components }` as it is now. Refused (400) for a serial not in the unit, a component that is not raw material, or a new serial its material's logic rejects or that is already scanned; 422 for a missing serial |
+| `GET /history?page=&start=&end=` | the components replaced in units of the user's business unit, newest first, read only |
+
+The request carries serials only: the job card and row come from the server's own lookup. `POST /` takes an `Idempotency-Key` header: the same key again gets the first answer, not a second replacement.
 
 ### Model Transfer — `/api/production/model-transfers`
 
@@ -297,7 +303,6 @@ WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and c
 
 Model To Model Transfer works by a list of FG serials (owner, 29 Oct 2026; the page no longer offers the serial range form, which stays in the screen API): `POST /api/production/model-transfers/bulk/check` with `{ serials }` (up to 500; blanks and repeats left out) groups the live barcodes (status not 99) of FG materials (Type 100) by product, `{ groups: [{ materialCode, material, materialAlias, units: [{ serial, barcodeNo }] }], refused: [{ serial, error }] }`; `POST /api/production/model-transfers/bulk` with `{ source, destination, barcodeNos, printer }` (up to 50 a request; the page sends 25) moves each unit as the range transfer does (stock row, barcode, job card, location), prints its label again (its routing stage's number of copies) and logs it in ModelToModel one serial a row, answering `[{ barcodeNo, serial, ok, printed, error? }]` (`printed` false: moved, label not printed).
 
-RM Replacement also has `GET /api/production/rm-replacements/history?page=&start=&end=`: the components replaced in units of the user's business unit, newest first, read only (replaced on, unit serial, component, process, old serial, new serial, operator; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
 
 FG Scrap also has `GET /api/production/fg-scrap/history?page=&start=&end=`: the units / items scrapped on job cards of the user's business unit, newest first, read only (scrapped on, serial, material, scrap category, last station, remark, scrapped by; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
 

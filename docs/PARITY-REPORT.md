@@ -277,3 +277,17 @@ Checked on TEST: 517 of 518 logics with lines pass the check with what they gene
 format, and no material uses it). The screen's handlers, with temporary settings put back afterwards and every save
 rolled back: each setting fills the boxes as above, and an empty, wrong or different tag is refused. Not run on the screen
 or with a printer. The labels read `VSerial` and `Serial2`; a label for a model with no tag was not printed.
+
+# Intended difference: RM Replacement on an API of its own (owner, 1 Nov 2026)
+
+A plain React screen on `/api/production/rm-replacements` (`modules/rm-replacements`, API.md); `/api/forms` answers 410 for
+it and the generic screen resource is gone. What the operator does is unchanged: the same steps, list, raw material rule
+and new serial check. Differences: the browser sends serials only, where it used to hold the chosen row's job card, row
+and process codes between scans; the raw material and scrapped checks now also run at the replacement itself, not only at
+the scan; a repeated request (Idempotency-Key) does not replace twice; a refused unit clears its box; the page's form is
+at `?view=replace`. `rm-replacement-form.js` stays for the events parity only; no route serves it.
+
+Checked on TEST against the original DLLs: `production-writes --api "rm replacement"` IDENTICAL through the new service
+(the database rows restored after); events 9/10 on the old handler, the one difference being the serial format case above.
+On TEST data the service refused an unknown unit, a scrapped unit, a serial not in the unit, a non-raw component, a wrong
+format, a used serial and the same serial.

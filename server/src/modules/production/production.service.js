@@ -119,6 +119,13 @@ export async function validateWorkStation(ws, bu) {
 
 
 /** AVProcess.RMComponetStatus */
+/** AVProcess.RMComponetDetails: the components scanned into the serial's job card */
+export async function fgComponents(serial) {
+  const rows = await dataTable("Select mc.Type[Category]  , m.Name[Material],w.Name[Process],pb.Serial, pb.PsNo,pb.RowID,pb.ProcessCode ,m.matCode  from ProcessInputBOMScan pb inner join ProductionProcess w on pb.processCode  =w.ProcessCode  inner join Material m on pb.Material=m.MatCode  left join MaterialCategoryType mc on m.Type =mc.ID where pb.PSNo=(Select DocNo from MaterialBarcode where Serial=@s)", { s: serial });
+  if (!rows.length) throw new Error('Invaild Barcode Scanned');
+  return rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x ?? ''])));
+}
+
 export const componentStatus = async (serial) => netInt(await scalar('Select Status from MaterialBarcode where Serial=@s', { s: serial }));
 
 /** AVProductionCapture.ReplaceRMScanValidate(row): a scanned component replaced by a new serial that fits its material */

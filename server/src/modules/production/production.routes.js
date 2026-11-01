@@ -1,6 +1,6 @@
-// /api/production/<name>: the shop-floor screens (WIP capture, FG scrap, RM replacement, model transfer, process guide,
-// plan upload, image display) as REST resources; the calls are in forms/resource.routes.js, the reference in
-// docs/API.md. Orders and assignments have modules of their own (production-orders/, production-assignments/).
+// /api/production/<name>: the shop-floor screens (WIP capture, FG scrap, model transfer, process guide, plan upload,
+// image display) as REST resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders,
+// assignments and RM replacements have modules of their own (production-orders/, production-assignments/, rm-replacements/).
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
 import { AppError } from '../../shared/AppError.js';
@@ -11,14 +11,13 @@ import { sessionContext } from '../auth/context.js';
 import { screensRouter } from '../forms/resource.routes.js';
 import { artworkByLabel, cabinetByLabel, routeByLabel } from './wip.service.js';
 import { KINDS } from '../masters/image-kinds.js';
-import { replacementHistory, scrapHistory } from './production.service.js';
+import { scrapHistory } from './production.service.js';
 import { checkTransfer, transferMany } from './model-transfer-bulk.js';
 
 /** API name -> screen */
 export const PRODUCTION = {
   'wip-capture': '/production/wipcaptureform',
   'fg-scrap': '/production/fgscrapform',
-  'rm-replacements': '/production/rmreplacementform',
   'model-transfers': '/production/modeltomodeltransferform',
   'process-guides': '/production/processguideform',
   'plan-uploads': '/production/prodplanupload',
@@ -62,11 +61,6 @@ export function rangeOf(q) {
   return range;
 }
 const pageOf = (q) => Math.max(0, Number(q.page) || 0);
-// RM Replacement's history (read only): the replacements done in the user's business unit, newest first
-// (?page=&start=&end=)
-router.get('/rm-replacements/history', requireAuth, authorizeScreen(PRODUCTION['rm-replacements']), async (req, res) => {
-  ok(res, await replacementHistory(req.session.businessUnit, pageOf(req.query), rangeOf(req.query)));
-});
 // FG Scrap's history (read only): the units / items scrapped in the user's business unit, newest first
 // (?page=&start=&end=)
 router.get('/fg-scrap/history', requireAuth, authorizeScreen(PRODUCTION['fg-scrap']), async (req, res) => {
