@@ -43,7 +43,7 @@ import { GuideView, Panel } from "@/components/shared/FormControls.jsx";
 import Loader from "@/components/shared/Loader.jsx";
 import Page from "@/components/shared/Page.jsx";
 import QCPanel from "@/components/shared/QCPanel.jsx";
-import ComponentChecklist from "@/components/shopfloor/ComponentChecklist.jsx";
+import ComponentChecklist, { fittedCount } from "@/components/shopfloor/ComponentChecklist.jsx";
 import Ctl from "@/components/shopfloor/Ctl.jsx";
 import MuteButton from "@/components/shopfloor/MuteButton.jsx";
 import ImageZoom from "@/components/shopfloor/ImageZoom.jsx";
@@ -482,6 +482,7 @@ function ComponentDetails({ e, className }) {
 /** result 10: the stage's components, scanned one by one (BtnINBarcode, then Consume when a quantity is asked) */
 function ComponentScan({ e }) {
   const { values, busy, fire, vis } = e;
+  const count = fittedCount(values.GVINMaterial);
   const ref = useRef(null);
   useEffect(() => {
     if (!busy) ref.current?.focus();
@@ -503,17 +504,33 @@ function ComponentScan({ e }) {
       }
     >
       <div className="space-y-4">
-        {vis("ScanINbarcodePanel") && (
-          <ScanBox
-            ref={ref}
-            label="Component barcode"
-            placeholder="Scan a component barcode"
-            value={values.TBINItemCode}
-            onChange={(v) => e.change("TBINItemCode", v)}
-            onScan={() => fire("BtnINBarcode")}
-            busy={busy}
-          />
-        )}
+        {/* the scan box, and how many of the stage's components are fitted */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+          {vis("ScanINbarcodePanel") && (
+            <div className="min-w-0 flex-1">
+              <ScanBox
+                ref={ref}
+                size="md"
+                label="Component barcode"
+                placeholder="Scan a component barcode"
+                value={values.TBINItemCode}
+                onChange={(v) => e.change("TBINItemCode", v)}
+                onScan={() => fire("BtnINBarcode")}
+                busy={busy}
+              />
+            </div>
+          )}
+          {count.total > 0 && (
+            <div className={`flex shrink-0 items-baseline gap-2 rounded-xl border px-4 py-2 ${count.fitted === count.total ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200" : "bg-muted/40"}`}>
+              <span className="text-2xl font-bold tabular">
+                {count.fitted} / {count.total}
+              </span>
+              <span className="text-sm font-medium">
+                {count.fitted === count.total ? "All fitted ✓" : `fitted · ${count.total - count.fitted} to go`}
+              </span>
+            </div>
+          )}
+        </div>
         {vis("InQtyPanel") && (
           <div className="flex flex-wrap items-end gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
             <Ctl
@@ -918,7 +935,9 @@ function Station({ spec }) {
       {/* the scan card only as wide as its boxes, the scanned unit's cabinet (its artwork) taking the rest. Frozen at
           the top of the page (owner, 31 Oct 2026): components, inspection and the rest scroll under it */}
       <div className="sticky top-0 z-20 -mx-2 -mt-2 bg-background px-2 pt-2 pb-2 sm:-mx-3 sm:-mt-3 sm:px-3 sm:pt-3">
-          <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]">
+          {/* with an image (the stage's routing shows one) the scan card stays narrow so the picture has the room;
+              without one, scan and cabinet share the row half and half (owner, 1 Nov 2026) */}
+          <div className={`grid items-stretch gap-4 ${unit?.cabinet?.artwork?.kind ? "lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]" : "lg:grid-cols-2"}`}>
           <SectionCard
             icon={ScanLine}
             title="Scan"
@@ -931,7 +950,7 @@ function Station({ spec }) {
               )
             }
           >
-            <div className="space-y-4">
+            <div className="max-w-xl space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
                 {vis("WorkStationPanel") && (
                   <div className="grid min-w-0 gap-2">
