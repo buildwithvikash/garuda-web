@@ -297,7 +297,7 @@ function useUnit(label, tick) {
     if (!label) return void setUnit(null);
     let live = true;
     api(
-      `/forms/unit?path=${encodeURIComponent(PATH)}&label=${encodeURIComponent(label)}`,
+      `/forms/unit?path=${encodeURIComponent(PATH)}&label=${encodeURIComponent(label)}&tab=${TAB}`,
     ).then(
       (d) => live && setUnit(d),
       () => live && setUnit(null),
@@ -341,12 +341,14 @@ function Cabinet({ unit, label, e, line, className }) {
     ctl("DDLProdOrder")?.options?.find((o) => o.value === values.DDLProdOrder)
       ?.text;
   if (c && !c.order && order) rows.splice(rows.length - 2, 0, ["Order", order]);
-  // Up to the assembly label (the unit still carries its foaming serial): the artwork, large, with only what the
-  // operator matches it against (owner, 31 Oct 2026). Graphics and customer are the model's own variant fields.
-  if (c?.kind === "Foaming") {
+  // The image the routing shows at this station's stage (Routing screen, "Images on WIP Capture": artwork, unit frame or
+  // basket; owner, 1 Nov 2026), large, with only what the operator matches it against. Graphics and customer are the
+  // model's own variant fields. A stage set to show no image: the details below, no picture.
+  if (c?.artwork?.kind) {
     // the FG material's (the artwork is uploaded there, not on the in-process material)
     const a = c.artwork ?? {};
-    const artworkUrl = `/api/production/wip-capture/units/${encodeURIComponent(label ?? "")}/artwork`;
+    const artworkUrl = `/api/production/wip-capture/units/${encodeURIComponent(label ?? "")}/image/${a.kind}`;
+    const kindName = { artwork: "artwork", unitframe: "unit frame image", basket: "basket image" }[a.kind] ?? "image";
     const facts = [
       ["Model", a.name || model],
       ["Category", a.category],
@@ -388,7 +390,7 @@ function Cabinet({ unit, label, e, line, className }) {
             )
           ) : (
             <div className="grid h-56 w-full place-items-center rounded-lg border border-dashed text-sm text-muted-foreground sm:w-3/5">
-              No artwork for this model
+              No {kindName} for this model
             </div>
           )}
           {/* the details spread over the card's height, large enough to read from the line */}
@@ -413,13 +415,7 @@ function Cabinet({ unit, label, e, line, className }) {
         </p>
       ) : (
         <div className="flex gap-5">
-          {c?.image && (
-            <img
-              src={c.image}
-              alt={c.name}
-              className="size-28 shrink-0 rounded-lg border bg-muted/30 object-contain p-2"
-            />
-          )}
+          {/* no picture here: a stage shows an image only when its routing says so (above) */}
           <dl className="grid min-w-0 flex-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {rows
               .filter(([, v]) => v)

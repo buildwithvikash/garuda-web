@@ -198,7 +198,10 @@ async function getUnit(req, res) {
   if (!spec) return;
   const label = netString(req.query.label).trim();
   if (label === '' || label.length > 100) return void res.status(400).json({ message: 'Scan a unit serial' });
-  const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
+  // the process of the station this tab scanned (kept on the server, step 1): which image the routing shows there
+  const kept = tabs.stateOf(req.session.userCode, '/production/wipcaptureform', tabs.tabOf(req.query.tab));
+  const process = kept?.viewState?.ProcessCode ?? null;
+  const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label, process)]);
   for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} forms/unit: ${r.reason?.message}`);
   res.json({ route: route.value ?? null, cabinet: cabinet.value ?? null });
 }

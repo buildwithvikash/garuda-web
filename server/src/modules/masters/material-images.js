@@ -7,7 +7,9 @@ import { execute, query, scalar } from '../../db/pool.js';
 import { AppError } from '../../shared/AppError.js';
 import { ok } from '../../shared/http.js';
 
-export const KINDS = ['artwork', 'unitframe', 'basket'];
+import { KINDS } from './image-kinds.js';
+
+export { KINDS };
 const MAX_BYTES = 10 * 1024 * 1024;
 
 /** the file's type from its first bytes (not the name or the browser's word for it): PNG, JPEG, WebP or PDF */

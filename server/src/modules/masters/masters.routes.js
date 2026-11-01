@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { screensRouter } from '../forms/resource.routes.js';
 import materialBarcodeReprint from './material-barcode-reprint.js';
 import materialImages from './material-images.js';
+import routingStageImages from './routing-stage-images.js';
 import serialLogicPreview from './serial-logic-preview.js';
 
 /** API name -> screen */
@@ -50,6 +51,7 @@ export const MASTERS = {
 // the material images (material-images.js) first: they are not part of the Material screen's record
 const router = Router();
 router.use(materialImages);
+router.use(routingStageImages); // the Routing screen's "Images on WIP Capture" (not part of its record either)
 router.use(serialLogicPreview); // before the screen's /:key routes ('preview' is not a key)
 router.use(materialBarcodeReprint); // before the screen's /:key routes ('reprint' is not a barcode number)
 router.use(screensRouter(MASTERS));

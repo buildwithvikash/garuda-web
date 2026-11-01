@@ -28,6 +28,7 @@ import { useMe } from '@/layouts/AppLayout.jsx';
 import { screenOf } from '@/layouts/Sidebar.jsx';
 import RecordList from './Routing/List.jsx';
 import RecordForm from './Routing/Form.jsx';
+import StageImages from './Routing/StageImages.jsx';
 
 // ────────────────────────────────────────────────────────────────────────────
 // 1. SETTINGS
@@ -251,6 +252,8 @@ export default function Routing() {
             page={{ ...page, texts }}
           />
         )}
+        {/* a saved routing: which material image WIP Capture shows at each of its stages */}
+        {spec && view.kind === 'form' && view.mode === 'edit' && view.key && <StageImages key={`img-${seq}`} routeCode={view.key} />}
     </Page>
   );
 }

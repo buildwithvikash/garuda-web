@@ -541,28 +541,40 @@ export async function routeByLabel(label) {
 /** The label's cabinet for the flow screen's details card (read only, not in the original): its FG material (name,
  *  alias, category, model, image), the material's variant values (colour, dimension...) and the sales order's customer.
  *  Null when the label has no job card. */
-/** a material's Artwork (table MaterialImages, kind 'artwork'): { hasArtwork, artworkType } without the bytes; nothing
- *  when it has none (or the table is not there yet on this database) */
-async function artworkOf(matCode) {
-  if (!matCode) return { hasArtwork: false, artworkType: null };
+/** a material's image of a kind (table MaterialImages: 'artwork' | 'unitframe' | 'basket'): { hasArtwork, artworkType }
+ *  without the bytes; nothing when it has none (or the table is not there yet on this database) */
+async function artworkOf(matCode, kind = 'artwork') {
+  if (!matCode || !kind) return { hasArtwork: false, artworkType: null };
   try {
-    const [row] = await query("select top 1 MimeType from MaterialImages where MatCode=@m and Kind='artwork'", { m: Number(matCode) });
+    const [row] = await query('select top 1 MimeType from MaterialImages where MatCode=@m and Kind=@k', { m: Number(matCode), k: kind });
     return row ? { hasArtwork: true, artworkType: str(row.MimeType) } : { hasArtwork: false, artworkType: null };
   } catch {
     return { hasArtwork: false, artworkType: null };
   }
 }
 
-/** the scanned unit's FG material Artwork with its bytes (the cabinet card shows it); null when there is none */
-export async function artworkByLabel(label) {
+/** the image a routing shows at a stage (Routing screen, "Images on WIP Capture"; table RoutingStageImages): its kind,
+ *  or null for none (also when the table is not there yet on this database) */
+export async function stageImageKind(route, process) {
+  if (!/^\d+$/.test(str(route)) || !/^\d+$/.test(str(process))) return null;
+  try {
+    const [row] = await query('select ImageKind from RoutingStageImages where RouteCode=@r and ProcessCode=@p', { r: Number(route), p: Number(process) });
+    return row ? str(row.ImageKind) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** the scanned unit's FG material image of a kind, with its bytes (the cabinet card shows it); null when there is none */
+export async function artworkByLabel(label, kind = 'artwork') {
   const [r] = await query("Select top 1 coalesce(ph.Material, po.Material) MatCode from ProcessStageLabel psl inner join ProcessOrder po on po.PSNo=psl.PSNo left join PRODHeader ph on po.PRODNo=ph.PRODNo where psl.BarcodeNo=@label", { label: netString(label) });
   if (!r) return null;
-  const [img] = await query("select Image image, MimeType mimeType from MaterialImages where MatCode=@m and Kind='artwork'", { m: Number(r.MatCode) });
+  const [img] = await query('select Image image, MimeType mimeType from MaterialImages where MatCode=@m and Kind=@k', { m: Number(r.MatCode), k: kind });
   return img ?? null;
 }
 
-export async function cabinetByLabel(label) {
-  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo],lp.ProdcutionStage[LabelStage],fg.MatCode[FgCode],fg.Name[FgName],fmc.Name[FgCategory] from ProcessStageLabel psl left join ProductionProcess lp on lp.ProcessCode=psl.ProcessCode inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join Material fg on fg.MatCode=ph.Material left join MaterialCategory fmc on fg.Category=fmc.CategoryCode left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
+export async function cabinetByLabel(label, process = null) {
+  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo],lp.ProdcutionStage[LabelStage],fg.MatCode[FgCode],fg.Name[FgName],fmc.Name[FgCategory],po.Routing[RouteCode] from ProcessStageLabel psl left join ProductionProcess lp on lp.ProcessCode=psl.ProcessCode inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join Material fg on fg.MatCode=ph.Material left join MaterialCategory fmc on fg.Category=fmc.CategoryCode left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
   if (!rows.length) return null;
   const r = rows[0];
   const variantsOf = async (mat) =>
@@ -571,6 +583,7 @@ export async function cabinetByLabel(label) {
   // the FG material (the production order's): its artwork and its own variant fields; the job card's material is an
   // in-process one at the foaming stages, with no artwork uploaded (owner, 31 Oct 2026)
   const fgNamed = r.FgCode && String(r.FgCode) !== String(r.MatCode) ? await variantsOf(r.FgCode) : named;
+  const imageKind = await stageImageKind(r.RouteCode, process);
   const pic = (img) => (Buffer.isBuffer(img) && img.length ? `data:image/png;base64,${img.toString('base64')}` : typeof img === 'string' && img.startsWith('data:image/') ? img : null);
   const img = r.MaterialImage;
   return {
@@ -579,9 +592,11 @@ export async function cabinetByLabel(label) {
     // the artwork view: the FG material's image, model, category, and its graphics / customer variant fields whatever
     // the model names them (else the job card material's, else the sales order's customer)
     artwork: {
-      // the FG material's Artwork (Material screen, "Artwork & Packing Images"): served by
-      // /api/production/wip-capture/units/:label/artwork; not its MaterialImage (the "Image" section)
-      ...(await artworkOf(r.FgCode || r.MatCode)),
+      // the image the routing shows at this station's stage (owner, 1 Nov 2026: set on the Routing screen, one per
+      // stage, none unless set): the FG material's image of that kind (Material screen, "Artwork & Packing Images"),
+      // served by /api/production/wip-capture/units/:label/image/:kind
+      kind: imageKind,
+      ...(imageKind ? await artworkOf(r.FgCode || r.MatCode, imageKind) : { hasArtwork: false, artworkType: null }),
       name: str(r.FgName) || str(r.Name),
       category: str(r.FgCategory) || str(r.Category),
       graphics: variantValue(fgNamed, GRAPHICS) || variantValue(named, GRAPHICS),
