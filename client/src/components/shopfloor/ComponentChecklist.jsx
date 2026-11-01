@@ -21,58 +21,55 @@ export const fittedCount = (rows) => {
   return { fitted: items.filter((r) => r.ok).length, total: items.length };
 };
 
-/** The stage's components as cards: fitted ones green with their serial, the next one to scan marked, the rest waiting.
- *  Each shows its type, its name, the alternatives accepted for it and the quantity. */
+/** The stage's components as compact rows (two columns on wide screens: 8 or 9 components stay short): each with its
+ *  status, type, name (the alternatives accepted on a second line), quantity and, once fitted, its serial. The next
+ *  one to scan is marked. */
 export default function ComponentChecklist({ rows = [] }) {
   const items = componentsOf(rows);
   if (!items.length) return <p className="text-sm text-muted-foreground">No components to scan at this stage.</p>;
   const next = items.findIndex((r) => !r.ok); // the first one still to fit
   return (
-    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <ul className="grid gap-2 xl:grid-cols-2">
       {items.map((r, i) => {
         const isNext = i === next;
         return (
           <li
             key={r.RowID ?? i}
             className={cn(
-              "flex min-w-0 flex-col gap-2 rounded-xl border p-3.5 transition-colors",
-              r.ok && "border-emerald-300 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/20",
-              isNext && "border-primary bg-primary/5 ring-2 ring-primary/20",
-              !r.ok && !isNext && "bg-card",
+              "flex min-w-0 items-center gap-3 rounded-lg border border-l-4 px-3 py-2",
+              r.ok && "border-emerald-200 border-l-emerald-500 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20",
+              isNext && "border-primary/40 border-l-primary bg-primary/5",
+              !r.ok && !isNext && "border-l-border bg-card",
             )}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                {r.Type || "Component"}
-              </span>
-              <span className={cn("shrink-0 text-sm font-bold tabular", r.ok ? "text-emerald-700 dark:text-emerald-300" : "text-foreground/80")}>
-                {r.got} / {r.need} {r.Unit}
-              </span>
-            </div>
-            <div className="flex items-start gap-2">
-              {r.ok ? (
-                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Fitted" />
-              ) : isNext ? (
-                <ScanLine className="mt-0.5 size-5 shrink-0 text-primary" aria-label="Scan next" />
-              ) : (
-                <Circle className="mt-0.5 size-5 shrink-0 text-muted-foreground/40" aria-label="Waiting" />
-              )}
-              <p className={cn("min-w-0 text-[15px] leading-snug font-semibold break-words", r.ok && "text-emerald-800 dark:text-emerald-200")}>{r.Material}</p>
-            </div>
-            {r.alts.length > 0 && (
-              <p className="line-clamp-2 text-xs text-muted-foreground" title={r.alts.join(", ")}>
-                Also accepted: {r.alts.join(", ")}
-              </p>
+            {r.ok ? (
+              <CheckCircle2 className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Fitted" />
+            ) : isNext ? (
+              <ScanLine className="size-5 shrink-0 text-primary" aria-label="Scan next" />
+            ) : (
+              <Circle className="size-5 shrink-0 text-muted-foreground/40" aria-label="Waiting" />
             )}
-            <div className="mt-auto pt-1">
-              {r.serials.length > 0 ? (
-                <p className="font-mono text-xs break-all text-emerald-800 dark:text-emerald-200">{r.serials.join(", ")}</p>
-              ) : isNext ? (
-                <span className="inline-flex rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-semibold text-primary-foreground">Scan next</span>
-              ) : (
-                <span className="text-xs text-muted-foreground">Waiting</span>
-              )}
+            <span className="hidden w-24 shrink-0 truncate rounded bg-muted px-1.5 py-0.5 text-center text-[10px] font-semibold tracking-wide text-muted-foreground uppercase sm:inline-block" title={r.Type}>
+              {r.Type || "Part"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className={cn("truncate text-sm font-semibold", r.ok && "text-emerald-800 dark:text-emerald-200")} title={r.Material}>
+                {r.Material}
+              </p>
+              {r.ok && r.serials.length > 0 ? (
+                <p className="truncate font-mono text-xs text-emerald-800 dark:text-emerald-200" title={r.serials.join(", ")}>
+                  {r.serials.join(", ")}
+                </p>
+              ) : r.alts.length > 0 ? (
+                <p className="truncate text-xs text-muted-foreground" title={r.alts.join(", ")}>
+                  or {r.alts.join(", ")}
+                </p>
+              ) : null}
             </div>
+            {isNext && <span className="hidden shrink-0 rounded-full bg-primary px-2 py-0.5 text-[11px] font-semibold text-primary-foreground md:inline">Scan next</span>}
+            <span className={cn("shrink-0 text-sm font-bold tabular", r.ok ? "text-emerald-700 dark:text-emerald-300" : "text-foreground/80")}>
+              {r.got}/{r.need} {r.Unit}
+            </span>
           </li>
         );
       })}
