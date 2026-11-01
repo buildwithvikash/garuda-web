@@ -510,7 +510,7 @@ function ComponentScan({ e }) {
             <div className="min-w-0 flex-1">
               <ScanBox
                 ref={ref}
-                size="md"
+                size="lg"
                 label="Component barcode"
                 placeholder="Scan a component barcode"
                 value={values.TBINItemCode}
@@ -521,8 +521,8 @@ function ComponentScan({ e }) {
             </div>
           )}
           {count.total > 0 && (
-            <div className={`flex shrink-0 items-baseline gap-2 rounded-xl border px-4 py-2 ${count.fitted === count.total ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200" : "bg-muted/40"}`}>
-              <span className="text-2xl font-bold tabular">
+            <div className={`flex h-16 shrink-0 items-center gap-2 rounded-xl border px-5 ${count.fitted === count.total ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200" : "bg-muted/40"}`}>
+              <span className="text-3xl font-bold tabular">
                 {count.fitted} / {count.total}
               </span>
               <span className="text-sm font-medium">
