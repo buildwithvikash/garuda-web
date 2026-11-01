@@ -42,7 +42,7 @@ import Grid from "@/components/shared/DataGrid.jsx";
 import { GuideView, Panel } from "@/components/shared/FormControls.jsx";
 import Loader from "@/components/shared/Loader.jsx";
 import Page from "@/components/shared/Page.jsx";
-import QCPanel from "@/components/shared/QCPanel.jsx";
+import ChecklistTable from "@/components/shopfloor/ChecklistTable.jsx";
 import ComponentChecklist, { fittedCount } from "@/components/shopfloor/ComponentChecklist.jsx";
 import Ctl from "@/components/shopfloor/Ctl.jsx";
 import MuteButton from "@/components/shopfloor/MuteButton.jsx";
@@ -1064,7 +1064,7 @@ function Station({ spec }) {
           <DialogTitle className="sr-only">Checklist</DialogTitle>
           <DialogDescription className="sr-only">Check each item of the stage, then close the checklist</DialogDescription>
           {vis("InspectionCheckList") && values.InspectionCheckList && (
-            <QCPanel
+            <ChecklistTable
               s={values.InspectionCheckList}
               busy={busy}
               onChange={(next) =>

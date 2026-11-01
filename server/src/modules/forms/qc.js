@@ -258,6 +258,20 @@ export const QC_EVENTS = {
       return { alert: alert ?? exceptionAlert(e.message) };
     }
   },
+  // not in the original (WIP Capture's checklist table, owner 1 Nov 2026): a row clicked shows that item, without the
+  // original row select's first-click error
+  goto: async (s, key, index) => {
+    const dt = s.rows ?? (() => { throw NRE(); })();
+    const i = netInt(index);
+    if (!dt[i]) return {};
+    await display(s, dt[i]);
+    s.index = i;
+    s.sel = i;
+    s.f.BtnPrevious = i === 0 ? { enabled: false, text: ' <<  ' } : { enabled: true, text: `${i} <<  ` };
+    s.f.BtnNext = dt.length === i + 1 ? { enabled: false, text: '  >> ' } : { enabled: true, text: `  >> ${dt.length - (i + 1)}` };
+    makeUp(dt, s);
+    return {};
+  },
   // GVDetails_RowCommand Fail / Pass on a yes/no item
   Fail: async (s, key, index) => rowCommand(s, index, '0'),
   Pass: async (s, key, index) => rowCommand(s, index, '1'),
