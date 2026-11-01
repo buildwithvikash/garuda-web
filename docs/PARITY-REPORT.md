@@ -313,3 +313,21 @@ Checked on TEST against the original DLLs: `production-writes --api "fg scrap"` 
 (barcodes, scans and FGScrap rows, restored after), its only difference being the original's error; events 6/6 on the old
 handler. On TEST data the service refused an unknown unit, a scrapped unit, a repeat scrap and a category not in the list.
 Not run on the screen.
+
+# Intended difference: Model To Model Transfer on an API of its own, each unit in one transaction (owner, 1 Nov 2026)
+
+`modules/model-transfers` at `/api/production/model-transfers` (API.md); `/api/forms` answers 410 for the screen and the
+generic screen resource is gone, so **the original's serial range transfer can no longer be run**, as the page stopped
+offering it on 29 Oct. `model-to-model-transfer-form.js` and `modelToModelTransfer` stay for the parity scripts only.
+
+Each unit's move (stock row, barcode, job card, location) and its ModelToModel row are now one transaction, where the
+original's statements each stood alone and a failure partway left stock wrong. The unit is locked and checked again inside
+it, so a second request finds it already moved. The label still prints after the commit: a printer failure reports
+"moved, label not printed". A repeated request (Idempotency-Key) gets the first answer. The list of materials and printers
+no longer comes from the screen's spec. The statements themselves are unchanged, including that the stock step always
+takes from ReleasedQty, whatever the unit's QC status (not addressed).
+
+Checked on TEST, every transaction rolled back and printing stubbed: a real unit's move changed the barcode, job card, both
+stock rows and the log inside the transaction and nothing after it; a failure forced at its end also left nothing changed,
+and the next unit in the request was still reported. Events 10/10 on the old handler. Not run: a committed transfer, a real
+label, the screen.

@@ -274,9 +274,14 @@ The request carries serials only: the job card and row come from the server's ow
 
 ### Model Transfer — `/api/production/model-transfers`
 
-Original: `View/Production/ModelToModelTransferForm.aspx`. Fields: `tbDate`, `ddlSourceMaterial`, `ddlDestiMaterial`, `tbStart`, `tbEnd`, `gvDetails`, `ddlPrinter`, `gvPrint`, `qc`.
+Original: `View/Production/ModelToModelTransferForm.aspx`. Its own module (`modules/model-transfers`), not a screen resource; the screen engine answers 410.
 
-Events: `ddlSourceMaterial`, `btnShow`, `btnPrint`.
+| Call | Does |
+|---|---|
+| `GET /options` | what the screen chooses from: `{ materials: [{ value, label }], printers: [{ value, label }] }` |
+| `POST /check` `{ serials }` | up to 500 serials (blanks and repeats left out) checked and grouped by product: `{ groups: [{ materialCode, material, materialAlias, units: [{ serial, barcodeNo }] }], refused: [{ serial, error }] }` |
+| `POST /` `{ source, destination, barcodeNos, printer }` | up to 50 units of one product moved, each in its own transaction, then its label printed again: `[{ barcodeNo, serial, ok, printed, error? }]`. A unit that fails is reported and the rest go on; `printed: false` means moved, label not printed. Takes an `Idempotency-Key` header |
+| `GET /history?page=&column=&op=&value=` | the transfers so far, read only; `GET /history/columns` the columns it can be filtered on, `GET /history/values/:column` a column's values |
 
 ### Process Guide — `/api/production/process-guides`
 
@@ -308,7 +313,6 @@ Serial Generation Logic also has `POST /api/masters/serial-logics/preview` (owne
 
 WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and cabinet details of the scanned unit (`{ route, cabinet }`, each null when its lookup fails), and `GET /api/production/wip-capture/units/:label/image/:kind` (`artwork` | `unitframe` | `basket`): the unit's FG material image of that kind. Which kind a stage shows is set per routing stage: `GET` / `PUT /api/masters/routings/:route/stage-images` (`{ stages: [{ processCode, imageKind | null }] }`, table `RoutingStageImages`, migration `server/db/migrations/2026-11-routing-stage-images.sql`).
 
-Model To Model Transfer works by a list of FG serials (owner, 29 Oct 2026; the page no longer offers the serial range form, which stays in the screen API): `POST /api/production/model-transfers/bulk/check` with `{ serials }` (up to 500; blanks and repeats left out) groups the live barcodes (status not 99) of FG materials (Type 100) by product, `{ groups: [{ materialCode, material, materialAlias, units: [{ serial, barcodeNo }] }], refused: [{ serial, error }] }`; `POST /api/production/model-transfers/bulk` with `{ source, destination, barcodeNos, printer }` (up to 50 a request; the page sends 25) moves each unit as the range transfer does (stock row, barcode, job card, location), prints its label again (its routing stage's number of copies) and logs it in ModelToModel one serial a row, answering `[{ barcodeNo, serial, ok, printed, error? }]` (`printed` false: moved, label not printed).
 
 
 

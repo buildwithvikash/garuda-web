@@ -208,20 +208,20 @@ export function listShape(rows, names, total, from) {
 
 /** AVMM.UpdateLocation(location, barcode, StockAdd: true, dw): the barcode's quantity into the location's stock row,
  *  the barcode active there. false when the barcode does not exist. */
-export async function updateLocationAdd(locationCode, barcode) {
-  const d = (await query(`Select * from MaterialBarcode where BarcodeNo = ${num(barcode)}`))[0];
+export async function updateLocationAdd(locationCode, barcode, tx) {
+  const d = (await query(`Select * from MaterialBarcode where BarcodeNo = ${num(barcode)}`, {}, tx))[0];
   if (!d) return false;
   const [m, batch, cArea, qty, uom, st] = [netInt(d.Material), netLong(d.Batch), netInt(d.Area), netDouble(d.CurrentQty), netInt(d.Uom), netInt(d.QCStatus)];
   const [hold, release, rejected] = [st === 11 ? qty : 0, st === 12 ? qty : 0, st === 13 ? qty : 0];
   const loc = num(locationCode);
-  const area = netLong(loc) <= 0 ? netLong(d.Area) : netLong(await scalar(`Select Area from StorageArea where StorageCode=${loc}`));
-  if (netDouble(await scalar(`select Qty from MaterialStock where Material=${m} and StorageCode = ${loc} and Batch=${batch} and Area=${cArea}`)) > 0) {
-    await execute(`Update MaterialStock set Qty=qty+${netNum(qty)},HoldQty= HoldQty+${netNum(hold)},ReleasedQty=ReleasedQty+${netNum(release)} , RejectedQty=RejectedQty+${netNum(rejected)} where Material=${m}and StorageCode = ${loc} and Batch=${batch} and Area=${cArea}`);
+  const area = netLong(loc) <= 0 ? netLong(d.Area) : netLong(await scalar(`Select Area from StorageArea where StorageCode=${loc}`, {}, tx));
+  if (netDouble(await scalar(`select Qty from MaterialStock where Material=${m} and StorageCode = ${loc} and Batch=${batch} and Area=${cArea}`, {}, tx)) > 0) {
+    await execute(`Update MaterialStock set Qty=qty+${netNum(qty)},HoldQty= HoldQty+${netNum(hold)},ReleasedQty=ReleasedQty+${netNum(release)} , RejectedQty=RejectedQty+${netNum(rejected)} where Material=${m}and StorageCode = ${loc} and Batch=${batch} and Area=${cArea}`, {}, tx);
   } else {
-    await execute(`insert into MaterialStock (StorageCode,Material,Batch,Qty,HoldQty,ReleasedQty,RejectedQty,Uom,Area,Department,BusinessUnit) values(${loc},${m},${batch},${netNum(qty)},${netNum(hold)},${netNum(release)},${netNum(rejected)},${uom},${area}, ${netInt(d.Department)},${netInt(d.BusinessUnit)})`);
+    await execute(`insert into MaterialStock (StorageCode,Material,Batch,Qty,HoldQty,ReleasedQty,RejectedQty,Uom,Area,Department,BusinessUnit) values(${loc},${m},${batch},${netNum(qty)},${netNum(hold)},${netNum(release)},${netNum(rejected)},${uom},${area}, ${netInt(d.Department)},${netInt(d.BusinessUnit)})`, {}, tx);
   }
-  if (netLong(loc) > 0) await execute(`Update MaterialBarcode set Status=1,  StorageCode=${loc},Area=${area} where BarcodeNo = ${num(barcode)}`);
-  else await execute(`Update MaterialBarcode set Status=1,  StorageCode=${loc} where BarcodeNo = ${num(barcode)}`);
+  if (netLong(loc) > 0) await execute(`Update MaterialBarcode set Status=1,  StorageCode=${loc},Area=${area} where BarcodeNo = ${num(barcode)}`, {}, tx);
+  else await execute(`Update MaterialBarcode set Status=1,  StorageCode=${loc} where BarcodeNo = ${num(barcode)}`, {}, tx);
   return true;
 }
 
@@ -240,12 +240,12 @@ export async function showModelDetails(srcMat, startSerial, endSerial) {
 }
 
 /** one barcode (its MaterialBarcode row) moved to the destination material, as ModelToModelTransferWRL does: its stock
- *  row, the barcode, its job card, then its location (no transaction: each statement stands, as there) */
-export async function moveBarcode(d, des) {
-  await execute(`Update MaterialStock set Qty=qty-${num(d.CurrentQty)},ReleasedQty=ReleasedQty-${num(d.CurrentQty)} where Material=${num(d.Material)}  and  StorageCode=${num(d.StorageCode)}  and Batch=${num(d.Batch)}`);
-  await execute(`Update MaterialBarcode set Material=${num(des)} where BarcodeNo=${num(d.BarcodeNo)}`);
-  await execute(`Update ProcessOrder set Material=${num(des)} where PSNo=${num(d.DocNo)}`);
-  await updateLocationAdd(str(d.StorageCode), str(d.BarcodeNo));
+ *  row, the barcode, its job card, then its location. tx: the caller's transaction (none: each statement stands, as there) */
+export async function moveBarcode(d, des, tx) {
+  await execute(`Update MaterialStock set Qty=qty-${num(d.CurrentQty)},ReleasedQty=ReleasedQty-${num(d.CurrentQty)} where Material=${num(d.Material)}  and  StorageCode=${num(d.StorageCode)}  and Batch=${num(d.Batch)}`, {}, tx);
+  await execute(`Update MaterialBarcode set Material=${num(des)} where BarcodeNo=${num(d.BarcodeNo)}`, {}, tx);
+  await execute(`Update ProcessOrder set Material=${num(des)} where PSNo=${num(d.DocNo)}`, {}, tx);
+  await updateLocationAdd(str(d.StorageCode), str(d.BarcodeNo), tx);
 }
 
 /** a moved barcode's label printed again: its routing stage's number of copies (at least once). bp: the printer row */

@@ -1,17 +1,34 @@
-// Model To Model Transfer by a list of FG serials (owner, 29 Oct 2026), beside the original's serial range: the
-// serials are checked and grouped by their product (source material), each group gets its destination, then each unit
-// is moved and its label printed again exactly as the range transfer does it (production.service.js moveBarcode,
-// printMoved), and logged in ModelToModel one serial a row (StartSerial = EndSerial = the FG serial, Qty 1).
+// Model To Model Transfer by a list of FG serials (owner, 29 Oct 2026): the serials are checked and grouped by their
+// product (source material), each group gets its destination, then each unit is moved with the original's statements
+// (production.service.js moveBarcode), its label printed again (printMoved), and logged in ModelToModel one serial a
+// row (StartSerial = EndSerial = the FG serial, Qty 1). Each unit's move and log are one transaction (owner, 1 Nov 2026).
 // Units: live barcodes (Status != 99) of an FG material (Type 100: the screen's source and destination list).
 import { execute, query } from '../../db/pool.js';
+import { transaction } from '../../db/tx.js';
 import { AppError } from '../../shared/AppError.js';
 import { netInt, netString } from '../../shared/net.js';
-import { printerDetail, printerOnline } from './labels.service.js';
-import { moveBarcode, printMoved } from './production.service.js';
+import { distinctValues, listPage, operatorsFor, OPERATOR_TEXT, searchColumns } from '../forms/lists.js';
+import { FORMS } from '../forms/specs.js';
+import { printerDetail, printerOnline } from '../production/labels.service.js';
+import { moveBarcode, printMoved } from '../production/production.service.js';
 
+export const SCREEN = '/production/modeltomodeltransferform';
 export const MAX_CHECK = 500;
 export const MAX_MOVE = 50;
 const FG_TYPE = 100;
+
+const option = (rows, value, label) => rows.map((r) => ({ value: netString(r[value]), label: netString(r[label]) }));
+
+/** what the screen chooses from: the FG materials and the printers */
+export async function options() {
+  const [materials, printers] = await Promise.all([query(`Select MatCode, Name from Material Where Type=${FG_TYPE} order by Name`), query('Select ROWID, Name from BarcodePrinter')]);
+  return { materials: option(materials, 'MatCode', 'Name'), printers: option(printers, 'ROWID', 'Name') };
+}
+
+/** the transfers so far (ModelToModel), read only: a page, optionally filtered on one column */
+export const history = (ctx, page, search) => listPage(FORMS[SCREEN], ctx, page, search);
+export const historyColumns = async (ctx) => (await searchColumns(FORMS[SCREEN], ctx)).map((c) => ({ name: c.name, operators: operatorsFor(c.type).map((o) => [o, OPERATOR_TEXT[o]]) }));
+export const historyValues = async (ctx, column) => (await distinctValues(FORMS[SCREEN], ctx, column)).map((v) => netString(v));
 
 /** each serial's barcode row (live or not), in list order: one query (OPENJSON; Serial is unique in MaterialBarcode) */
 async function rowsOf(serials) {
@@ -56,6 +73,7 @@ export async function checkTransfer(serials) {
  *  on. [{ barcodeNo, serial, ok, printed, error? }]: printed false when the unit moved but its label failed (reprint it
  *  on Material Barcode). */
 export async function transferMany({ source, destination, barcodeNos, printer }, ctx) {
+  const lost = (status) => (netInt(status) === 99 ? 'This unit is scrapped (status 99).' : 'This unit is no longer of the source material.');
   const [src, des] = [netString(source).trim(), netString(destination).trim()];
   if (!/^\d{1,18}$/.test(src) || !/^\d{1,18}$/.test(des)) throw AppError.badRequest('Choose the source and the destination material.');
   if (src === des) throw AppError.badRequest('The destination is the same material as the source.');
@@ -75,12 +93,17 @@ export async function transferMany({ source, destination, barcodeNos, printer },
   for (const b of list) {
     const d = byNo.get(b);
     if (!d || netString(d.Material) !== src || netInt(d.Status) === 99) {
-      out.push({ barcodeNo: b, serial: d?.Serial ?? null, ok: false, printed: false, error: !d ? 'No such barcode.' : netInt(d.Status) === 99 ? 'This unit is scrapped (status 99).' : 'This unit is no longer of the source material.' });
+      out.push({ barcodeNo: b, serial: d?.Serial ?? null, ok: false, printed: false, error: !d ? 'No such barcode.' : lost(d.Status) });
       continue;
     }
     try {
-      await moveBarcode(d, des);
-      await execute('Insert into ModelToModel(SrcMaterial,DestMaterial,StartSerial,EndSerial,qty,UserCode) Values(@s,@d,@n,@n,1,@u)', { s: src, d: des, n: netString(d.Serial), u: netInt(ctx.userCode) });
+      await transaction(async (tx) => {
+        // locked and checked again: a second request for this unit waits here, and finds it already moved
+        const [now] = await query('select Material, Status from MaterialBarcode with (updlock, rowlock) where BarcodeNo=@b', { b }, tx);
+        if (netString(now?.Material) !== src || netInt(now?.Status) === 99) throw new Error(lost(now?.Status));
+        await moveBarcode(d, des, tx);
+        await execute('Insert into ModelToModel(SrcMaterial,DestMaterial,StartSerial,EndSerial,qty,UserCode) Values(@s,@d,@n,@n,1,@u)', { s: src, d: des, n: netString(d.Serial), u: netInt(ctx.userCode) }, tx);
+      });
     } catch (e) {
       out.push({ barcodeNo: b, serial: d.Serial, ok: false, printed: false, error: e.message });
       continue;

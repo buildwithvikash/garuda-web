@@ -11,6 +11,7 @@ import productionAssignmentsRoutes from './modules/production-assignments/produc
 import productionOrdersRoutes from './modules/production-orders/production-orders.routes.js';
 import rmReplacementsRoutes from './modules/rm-replacements/rm-replacements.routes.js';
 import fgScrapsRoutes from './modules/fg-scraps/fg-scraps.routes.js';
+import modelTransfersRoutes from './modules/model-transfers/model-transfers.routes.js';
 import mastersRoutes from './modules/masters/masters.routes.js';
 import qualityRoutes from './modules/quality/quality.routes.js';
 import productionRoutes, { PRODUCTION } from './modules/production/production.routes.js';
@@ -31,9 +32,10 @@ app.use('/api/production/orders', productionOrdersRoutes);
 app.use('/api/production/assignments', productionAssignmentsRoutes);
 app.use('/api/production/rm-replacements', rmReplacementsRoutes);
 app.use('/api/production/fg-scrap', fgScrapsRoutes);
+app.use('/api/production/model-transfers', modelTransfersRoutes);
 app.use('/api/masters', mastersRoutes);
 app.use('/api/quality', qualityRoutes);
-app.use('/api/production', productionRoutes); // the shop-floor screens, after orders / assignments / RM replacements / FG scrap
+app.use('/api/production', productionRoutes); // the shop-floor screens, after the screens with modules of their own
 app.use('/api', notFoundHandler);
 
 // ~/GuideFiles/… as on the original site

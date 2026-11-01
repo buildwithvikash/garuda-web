@@ -20,12 +20,14 @@ import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orde
 import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production-assignments/production-assignments.service.js';
 import { SCREEN as RM_REPLACEMENT } from '../rm-replacements/rm-replacements.service.js';
 import { SCREEN as FG_SCRAP } from '../fg-scraps/fg-scraps.service.js';
+import { SCREEN as MODEL_TRANSFER } from '../model-transfers/model-transfers.service.js';
 
 /** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
  *  (Production Order: no change or cancel after create, one business unit's orders only; Production Assignment: every
  *  choice checked, one print per click; RM Replacement: the job card and row looked up by the server, one replacement per
- *  scan; FG Scrap: all in one transaction, one scrap per click) cannot be gone around. */
-const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap' };
+ *  scan; FG Scrap: all in one transaction, one scrap per click; Model Transfer: serials checked, each unit in one transaction)
+ *  cannot be gone around. */
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap', [MODEL_TRANSFER]: '/api/production/model-transfers' };
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();

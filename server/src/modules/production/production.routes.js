@@ -1,22 +1,20 @@
-// /api/production/<name>: the shop-floor screens (WIP capture, model transfer, process guide, plan upload, image display)
-// as REST resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders, assignments, RM
-// replacements and FG scrap have modules of their own (production-orders/, production-assignments/, rm-replacements/, fg-scraps/).
+// /api/production/<name>: the shop-floor screens (WIP capture, process guide, plan upload, image display) as REST
+// resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders, assignments, RM replacements,
+// FG scrap and model transfers have modules of their own (production-orders/, production-assignments/, rm-replacements/,
+// fg-scraps/, model-transfers/).
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
 import { AppError } from '../../shared/AppError.js';
 import { ok } from '../../shared/http.js';
 import { netString } from '../../shared/net.js';
 import { log } from '../../config/logger.js';
-import { sessionContext } from '../auth/context.js';
 import { screensRouter } from '../forms/resource.routes.js';
 import { artworkByLabel, cabinetByLabel, routeByLabel } from './wip.service.js';
 import { KINDS } from '../masters/image-kinds.js';
-import { checkTransfer, transferMany } from './model-transfer-bulk.js';
 
 /** API name -> screen */
 export const PRODUCTION = {
   'wip-capture': '/production/wipcaptureform',
-  'model-transfers': '/production/modeltomodeltransferform',
   'process-guides': '/production/processguideform',
   'plan-uploads': '/production/prodplanupload',
   'image-display': '/production/wrlimagedisply',
@@ -58,14 +56,6 @@ export function rangeOf(q) {
   if (range.startTime && range.endTime && range.startTime > range.endTime) throw AppError.badRequest('The start time is after the end time');
   return range;
 }
-// Model To Model Transfer by a list of FG serials (model-transfer-bulk.js): { serials } checked and grouped by product,
-// then { source, destination, barcodeNos, printer } moved MAX_MOVE at a time
-router.post('/model-transfers/bulk/check', requireAuth, authorizeScreen(PRODUCTION['model-transfers']), async (req, res) => {
-  ok(res, await checkTransfer(req.body?.serials));
-});
-router.post('/model-transfers/bulk', requireAuth, authorizeScreen(PRODUCTION['model-transfers']), async (req, res) => {
-  ok(res, await transferMany(req.body ?? {}, sessionContext(req)));
-});
 router.use(screensRouter(PRODUCTION));
 
 export default router;
