@@ -42,7 +42,7 @@ const layout = {
   subtitle: 'How a serial number is built, part by part',
   header: ['ddlStatus'],
   sections: [
-    { title: 'Logic', icon: ClipboardList, tone: 'blue', width: 5, cols: 2, ids: ['PrimaryKey', 'TextBox3', 'Alias', 'DdlType', 'TextBox1'] },
+    { title: 'Logic', icon: ClipboardList, tone: 'blue', width: 5, cols: 2, ids: ['PrimaryKey', 'TextBox3', 'Alias', 'DdlType', 'TextBox1', 'DDLUseFor'] },
     { title: 'Serial Preview', subtitle: 'What this logic makes', icon: Eye, tone: 'emerald', width: 5, render: ({ values }) => <SerialPreview values={values} /> },
     { title: 'Serial Parts', subtitle: 'In sequence order; add a part in the first row, ✏ changes one', icon: ListOrdered, tone: 'violet', ids: ['GVTransData'] },
   ],
@@ -76,6 +76,7 @@ const texts = {
     Alias: { label: 'Alias', hidden: false }, // TextBox · SerialGenerationLogicHeader.Alias
     DdlType: { label: 'Type', hidden: false }, // DropDownList · SerialGenerationLogicHeader.Type
     TextBox1: { label: 'Barcode Length', hidden: false }, // TextBox · SerialGenerationLogicHeader.SerialLength
+    DDLUseFor: { label: 'Use for', hidden: false }, // DropDownList · SerialGenerationLogicHeader.UseFor
     DdlName: { label: 'Sequence Field', hidden: true }, // DropDownList · in the table's cells
     TbDescription: { label: 'Field Desc', hidden: true }, // TextBox · in the table's cells
     tbSeqNo: { label: 'Sequence No', hidden: true }, // TextBox · in the table's cells

@@ -135,7 +135,7 @@ Events: `isInspectionReq`.
 
 ### Material — `/api/masters/materials`
 
-Original: `View/MaterialSetup/MaterialForm.aspx`. Fields: `matCode`, `status`, `type`, `category`, `model`, `ledger`, `name`, `altName`, `alias`, `baseUom`, `hsnCode`, `barcode`, `tagCode`, `sRetailRate`, `batch`, `supBatch`, `manDate`, `expiry`, `exipiryMonths`, `serial`, `assetTagType`, `track`, `trackNoType`, `isPacket`, `grossWeight`, `alterUOM`, `convVal`, `classification`, `isFIFO`, `fifoAge`, `reorderLevel`, `reorderQty`, `depreciationMethod`, `isInspectionReq`, `inspectionType`, `inspectionCheckList`, `retestIn`, `certificateControl`, `materialImage`, `purchaseTax`, `purchaseRate`, `purchaseUnit`, `pConvQty`, `salesTax`, `wholesaleRate`, `salesUnit`, `sConvQty`, `ddlGroup`, `ddlName`, `tbNewValue`, `materialVariant`, `ddlVendor`, `dDlSerialLogic`, `materialLedgerMap`, `route`, `ddlValue`, `tbVendorMat`.
+Original: `View/MaterialSetup/MaterialForm.aspx`. Fields: `matCode`, `status`, `type`, `category`, `model`, `ledger`, `name`, `altName`, `alias`, `baseUom`, `hsnCode`, `greenTagLogic`, `barcode`, `tagCode`, `sRetailRate`, `batch`, `supBatch`, `manDate`, `expiry`, `exipiryMonths`, `serial`, `assetTagType`, `track`, `trackNoType`, `isPacket`, `grossWeight`, `alterUOM`, `convVal`, `classification`, `isFIFO`, `fifoAge`, `reorderLevel`, `reorderQty`, `depreciationMethod`, `isInspectionReq`, `inspectionType`, `inspectionCheckList`, `retestIn`, `certificateControl`, `materialImage`, `purchaseTax`, `purchaseRate`, `purchaseUnit`, `pConvQty`, `salesTax`, `wholesaleRate`, `salesUnit`, `sConvQty`, `ddlGroup`, `ddlName`, `tbNewValue`, `materialVariant`, `ddlVendor`, `dDlSerialLogic`, `materialLedgerMap`, `route`, `ddlValue`, `tbVendorMat`.
 
 Events: `baseUom`, `type`, `isInspectionReq`, `category`, `model`, `ddlName`, `ddlGroup`, `btnAdd`, `gvTransDataDelete`, `btnLedgerMap`, `gvLedgerCodeDelete`.
 
@@ -147,7 +147,7 @@ Events: `ddlName`, `ddlGroup`, `btnAdd`, `gvTransDataDelete`.
 
 ### Serial Generation Logic — `/api/masters/serial-logics`
 
-Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `serialLength`, `ddlName`, `tbDescription`, `tbSeqNo`, `ddlSeperator`, `tbStartingNo`, `tbSeed`, `tbLenth`, `tbEndingNo`, `tbFormat`, `tbValue`, `serialGenerationLogicDetail`.
+Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `serialLength`, `useFor`, `ddlName`, `tbDescription`, `tbSeqNo`, `ddlSeperator`, `tbStartingNo`, `tbSeed`, `tbLenth`, `tbEndingNo`, `tbFormat`, `tbValue`, `serialGenerationLogicDetail`.
 
 Events: `ddlName`, `type`, `btnAdd`, `gvTransDataSelect`, `gvTransDataCancel`, `gvTransDataDelete`.
 

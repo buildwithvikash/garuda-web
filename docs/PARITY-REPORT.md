@@ -225,3 +225,55 @@ the screen's own editors in its cells, its Add (Update after a Select), Select a
 (`screens/settings/parameter-form.js`, `GVTransData:cancel`: the editors back to Add, the lines unchanged), where the
 original stayed in Update until the next Add. Checked on TEST in memory: Select opens all 72 lines of 20 checklists,
 an edit changed only its description, a cancel left the lines as they were.
+
+# Intended difference: an inspection with no lot at WIP Capture and Rework Confirmation (owner, 1 Nov 2026)
+
+In the original, when an older rejection had left a lot open at the unit's next stage, the unit got no lot of its own
+and its inspection was saved on lot 0. A rejection on lot 0 then completed the stage (its empty quantities compared
+equal), and Rework Confirmation failed with "There is no row at position 0" at a stage of type 6 or 8. Three changes,
+all in the server:
+
+- WIP Capture's scan: a unit with lot 0 takes the lot open at this stage (`wip.service.js` `openLot`, `wip-capture-form.js`).
+- `saveQCINProcess`: a rejected unit never completes its stage, as `saveQCFinalProcess` already did.
+- `saveNewRRFConfirmation`: an inspection with no lot header is confirmed; its new lot takes the barcode's DocLine and
+  the job card's current process.
+
+Checked on TEST with the transactions rolled back, for S42620261101406: before, the rejection took the job card from 8
+stages done to 9 and the confirmation failed; after, it stays at 8 and the confirmation opens lot 626961362 on the
+current process. `saveRRFConfirmation` (the Repair and Finishing confirmations) is unchanged.
+
+# Intended difference: the rework scan loads the newest unconfirmed inspection (owner, 1 Nov 2026)
+
+`validateBarcodeRRF` (Rework, Repair and Finishing Confirmation) took the first matching row, and a confirmed inspection
+keeps its rejected status. So a unit failed a second time had its older inspection confirmed again: the unit was released
+while the new failure stayed unconfirmed and its lot open, which is how the lot-0 case above starts. Now: the newest
+inspection not yet confirmed, else the newest. A unit with one inspection behaves as before.
+
+# Intended difference: WIP Capture's serial box offers Change at an inspection (owner, 1 Nov 2026)
+
+After a serial is scanned at an inspection or FG label stage (results 30 and 40), `BtnWorderScan` now reads Clr, as it
+already did at a component stage: the box locks and shows Change, which clears the serial and closes the inspection (now
+also `QCPanel`) so another can be scanned. The original left the button on Go there, so a new serial could be typed over
+the old one with the inspection open. A save still clears the box as before.
+
+# Intended difference: asset and green tags follow a Serial Generation Logic (owner, 1 Nov 2026)
+
+New columns (`db/migrations/2026-11-tag-logic.sql`, on TEST; to be run on LIVE before deploying): `SerialGenerationLogicHeader.UseFor`
+(Generate, or Check scanned tag) and `Material.GreenTagLogic`. At WIP Capture's FG label stage (`production/tag-check.js`,
+`wip-capture-form.js`, `saveQCFinalProcess`) each tag follows the logic on the unit's material:
+
+- No logic: the box is empty and locked; the unit is saved with no tag (a green tag already on it stays). In the original,
+  Asset Tag Type 0 meant a scanned tag, checked for length only.
+- Generate: filled in and locked. A green tag from a logic is new; the original never generated one. A green tag already
+  on the unit is kept. Green tags count apart from asset tags when the two logics differ (`SerialBarcode.AssetLogic`).
+- Check scanned tag: empty, and scanned. At the save of a passed unit the tag must match the logic: fixed text, model and
+  separators exactly, the number by length and range, year / month / week by format only (a tag printed last month passes).
+  A green tag already on the unit is scanned too and must be the same number. The counters are not touched.
+
+On the Material screen Green Tag Require and the green and asset tag lengths are hidden and no longer used (their columns
+stay); Asset Tag Type reads Asset Tag Logic. The duplicate and customer green tag checks stay. A failed unit is not checked.
+
+Checked on TEST: 517 of 518 logics with lines pass the check with what they generate (the other has a Year line with no
+format, and no material uses it). The screen's handlers, with temporary settings put back afterwards and every save
+rolled back: each setting fills the boxes as above, and an empty, wrong or different tag is refused. Not run on the screen
+or with a printer. The labels read `VSerial` and `Serial2`; a label for a model with no tag was not printed.

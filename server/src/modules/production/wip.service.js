@@ -628,6 +628,10 @@ export async function validateProductionBarcodeforQC(barcode, ps) {
   }
   return rows.map(ci);
 }
+/** Rule fix (owner, 1 Nov): the lot open at this stage, for a unit that has none of its own: the original saved its
+ *  inspection on lot 0 when an older rejection had left the stage's lot open */
+export const openLot = async (ps, process) =>
+  str(await sc(`Select top 1 InspectionLotNo from InspectionHeader where DocNo=${num(ps)} and Process=${num(process)} and DocType=${DOC_PROCESS_ORDER} and Status=1 order by InspectionLotNo desc`));
 /** AVQuality.GetUDListInProcess: the routing step's checklist, with empty result columns */
 export async function udListInProcess(ps, process) {
   const rows = await dataTable(`select * from ParameterTran where ParameterCode=(select ParameterCode from ProcessRouting where PSno=${num(ps)} and ProcessCode=${num(process)})`);
@@ -768,6 +772,9 @@ export async function saveQCINProcess({ ud, defects, status, nextAction, barcode
         if (!tables.InspectionTrans.rows.length) throw new Error('There is no row at position 0.');
         const l = num(lot);
         await ex(`Update InspectionHeader set ${status === String(STATUS.Approved) ? 'ApprovedQty=ApprovedQty' : 'RejectedQty=RejectedQty'}+${netNum(sQty)} where InspectionLotNo=${l}`, tx);
+        // Rule fix (owner, 1 Nov): a rejected unit stays at its stage. In the original a lot with no quantities (lot 0)
+        // compared equal below and completed the stage, sending the failed unit on.
+        if (status !== String(STATUS.Approved)) return '0';
         const ip = await q(`select Sum(Qty)[SQty],Sum(ApprovedQty)[ApprovedQty],Sum(RejectedQty)[RejectedQty] from InspectionHeader where InspectionLotNo=${l} and DocNo = ${num(ps)} and DocLine=${num(rowID)}`, tx);
         if (!ip.length || netDouble(ip[0].SQty) !== netDouble(ip[0].ApprovedQty)) return '0';
         const material = first(bars).Material;
@@ -902,7 +909,8 @@ export async function saveNewRRFConfirmation({ id, barcode, qty, aqty, rootCause
         if (t === null || t === undefined) throw NRE();
         return str(t);
       };
-      if ((netBool(cfg.IsInspectionReq) && netInt(first(type).InspectionType) === 300) || selfApproval === 0) {
+      // Rule fix (owner, 1 Nov): an inspection saved on lot 0 has no header; it no longer stops the confirmation
+      if ((netBool(cfg.IsInspectionReq) && netInt(type[0]?.InspectionType) === 300) || selfApproval === 0) {
         const current = str(await sc(currentSql, tx));
         if (current === '') return;
         const t = await stageOf(current);
@@ -916,7 +924,7 @@ export async function saveNewRRFConfirmation({ id, barcode, qty, aqty, rootCause
           const lot = String(netInt(key));
           const now = new Date();
           now.setMilliseconds(0);
-          const ty = first(type);
+          const ty = type[0] ?? { DocLine: d.DocLine, Process: current };
           const ds = await newRow('InspectionHeader', {
             InspectionLotNo: lot, Alias: `${prefix}${lot}`, DocType: d.DocType, DocDate: now, DocNo: d.DocNo, DocLine: ty.DocLine, Process: ty.Process, Material: d.Material,
             InspectionType: cfg.InspectionType, Qty: d.CurrentQty, Uom: d.Uom, Department: ctx.department, BusinessUnit: ctx.businessUnit, Status: 1,
@@ -995,7 +1003,7 @@ export async function assetSegment(dr, material, tx) {
   }
   return str(dr.Value).trim();
 }
-const assetLogicRows = (logic, tx) => q(`select sd.*,sv.VariantType from SerialGenerationLogicDetail sd inner join SequenceVariant sv on sd.variantCode=sv.VariantCode where SerialCode =${num(logic)} order by Seq`, tx);
+export const assetLogicRows = (logic, tx) => q(`select sd.*,sv.VariantType from SerialGenerationLogicDetail sd inner join SequenceVariant sv on sd.variantCode=sv.VariantCode where SerialCode =${num(logic)} order by Seq`, tx);
 const yyNow = () => String(new Date().getFullYear()).slice(-2);
 
 /** DataWrapper.GetNextAssetIDWRL (no transaction): the next asset tag, without taking it */
@@ -1068,7 +1076,7 @@ export async function getNextSerialNo(fgMat, material, bu, dept, process) {
 /** AVProductionCapture.SaveQCFInalProcess: the FG stage's QC decision; an approval gives the barcode its FG serial,
  *  asset tag and green tag (and the plan's printed count), and a fully inspected lot completes the stage (with the
  *  next stage's label printed at indicator 10000). Returns "0", "1" or the printed barcode number. */
-export async function saveQCFinalProcess({ ud, defects, status, nextAction, barcode, ps, process, lot, parameterCode, station, controlId, printer, serial, assetTag, greenTag, otherPlant, dept, remark }, ctx) {
+export async function saveQCFinalProcess({ ud, defects, status, nextAction, barcode, ps, process, lot, parameterCode, station, controlId, printer, serial, assetTag, greenTag, tags, otherPlant, dept, remark }, ctx) {
   // the other plant's (Sanjan) database: its connection string is not configured at WRL
   if (otherPlant === 1) throw NRE();
   const tables = {};
@@ -1102,16 +1110,19 @@ export async function saveQCFinalProcess({ ud, defects, status, nextAction, barc
         const tSerial = str(tables.InspectionTrans.rows[0].get(tables.InspectionTrans.schema.col('Serial').name));
         const cond = `where BarCodeNo=${num(b.BarcodeNo)} and CurrentQty<=(Select sum(Qty) from InspectionTrans where Serial=${lit(tSerial)} and Status=${num(status)})`;
         if (approved) {
-          const logic = parseString(await sc(`select AssetTagType from Material where matcode=${num(first(bars).Material)}`, tx));
-          let tag = await genAssetIDWRL(str(first(bars).Material), String(ctx.businessUnit), dept, process, 1, logic, tx);
+          // owner, 1 Nov 2026 (tag-check.js): only a Generate logic takes a number; AssetLogic in the counter keeps a green
+          // tag's logic counting apart from the asset tag's
+          const take = (logic) => genAssetIDWRL(str(first(bars).Material), String(ctx.businessUnit), dept, process, 1, logic, tx);
+          let tag = tags.asset.mode === 'generate' ? await take(tags.asset.logic) : '';
           if (tag === '') tag = assetTag;
+          const green = tags.green.mode === 'generate' && greenTag === '' ? await take(tags.green.logic) : greenTag;
           const dup = str(await sc(`Select Vserial from MaterialBarcode where Vserial=${lit(assetTag)}`, tx));
           const dupRows = await q(`select mb.VSerial,m.Alias,mb.CreatedOn from MaterialBarcode mb inner join Material m on mb.Material = m.MatCode where mb.VSerial  = ${lit(assetTag)}`, tx);
           if (dupRows.length && (assetTag !== '' || dup !== '')) {
             const r = dupRows[0];
             throw new Error(`Duplicate Asset Tag :${str(Object.values(r)[0])} Material :${str(Object.values(r)[1])} Printed On :${dotnetDate('', Object.values(r)[2] instanceof Date ? Object.values(r)[2] : new Date(Object.values(r)[2]))}`);
           }
-          await ex(`Update MaterialBarcode Set Alias=${lit(b.Serial)}, Serial= ${lit(serial)},Vserial=${lit(tag)},Serial2=${lit(greenTag)}, QCStatus=${num(status)}  ${cond}`, tx);
+          await ex(`Update MaterialBarcode Set Alias=${lit(b.Serial)}, Serial= ${lit(serial)},Vserial=${lit(tag)},Serial2=${lit(green)}, QCStatus=${num(status)}  ${cond}`, tx);
         } else await ex(`Update MaterialBarcode Set  QCStatus=${num(status)} ${cond}`, tx);
       }
       if (!tables.InspectionTrans.rows.length) throw new Error('There is no row at position 0.');

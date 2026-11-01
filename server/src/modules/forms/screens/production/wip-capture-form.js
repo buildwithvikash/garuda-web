@@ -7,7 +7,8 @@ import { fill } from '../../../../db/options.js';
 import { printerOnline } from '../../../production/labels.service.js';
 import { qcOpen } from '../../qc.js';
 import { guideData } from '../../../production/production.service.js';
-import { explainPending, scanStageLabelNew, stageRMScanValidate, scanInputMaterialBarcode, displayInputBOMNew, historyByLabel, validateProductionBarcodeforQC, udListInProcess, displayProcessMaterial, componentHistory, isNextStageLabelPrint, saveQCChecklist, saveQCINProcess, getNextSerialNo, getNextAssetIDWRL, saveQCFinalProcess } from '../../../production/wip.service.js';
+import { checkTag, tagSetup } from '../../../production/tag-check.js';
+import { explainPending, scanStageLabelNew, stageRMScanValidate, scanInputMaterialBarcode, displayInputBOMNew, historyByLabel, validateProductionBarcodeforQC, udListInProcess, displayProcessMaterial, componentHistory, isNextStageLabelPrint, saveQCChecklist, saveQCINProcess, getNextSerialNo, getNextAssetIDWRL, saveQCFinalProcess, openLot } from '../../../production/wip.service.js';
 import { reworkHistory } from '../../../quality/quality.service.js';
 import { NRE, alertMsg, errorMsg, gridDelete, guard, notInList, parseString, select, selectedText, withQC } from '../_shared.js';
 import { blankCells, deptPrinters, guideFile, guideStation } from './_shared.js';
@@ -189,7 +190,7 @@ Object.assign(PAGE_EVENTS, {
       try {
         if (h.ui('BtnWorderScan').text === 'Clr') {
           wipReset(out, 1);
-          for (const id of ['OrderSelectionPanel', 'ProcessingUnitPanle', 'MainPanel', 'MachinePanel', 'PnlHistory', 'PnlComponents', 'DefectHistoryPanel', 'RightTopPanel']) out.set[id] = { visible: false };
+          for (const id of ['OrderSelectionPanel', 'ProcessingUnitPanle', 'MainPanel', 'QCPanel', 'MachinePanel', 'PnlHistory', 'PnlComponents', 'DefectHistoryPanel', 'RightTopPanel']) out.set[id] = { visible: false };
           Object.assign(out.set, { TBJobCoard: { value: '', enabled: true }, BtnWorderScan: { text: 'Go' }, WorkStationPanel: { visible: true }, JobCardPanel: { visible: true } });
           return out;
         }
@@ -232,6 +233,9 @@ Object.assign(PAGE_EVENTS, {
         } else if (s.code === 20) {
           throw new Error("This station's output capture is not available yet in the new app");
         }
+        // owner, 1 Nov 2026: at an inspection the serial box also offers Change, to clear it and scan again (the original
+        // left it on Go there)
+        if ((s.code === 30 || s.code === 40) && out.set.QCPanel?.visible && !out.alert) out.set.BtnWorderScan = { text: 'Clr' };
       } catch (e) {
         out.alert = exceptionAlert(e.message);
         out.set.TBJobCoard = { ...out.set.TBJobCoard, value: '' };
@@ -376,7 +380,7 @@ async function wipQCStatus(status, v, h, out) {
     if (i === 40) out.set.FGLabelPanel = { visible: false };
     Object.assign(out.set, { btnQCSave: { ...out.set.btnQCSave, visible: true }, DDLNextAction: { index: 1 }, NextActionPanel: { visible: true }, PanelDefects: { visible: true }, PnlBEE: { visible: false }, QCPrinterPanel: { visible: false } });
   }
-  if (netInt(vs.FETCHGRNNE) !== 1) out.set.TBGreenTag = { value: '' };
+  if (netInt(vs.FETCHGRNNE) !== 1 && vs.GreenTagMode !== 'generate') out.set.TBGreenTag = { ...out.set.TBGreenTag, value: '' };
 }
 
 /** Go_Click: the barcode taken for QC (its lot, the checklist opened when the step has one) or cleared */
@@ -407,7 +411,7 @@ async function wipGo(v, h, out) {
       const uom = netString(rows[0].Uom);
       await selectOrCache(h, out, 'DDLUom', uom === '0' ? '' : uom);
       out.set.TbBar = { value: netString(rows[0].BarcodeNo) };
-      out.viewState.InspectionLotNo = netString(rows[0].InspectionLotNo);
+      out.viewState.InspectionLotNo = netInt(rows[0].InspectionLotNo) > 0 ? netString(rows[0].InspectionLotNo) : (await openLot(order, netString(out.viewState.ProcessCode))) || netString(rows[0].InspectionLotNo);
       const ud = await udListInProcess(order, netString(out.viewState.ProcessCode));
       out.viewState.QCDataTable = ud;
       if (ud.length) {
@@ -609,19 +613,22 @@ async function wipFGGo(row, v, h, out) {
   const process = netString(out.viewState.ProcessCode);
   const serial = await getNextSerialNo(material, material, String(h.ctx.businessUnit), dept, process);
   const order = netString(out.set.DDLProdOrder?.value ?? v.DDLProdOrder);
-  const fgRows = await query(`Select Classification,HSNCode,Barcode,AssetTagType,SalesTax From Material Where MatCode=${digitsOrEmpty(netString(await scalar(`Select Material from processOrder where PSNo=${digitsOrEmpty(order)}`) ?? ''))}`);
+  const fgRows = await query(`Select SalesTax From Material Where MatCode=${digitsOrEmpty(netString(await scalar(`Select Material from processOrder where PSNo=${digitsOrEmpty(order)}`) ?? ''))}`);
   if (fgRows.length) {
     const f = fgRows[0];
-    Object.assign(out.viewState, { GreenLblFlag: netString(f.Classification === true ? 'True' : f.Classification === false ? 'False' : f.Classification), GreenLenght: netString(f.HSNCode), AssetLenght: netString(f.Barcode), AssetTagType: netString(f.AssetTagType), SalesTax: netString(f.SalesTax === true ? 'True' : f.SalesTax === false ? 'False' : f.SalesTax) });
+    out.viewState.SalesTax = netString(f.SalesTax === true ? 'True' : f.SalesTax === false ? 'False' : f.SalesTax);
   }
   out.set.TbFGSerialNo = { value: serial, enabled: serial.trim() === '' };
   const barcode = netString(out.set.TBBarcode?.value ?? v.TBBarcode).trim();
   const green = parseString(await scalar("select Serial2 from MaterialBarcode where Serial=@s and Serial2 <> '1'", { s: barcode }));
   out.viewState.FETCHGRNNE = green !== '' ? '1' : '0';
-  out.set.TBGreenTag = { value: green };
-  const logic = parseString(await scalar(`select AssetTagType from Material where matcode=${digitsOrEmpty(material)}`));
-  const asset = await getNextAssetIDWRL(material, String(h.ctx.businessUnit), process, 1, logic);
-  out.set.TbASsetTag = { value: asset, enabled: asset.trim() === '' };
+  // owner, 1 Nov 2026: each tag follows the logic on the material (production/tag-check.js): none leaves the box empty
+  // and locked, Generate fills it (a green tag already on the unit stays), Check leaves it empty for the scan
+  const tags = await tagSetup(barcode);
+  const next = (logic) => getNextAssetIDWRL(tags.material, String(h.ctx.businessUnit), process, 1, logic);
+  out.viewState.GreenTagMode = tags.green.mode;
+  out.set.TBGreenTag = { value: tags.green.mode === 'generate' ? green || (await next(tags.green.logic)) : '', enabled: tags.green.mode === 'check' };
+  out.set.TbASsetTag = { value: tags.asset.mode === 'generate' ? await next(tags.asset.logic) : '', enabled: tags.asset.mode === 'check' };
   const cert = await query(`select * from CertificateController where ID = ( SELECT CertificateControl  FROM Material  WHERE MatCode = ${digitsOrEmpty(material)})`).catch(() => null);
   if (cert === null) throw NRE();
   const showPrinter = () => Object.assign(out.set, { Label49: { visible: true }, DDLQCPrinter: { ...out.set.DDLQCPrinter, visible: true, enabled: true } });
@@ -647,24 +654,41 @@ async function wipFGGo(row, v, h, out) {
 
 /** btnQCSave_Click's FG part (result 40): green / asset tag checks, then SaveQCFInalProcess */
 async function wipFGSave(v, h, out, base) {
-  const vs = h.vs;
-  const green = netString(v.TBGreenTag);
-  if (netInt(vs.GreenLblFlag) === 1) {
-    if (green === '') return { alert: errorMsg('Please Enter Green Tag ') };
-    if (netInt(vs.GreenLenght) !== 0 && green.length !== netInt(vs.GreenLenght)) return { alert: errorMsg(`Green Tag No. Lenght should be: ${netInt(vs.GreenLenght)}`) };
-  }
   out.session = { department: netString(v.DDLDepartment) };
-  if (netInt(vs.FETCHGRNNE) === 0 && netInt(vs.GreenLblFlag) === 1 && parseString(await scalar('Select Serial2 from  MaterialBarcode where Serial2=@g', { g: green.trim() })) !== '') {
-    out.set.TBGreenTag = { value: '' };
-    return { alert: errorMsg('Duplicate Green Tag ') };
+  const tags = await tagSetup(base.barcode);
+  const approved = base.status === '12'; // a failed unit takes no tag
+  const refuse = (id, message) => {
+    out.set[id] = { ...out.set[id], value: '' };
+    return { alert: errorMsg(message) };
+  };
+  // the green tag already on the unit is kept; a Check logic has it scanned again, and it must be the same number
+  const stored = parseString(await scalar("select Serial2 from MaterialBarcode where Serial=@s and Serial2 <> '1'", { s: netString(base.barcode).trim() }));
+  let green = stored;
+  if (tags.green.mode === 'check') {
+    green = netString(v.TBGreenTag).trim();
+    if (approved) {
+      if (green === '') return { alert: errorMsg('Please Enter Green Tag ') };
+      const why = await checkTag(green, tags.green.logic, tags.material);
+      if (why) return refuse('TBGreenTag', `Green Tag does not match its logic: ${why}`);
+      if (stored !== '' && green !== stored.trim()) return refuse('TBGreenTag', 'Green Tag does not match the one on this unit');
+      if (stored === '' && parseString(await scalar('Select Serial2 from  MaterialBarcode where Serial2=@g', { g: green })) !== '') return refuse('TBGreenTag', 'Duplicate Green Tag ');
+    }
   }
-  const asset = netString(v.TbASsetTag);
-  if (['0', ''].includes(parseString(vs.AssetTagType)) && netInt(vs.AssetLenght) !== 0 && asset.length !== netInt(vs.AssetLenght)) return { alert: errorMsg(`Asset Tag No. Lenght should be: ${netInt(vs.AssetLenght)}`) };
+  let asset = '';
+  if (tags.asset.mode === 'generate') asset = netString(v.TbASsetTag);
+  else if (tags.asset.mode === 'check') {
+    asset = netString(v.TbASsetTag).trim();
+    if (approved) {
+      if (asset === '') return { alert: errorMsg('Please Enter Asset Tag') };
+      const why = await checkTag(asset, tags.asset.logic, tags.material);
+      if (why) return refuse('TbASsetTag', `Asset Tag does not match its logic: ${why}`);
+    }
+  }
   // VaildateAssetGreentagWRL: a customer green tag for the asset must match
   const fg = parseString(await scalar(`Select Material from processOrder where PSNo=${digitsOrEmpty(base.ps)}`));
   if (fg !== '') {
     const code = parseString(await scalar(`Select Serial2 from TempAsset where Material =${digitsOrEmpty(fg)} And VSerial =@a`, { a: asset.trim() }));
     if (code !== '' && green.trim() !== code.trim()) throw new Error('This Green Tag Is Not Matched With Customer Green Tag');
   }
-  return { rtn: await saveQCFinalProcess({ ...base, serial: netString(v.TbFGSerialNo), assetTag: asset, greenTag: green, otherPlant: netInt(vs.SalesTax) }, { ...h.ctx, department: netString(v.DDLDepartment) }) };
+  return { rtn: await saveQCFinalProcess({ ...base, serial: netString(v.TbFGSerialNo), assetTag: asset, greenTag: green, tags, otherPlant: netInt(h.vs.SalesTax) }, { ...h.ctx, department: netString(v.DDLDepartment) }) };
 }

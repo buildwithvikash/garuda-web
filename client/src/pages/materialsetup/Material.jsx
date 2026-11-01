@@ -54,12 +54,11 @@ const layout = {
       ],
     },
     {
-      title: 'Tag & Asset Details', subtitle: 'Tag length, asset tagging and tracking details', icon: Tag, tone: 'violet', width: 4, cols: 2,
-      // a row each: FG serial (tracking), asset tag, green tag, packing
+      title: 'Tag & Asset Details', subtitle: 'The logic of each tag: none, no tag', icon: Tag, tone: 'violet', width: 4, cols: 2,
+      // a row each: FG serial (tracking), then the asset tag and green tag logics (the logic sets their format and length)
       ids: [
         'DropDownList24', 'ddlTrackSerialLogic',
-        'DropDownList6', 'TextBox11',
-        'DropDownList1', 'TextBox10',
+        'DropDownList6', 'DDLGreenLogic',
       ],
     },
     {
@@ -104,8 +103,8 @@ const texts = {
     TextBox1: { label: 'Item Code', hidden: false }, // TextBox · Material.ALTName
     Alias: { label: 'Alias', hidden: false }, // TextBox · Material.Alias
     DdlBaseUom: { label: 'Base UOM', hidden: false }, // DropDownList · Material.BaseUom
-    TextBox10: { label: 'Green Tag Length', hidden: false }, // TextBox · Material.HSNCode
-    TextBox11: { label: 'Asset Tag Length', hidden: false }, // TextBox · Material.Barcode
+    TextBox10: { label: 'Green Tag Length', hidden: true }, // TextBox · Material.HSNCode · not used since the logic sets it (1 Nov 2026)
+    TextBox11: { label: 'Asset Tag Length', hidden: true }, // TextBox · Material.Barcode · not used since the logic sets it (1 Nov 2026)
     DDLTag: { label: 'Material Tag Design', hidden: false }, // DropDownList · Material.TagCode
     TbRetailRate: { label: 'MRP', hidden: false }, // TextBox · Material.SRetailRate
     DropDownList3: { label: 'Enable Batch', hidden: true }, // DropDownList · Material.Batch
@@ -114,14 +113,15 @@ const texts = {
     DropDownList9: { label: 'Enable Expiry', hidden: true }, // DropDownList · Material.Expiry
     TextBox5: { label: 'Exipiry Months', hidden: true }, // TextBox · Material.ExipiryMonths
     DropDownList2: { label: 'Serialized Item', hidden: true }, // DropDownList · Material.Serial
-    DropDownList6: { label: 'Asset Tag Type', hidden: false }, // DropDownList · Material.AssetTagType
+    DropDownList6: { label: 'Asset Tag Logic', hidden: false }, // DropDownList · Material.AssetTagType
+    DDLGreenLogic: { label: 'Green Tag Logic', hidden: false }, // DropDownList · Material.GreenTagLogic
     DropDownList24: { label: 'Track', hidden: false }, // DropDownList · Material.Track
     ddlTrackSerialLogic: { label: 'FG Serial Logic', hidden: false }, // DropDownList · Material.TrackNoType
     DropDownList10: { label: 'Is Packet', hidden: true }, // DropDownList · Material.IsPacket
     DropDownList11: { label: 'Gross Weight', hidden: true }, // DropDownList · Material.GrossWeight
     DropDownList7: { label: 'Alternative Uom', hidden: true }, // DropDownList · Material.AlterUOM
     TextBox3: { label: 'Conversion Qty', hidden: true }, // TextBox · Material.ConvVal
-    DropDownList1: { label: 'Green Tag Require', hidden: false }, // DropDownList · Material.Classification
+    DropDownList1: { label: 'Green Tag Require', hidden: true }, // DropDownList · Material.Classification · not used since a logic decides (1 Nov 2026)
     DropDownList16: { label: 'FIFO Enable', hidden: true }, // DropDownList · Material.IsFIFO
     TextBox14: { label: 'FIFO Age(Months)', hidden: true }, // TextBox · Material.FIFOAge
     TextBox15: { label: 'Reorder Level', hidden: true }, // TextBox · Material.ReorderLevel

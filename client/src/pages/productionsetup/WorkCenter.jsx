@@ -85,6 +85,7 @@ const texts = {
   // the list of saved records: its columns { header, hidden } (RECNO is the # column)
   list: {
     RECNO: { header: 'Rec No', hidden: false },
+    STATIONCODE: { header: 'Station Code', hidden: false },
     ALIAS: { header: 'Alias', hidden: false },
     WORKCENETER: { header: 'Workceneter', hidden: false },
     PROCESS: { header: 'Process', hidden: false },

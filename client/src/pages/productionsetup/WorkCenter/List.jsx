@@ -66,10 +66,11 @@ function RecordList({ path, spec, onOpen, filter = {}, texts = {} }) {
   // a column the form has as a dropdown shows its names, not the stored codes (Status 1 -> Active)
   const names = useMemo(() => dropdownNames(spec), [spec]);
   const columns = useMemo(
-    () => (data?.columns ?? []).map((c, i) => ({ key: `c${i}`, name: c.name, header: texts.list?.[c.name]?.header ?? c.name, exactHeader: texts.list?.[c.name]?.header != null, text: (r) => nameIn(names, c.name, r[`c${i}`]), render: (r) => { const v = nameIn(names, c.name, r[`c${i}`]); return typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v ?? '—'; } })).filter((c) => !texts.list?.[c.name]?.hidden).sort((x, y) => placeOf(texts, x.name) - placeOf(texts, y.name)),
+    // STATIONCODE: the record's key, which the server's list leaves out of its columns
+    () => [...(data?.columns ?? []), { name: 'STATIONCODE' }].map((c, i) => ({ key: `c${i}`, name: c.name, header: texts.list?.[c.name]?.header ?? c.name, exactHeader: texts.list?.[c.name]?.header != null, text: (r) => nameIn(names, c.name, r[`c${i}`]), render: (r) => { const v = nameIn(names, c.name, r[`c${i}`]); return typeof v === 'boolean' ? (v ? 'Yes' : 'No') : v ?? '—'; } })).filter((c) => !texts.list?.[c.name]?.hidden).sort((x, y) => placeOf(texts, x.name) - placeOf(texts, y.name)),
     [data, texts, names],
   );
-  const rows = useMemo(() => (data?.rows ?? []).map((r, i) => ({ id: i, ...Object.fromEntries(r.map((v, j) => [`c${j}`, v])) })), [data]);
+  const rows = useMemo(() => (data?.rows ?? []).map((r, i) => ({ id: i, ...Object.fromEntries([...r, data.keys[i]].map((v, j) => [`c${j}`, v])) })), [data]);
   const totalPages = data ? Math.max(1, Math.ceil(data.count / data.pageSize)) : 1;
 
   const leading = (
