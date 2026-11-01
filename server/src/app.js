@@ -10,6 +10,7 @@ import formsRoutes from './modules/forms/forms.routes.js';
 import productionAssignmentsRoutes from './modules/production-assignments/production-assignments.routes.js';
 import productionOrdersRoutes from './modules/production-orders/production-orders.routes.js';
 import rmReplacementsRoutes from './modules/rm-replacements/rm-replacements.routes.js';
+import fgScrapsRoutes from './modules/fg-scraps/fg-scraps.routes.js';
 import mastersRoutes from './modules/masters/masters.routes.js';
 import qualityRoutes from './modules/quality/quality.routes.js';
 import productionRoutes, { PRODUCTION } from './modules/production/production.routes.js';
@@ -29,9 +30,10 @@ app.use('/api/forms', formsRoutes);
 app.use('/api/production/orders', productionOrdersRoutes);
 app.use('/api/production/assignments', productionAssignmentsRoutes);
 app.use('/api/production/rm-replacements', rmReplacementsRoutes);
+app.use('/api/production/fg-scrap', fgScrapsRoutes);
 app.use('/api/masters', mastersRoutes);
 app.use('/api/quality', qualityRoutes);
-app.use('/api/production', productionRoutes); // the shop-floor screens, after orders / assignments / RM replacements
+app.use('/api/production', productionRoutes); // the shop-floor screens, after orders / assignments / RM replacements / FG scrap
 app.use('/api', notFoundHandler);
 
 // ~/GuideFiles/… as on the original site

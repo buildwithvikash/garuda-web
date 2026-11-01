@@ -1,6 +1,6 @@
-// /api/production/<name>: the shop-floor screens (WIP capture, FG scrap, model transfer, process guide, plan upload,
-// image display) as REST resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders,
-// assignments and RM replacements have modules of their own (production-orders/, production-assignments/, rm-replacements/).
+// /api/production/<name>: the shop-floor screens (WIP capture, model transfer, process guide, plan upload, image display)
+// as REST resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders, assignments, RM
+// replacements and FG scrap have modules of their own (production-orders/, production-assignments/, rm-replacements/, fg-scraps/).
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
 import { AppError } from '../../shared/AppError.js';
@@ -11,13 +11,11 @@ import { sessionContext } from '../auth/context.js';
 import { screensRouter } from '../forms/resource.routes.js';
 import { artworkByLabel, cabinetByLabel, routeByLabel } from './wip.service.js';
 import { KINDS } from '../masters/image-kinds.js';
-import { scrapHistory } from './production.service.js';
 import { checkTransfer, transferMany } from './model-transfer-bulk.js';
 
 /** API name -> screen */
 export const PRODUCTION = {
   'wip-capture': '/production/wipcaptureform',
-  'fg-scrap': '/production/fgscrapform',
   'model-transfers': '/production/modeltomodeltransferform',
   'process-guides': '/production/processguideform',
   'plan-uploads': '/production/prodplanupload',
@@ -60,12 +58,6 @@ export function rangeOf(q) {
   if (range.startTime && range.endTime && range.startTime > range.endTime) throw AppError.badRequest('The start time is after the end time');
   return range;
 }
-const pageOf = (q) => Math.max(0, Number(q.page) || 0);
-// FG Scrap's history (read only): the units / items scrapped in the user's business unit, newest first
-// (?page=&start=&end=)
-router.get('/fg-scrap/history', requireAuth, authorizeScreen(PRODUCTION['fg-scrap']), async (req, res) => {
-  ok(res, await scrapHistory(req.session.businessUnit, pageOf(req.query), rangeOf(req.query)));
-});
 // Model To Model Transfer by a list of FG serials (model-transfer-bulk.js): { serials } checked and grouped by product,
 // then { source, destination, barcodeNos, printer } moved MAX_MOVE at a time
 router.post('/model-transfers/bulk/check', requireAuth, authorizeScreen(PRODUCTION['model-transfers']), async (req, res) => {

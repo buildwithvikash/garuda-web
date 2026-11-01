@@ -249,9 +249,16 @@ Events: `department`, `btnWorkStationScan`, `btnWorderScan`, `btnRM`, `btnINBarc
 
 ### FG Scrap — `/api/production/fg-scrap`
 
-Original: `View/Production/FGScrapForm.aspx`. Fields: `tbDate`, `tbBarcode`, `gvDetails`, `ddlScrapCategory`, `tbRemark`.
+Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/fg-scraps`), not a screen resource; the screen engine answers 410.
 
-Events: `go`, `btnSave`.
+| Call | Does |
+|---|---|
+| `GET /categories` | the scrap reasons: `[{ value, label }]` |
+| `GET /units/:serial` | the unit and its components: `{ serial, components: [{ category, material, process, serial }] }`; a scrapped or unknown unit is refused (400) |
+| `POST /` `{ unit, category, remark }` | scraps the unit in one transaction; `{ message, serial }`. Refused (400) for a unit already scrapped or unknown, or a category not in the list; 422 for a missing field or a remark over 150 characters |
+| `GET /history?page=&start=&end=` | the units / items scrapped on job cards of the user's business unit, newest first, read only |
+
+`POST /` takes an `Idempotency-Key` header: the same key again gets the first answer, not a second scrap. The plan quantity does not change.
 
 ### Component Replacement — `/api/production/rm-replacements`
 
@@ -304,7 +311,6 @@ WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and c
 Model To Model Transfer works by a list of FG serials (owner, 29 Oct 2026; the page no longer offers the serial range form, which stays in the screen API): `POST /api/production/model-transfers/bulk/check` with `{ serials }` (up to 500; blanks and repeats left out) groups the live barcodes (status not 99) of FG materials (Type 100) by product, `{ groups: [{ materialCode, material, materialAlias, units: [{ serial, barcodeNo }] }], refused: [{ serial, error }] }`; `POST /api/production/model-transfers/bulk` with `{ source, destination, barcodeNos, printer }` (up to 50 a request; the page sends 25) moves each unit as the range transfer does (stock row, barcode, job card, location), prints its label again (its routing stage's number of copies) and logs it in ModelToModel one serial a row, answering `[{ barcodeNo, serial, ok, printed, error? }]` (`printed` false: moved, label not printed).
 
 
-FG Scrap also has `GET /api/production/fg-scrap/history?page=&start=&end=`: the units / items scrapped on job cards of the user's business unit, newest first, read only (scrapped on, serial, material, scrap category, last station, remark, scrapped by; 1000 a page). The original screen had no list; added by the owner, 28 Oct 2026.
 
 Both histories take an optional time range: `start` and `end` as `YYYY-MM-DDTHH:mm` (what a date-time box holds), each limit included. A value that is not a date and time, or a start after the end, answers 400.
 

@@ -291,3 +291,25 @@ Checked on TEST against the original DLLs: `production-writes --api "rm replacem
 (the database rows restored after); events 9/10 on the old handler, the one difference being the serial format case above.
 On TEST data the service refused an unknown unit, a scrapped unit, a serial not in the unit, a non-raw component, a wrong
 format, a used serial and the same serial.
+
+# Intended difference: FG Scrap on an API of its own, with its save corrected (owner, 1 Nov 2026)
+
+A plain React screen on `/api/production/fg-scrap` (`modules/fg-scraps`, API.md); `/api/forms` answers 410 for it and the
+generic screen resource is gone. `fg-scrap-form.js` stays for the events parity only; no route serves it.
+
+The save differs from the original on purpose:
+
+- **No error after a good scrap.** The original's last statement has a stray `)`, so every scrap answered "Incorrect syntax
+  near )" after it was done, and cleared the boxes. That statement is gone. Owner's decision: **the plan quantity does not
+  change**, which is what has always happened in practice, since the statement never ran.
+- **One transaction**: all of it or none (the original had none, so a failure could leave a unit half scrapped).
+- **A unit already scrapped is refused**, at the scan and the save. The original's check compared a serial with 99 and never
+  fired, so a second scrap marked the components again and logged them again.
+- **The category must be in the list** (the original took the empty choice); a repeated request does not scrap twice; a
+  refused save keeps what was typed; the form is at `?view=scrap`; the job card, row and process codes no longer reach the
+  page.
+
+Checked on TEST against the original DLLs: `production-writes --api "fg scrap"` IDENTICAL in the data through the new service
+(barcodes, scans and FGScrap rows, restored after), its only difference being the original's error; events 6/6 on the old
+handler. On TEST data the service refused an unknown unit, a scrapped unit, a repeat scrap and a category not in the list.
+Not run on the screen.
