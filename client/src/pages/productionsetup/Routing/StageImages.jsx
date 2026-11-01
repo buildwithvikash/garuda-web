@@ -19,6 +19,7 @@ const KINDS = [
 export default function StageImages({ routeCode }) {
   const url = `/masters/routings/${encodeURIComponent(routeCode)}/stage-images`;
   const [stages, setStages] = useState(null);
+  const [setupNeeded, setSetupNeeded] = useState(false); // the table is not on this database yet
   const [saved, setSaved] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,8 +29,9 @@ export default function StageImages({ routeCode }) {
     api(url)
       .then((r) => {
         if (!live) return;
-        setStages(r);
-        setSaved(JSON.stringify(r));
+        setStages(r.stages);
+        setSaved(JSON.stringify(r.stages));
+        setSetupNeeded(!!r.setupNeeded);
       })
       .catch((e) => live && setError(e.message));
     return () => {
@@ -44,8 +46,8 @@ export default function StageImages({ routeCode }) {
     setBusy(true);
     try {
       const r = await api(url, { method: 'PUT', body: { stages: stages.map(({ processCode, imageKind }) => ({ processCode, imageKind })) } });
-      setStages(r);
-      setSaved(JSON.stringify(r));
+      setStages(r.stages);
+      setSaved(JSON.stringify(r.stages));
       toast.success('Images on WIP Capture saved');
     } catch (e) {
       toast.error(e.message, { id: e.message, duration: 6000 });
@@ -60,7 +62,7 @@ export default function StageImages({ routeCode }) {
       title="Images on WIP Capture"
       actions={
         stages?.length > 0 && (
-          <Button icon={Save} loading={busy} disabled={!dirty || busy} onClick={save}>
+          <Button icon={Save} loading={busy} disabled={!dirty || busy || setupNeeded} onClick={save}>
             Save images
           </Button>
         )
@@ -69,6 +71,11 @@ export default function StageImages({ routeCode }) {
       <p className="mb-3 text-sm text-muted-foreground">
         For each stage, the material image WIP Capture shows at its stations (uploaded on the Material screen, Artwork &amp; Packing Images). None: no picture at that stage.
       </p>
+      {setupNeeded && (
+        <p role="alert" className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          Not set up on this database yet: run <code className="font-mono">server/db/migrations/2026-11-routing-stage-images.sql</code> on it once (SQL Server Management Studio), then reload this page.
+        </p>
+      )}
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
