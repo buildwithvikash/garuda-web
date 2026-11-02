@@ -1,8 +1,8 @@
 // RM Replacement: a component of a unit replaced by a new serial. The browser sends serials only; the job card and row
 // come from the server's own lookup each time, and every rule is checked at the replacement itself.
-import { AppError } from '../../shared/AppError.js';
-import { netString } from '../../shared/net.js';
-import { componentStatus, fgComponents, replaceRMScan } from '../production/production.service.js';
+import { AppError } from '../../../shared/AppError.js';
+import { netString } from '../../../shared/net.js';
+import { componentStatus, fgComponents, replaceRMScan } from '../production.service.js';
 
 export const SCREEN = '/production/rmreplacementform';
 

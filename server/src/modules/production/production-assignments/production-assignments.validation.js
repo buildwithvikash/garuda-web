@@ -1,6 +1,6 @@
 // A production assignment as the API takes it: the choices (codes) and the quantity. Nothing is required here: the
 // screen's own Print checks what is missing ("Select A Department", "Enter Positive Qty" ...) and says so.
-import { validate, rules } from '../../shared/validate.js';
+import { validate, rules } from '../../../shared/validate.js';
 
 const draft = {
   department: rules.code(),

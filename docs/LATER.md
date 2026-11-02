@@ -35,3 +35,10 @@ progress always agree (the page handler's list changes: an intended difference f
 - The other screens still run on the copied form engine (`/api/forms`); switch them one at a time as Production
   Order and Production Assignment were (CLIENT-SWITCH-PLAN.md). Suggested next: WIP Capture.
 - The client has no tests and no lint / Prettier setup.
+
+## Decisions waiting (found while moving screens, 1 Nov 2026)
+
+Details in PARITY-REPORT.md. Each is the original's behaviour, kept on purpose:
+- Process Guide: a wrong password at the station login still logs people out; passwords compared as plain text; the QR holds user|password.
+- Rework Confirmation: Status and Next action are checked but not stored.
+- Model To Model Transfer: the stock step always takes from released quantity, even for a unit on hold or rejected.

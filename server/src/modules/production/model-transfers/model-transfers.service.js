@@ -3,14 +3,14 @@
 // (production.service.js moveBarcode), its label printed again (printMoved), and logged in ModelToModel one serial a
 // row (StartSerial = EndSerial = the FG serial, Qty 1). Each unit's move and log are one transaction (owner, 1 Nov 2026).
 // Units: live barcodes (Status != 99) of an FG material (Type 100: the screen's source and destination list).
-import { execute, query } from '../../db/pool.js';
-import { transaction } from '../../db/tx.js';
-import { AppError } from '../../shared/AppError.js';
-import { netInt, netString } from '../../shared/net.js';
-import { distinctValues, listPage, operatorsFor, OPERATOR_TEXT, searchColumns } from '../forms/lists.js';
-import { FORMS } from '../forms/specs.js';
-import { printerDetail, printerOnline } from '../production/labels.service.js';
-import { moveBarcode, printMoved } from '../production/production.service.js';
+import { execute, query } from '../../../db/pool.js';
+import { transaction } from '../../../db/tx.js';
+import { AppError } from '../../../shared/AppError.js';
+import { netInt, netString } from '../../../shared/net.js';
+import { distinctValues, listPage, operatorsFor, OPERATOR_TEXT, searchColumns } from '../../forms/lists.js';
+import { FORMS } from '../../forms/specs.js';
+import { printerDetail, printerOnline } from '../labels.service.js';
+import { moveBarcode, printMoved } from '../production.service.js';
 
 export const SCREEN = '/production/modeltomodeltransferform';
 export const MAX_CHECK = 500;

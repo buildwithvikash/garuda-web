@@ -1,12 +1,12 @@
 // /api/production/model-transfers: FG units moved to another model by their serials, and the history.
 import { Router } from 'express';
-import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
-import { portedErrors } from '../../middlewares/errorHandler.js';
-import { idempotent } from '../../middlewares/idempotency.js';
-import { operatorMessages } from '../../middlewares/operatorMessages.js';
-import { ok } from '../../shared/http.js';
-import { netString } from '../../shared/net.js';
-import { sessionContext as ctx } from '../auth/context.js';
+import { authorizeScreen, requireAuth } from '../../../middlewares/auth.js';
+import { portedErrors } from '../../../middlewares/errorHandler.js';
+import { idempotent } from '../../../middlewares/idempotency.js';
+import { operatorMessages } from '../../../middlewares/operatorMessages.js';
+import { ok } from '../../../shared/http.js';
+import { netString } from '../../../shared/net.js';
+import { sessionContext as ctx } from '../../auth/context.js';
 import * as transfers from './model-transfers.service.js';
 
 const router = Router();

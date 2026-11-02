@@ -1,193 +1,126 @@
-// ════════════════════════════════════════════════════════════════════════════════
-//  Production Plan Upload
-//  Sidebar: Production › Production Plan Upload
-//
-//  Change how this page works or looks in its three files: nothing in them is used by
-//  any other page. Only the UI pieces are shared (@/components/ui = shadcn,
-//  @/components/shared = Page, Section, DataTable, Modal ...).
-//
-//  This page is three files (the router opens this one; the folder beside it holds the views):
-//    ProductionPlanUpload.jsx        1. SETTINGS   this page's layout and captions          <- start here
-//                                    6. PAGE       loads the screen and switches between list and form
-//    ProductionPlanUpload/List.jsx   4. LIST VIEW  saved records: search, table, paging
-//    ProductionPlanUpload/Form.jsx   2. STATE      how the form's state is read and patched
-//                                    3. ENGINE     sends events to the server and applies its reply
-//                                    5. FORM VIEW  one record: fields, buttons, grids, print ...
-// ════════════════════════════════════════════════════════════════════════════════
-
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { openedRecord, useRememberView } from '@/lib/recordParam.js';
-import { RotateCw, Plus } from 'lucide-react';
+// Production Plan Upload (sidebar: Production › Production Plan Upload): read an Excel sheet of monthly label plans, see it,
+// then apply it; each row turns green (applied) or red (no match). ?view=list: the plans so far.
+// Server: /api/production/plan-uploads.
+import { useRef, useState } from 'react';
+import { ArrowLeft, FileUp, List as ListIcon, Table2, Upload } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '@/api.js';
-import Loader from '@/components/shared/Loader.jsx';
+import { FileField } from '@/components/shared/FormControls.jsx';
+import { Step } from '@/components/shared/FormStep.jsx';
 import Page from '@/components/shared/Page.jsx';
+import RecordsList from '@/components/shared/RecordsList.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { useMe } from '@/layouts/AppLayout.jsx';
-import { screenOf } from '@/layouts/Sidebar.jsx';
-import RecordList from './ProductionPlanUpload/List.jsx';
-import RecordForm from './ProductionPlanUpload/Form.jsx';
 
-const enc = encodeURIComponent;
+export const route = '/production/prodplanupload';
 
-// ────────────────────────────────────────────────────────────────────────────
-// 1. SETTINGS
-// Edit these for this page. `layout` arranges the fields in sections; `page` adds captions / search boxes.
-// ────────────────────────────────────────────────────────────────────────────
-export const route = "/production/prodplanupload";
-
-// const layout = { icon, subtitle, sections: [{ title, icon, ids: ['ControlId', { id: 'ControlId', label: 'Caption' }] }] };
-const layout = undefined;
-
-// const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = {};
-
-// ────────────────────────────────────────────────────────────────────────────
-// TEXTS
-// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
-// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
-// ────────────────────────────────────────────────────────────────────────────
-const texts = {
-  title: 'Production Plan Upload',
-  // fields, buttons and panels: { label, hidden }
-  fields: {
-    TBDate: { label: '', hidden: false }, // TextBox · hidden by the screen until its logic shows it
-    GvDetails: { label: '', hidden: false }, // GridView
-    LeftPanel: { label: '', hidden: false }, // Panel
-    FileUpload1: { label: 'Upload Excel', hidden: false }, // FileUpload
-    btnImport: { label: 'Import', hidden: false }, // Button
-    GridPanel: { label: '', hidden: false }, // Panel
-    BtnUpdate: { label: 'Update', hidden: false }, // Button · hidden by the screen until its logic shows it
-  },
-  // grids: each one's columns { header, hidden } (its rows keep every field)
-  grids: {
-    GvDetails: {
-    },
-  },
-  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
-  list: {
-    RECNO: { header: 'Rec No', hidden: false },
-    PlanNo: { header: 'Plan No', hidden: false },
-    PlanMonthYear: { header: 'Plan Month Year', hidden: false },
-    PlanMaterial: { header: 'Plan Material', hidden: false },
-    PlanQty: { header: 'Plan Qty', hidden: false },
-    PrintLbl: { header: 'Print Lbl', hidden: false },
-    PlanType: { header: 'Plan Type', hidden: false },
-    Remark: { header: 'Remark', hidden: false },
-    CreatedBy: { header: 'Created By', hidden: false },
-    CreatedOn: { header: 'Created On', hidden: false },
-    Status: { header: 'Status', hidden: false },
-  },
+const BASE = '/production/plan-uploads';
+const source = {
+  list: (query) => api(`${BASE}?${query}`),
+  columns: () => api(`${BASE}/columns`),
+  values: (column) => api(`${BASE}/values/${encodeURIComponent(column)}`),
 };
+const HEADERS = { RECNO: 'Rec No', PlanNo: 'Plan No', PlanMonthYear: 'Plan Month Year', PlanMaterial: 'Plan Material', PlanQty: 'Plan Qty', PrintLbl: 'Print Lbl', PlanType: 'Plan Type', Remark: 'Remark', CreatedBy: 'Created By', CreatedOn: 'Created On', Status: 'Status' };
 
-// ────────────────────────────────────────────────────────────────────────────
-// 6. PAGE
-// Loads the screen from the server and switches between the list and the form.
-// ────────────────────────────────────────────────────────────────────────────
+/** a key for one Update (crypto.randomUUID needs https or localhost; the plant may open the app over http) */
+const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const TONE = { true: 'bg-emerald-100 dark:bg-emerald-950', false: 'bg-rose-100 dark:bg-rose-950' };
+const refuse = (message) => toast.error(message, { id: message, duration: 6000 });
+
+function SheetUpload() {
+  const [file, setFile] = useState(null);
+  const [sheet, setSheet] = useState(null);
+  const [applied, setApplied] = useState([]);
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const key = useRef(newKey());
+
+  const read = async () => {
+    setBusy(true);
+    try {
+      setSheet(await api(`${BASE}/read`, { method: 'POST', body: { file } }));
+      setApplied([]);
+      setDone(false);
+      key.current = newKey();
+    } catch (e) {
+      refuse(e.message);
+    } finally {
+      setFile(null); // the picked file clears after each post, as the original's page did
+      setBusy(false);
+    }
+  };
+  const update = async () => {
+    setBusy(true);
+    try {
+      const r = await api(BASE, { method: 'POST', body: sheet, headers: { 'Idempotency-Key': key.current } });
+      key.current = newKey();
+      setApplied(r.applied);
+      if (r.error) refuse(r.error);
+      else {
+        setDone(true);
+        toast.success('Done');
+      }
+    } catch (e) {
+      refuse(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Step n={1} tone="blue" icon={FileUp} title="File" subtitle="The Excel sheet of plans">
+        <div className="flex flex-wrap items-end gap-3">
+          <FileField c={{ id: 'file' }} label="Upload Excel" value={file} onChange={setFile} />
+          <Button icon={Upload} loading={busy} disabled={!file} onClick={read}>Import</Button>
+        </div>
+      </Step>
+      {sheet && (
+        <Step
+          n={2}
+          tone="emerald"
+          icon={Table2}
+          title="Rows"
+          subtitle="Green: applied. Red: not this or next month, or the material is not known"
+          actions={!done && <Button size="sm" loading={busy} onClick={update}>Update</Button>}
+        >
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/50 text-xs text-muted-foreground">
+                <tr>{sheet.columns.map((c, i) => <th key={i} scope="col" className="px-3 py-2 font-medium">{c}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sheet.rows.map((r, i) => (
+                  <tr key={i} className={TONE[applied[i]] ?? ''}>
+                    {sheet.columns.map((_, j) => <td key={j} className="px-3 py-2">{r[j] ?? ''}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Step>
+      )}
+    </div>
+  );
+}
+
 export default function ProductionPlanUpload() {
-  const me = useMe();
-  const { pathname } = useLocation();
-  const path = route;
-  const screen = me ? screenOf(me.menu, pathname) : null;
-  const [spec, setSpec] = useState(null);
-  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  const [seq, setSeq] = useState(0);
-  const remember = useRememberView();
-  const [listFilter, setListFilter] = useState({});
-  const show = (v) => {
-    setError("");
-    setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
-    setView(v);
-    remember(v); // ?record=<key> | new: a refresh reopens this form
-  };
-
-  useEffect(() => {
-    setSpec(null);
-    api(`/forms/spec?path=${enc(path)}`)
-      .then((s) => {
-        setSpec(s);
-        // the form the URL names (a refresh), else where the screen starts
-        const want = openedRecord();
-        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
-        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
-        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
-      })
-      .catch((e) => setError(e.message));
-  }, [path]);
-
-  const run = (p) => p.catch((e) => setError(e.message));
-  const open = (key, notice) =>
-    run(
-      api(`/forms/record?path=${enc(path)}&key=${enc(key)}`).then((state) =>
-        show({ kind: "form", mode: "edit", key, state, notice }),
-      ),
-    );
-  // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
-  const fresh = (notice) =>
-    run(
-      api(`/forms/spec?path=${enc(path)}`).then((state) =>
-        show({ kind: "form", mode: "new", state, notice }),
-      ),
-    );
-  const copy = (key) =>
-    run(
-      api(`/forms/copy?path=${enc(path)}&key=${enc(key)}`).then((state) =>
-        show({ kind: "form", mode: "new", state }),
-      ),
-    );
-
-  const title = texts.title || spec?.title || screen?.caption || "Screen";
+  const [params, setParams] = useSearchParams();
+  const listing = params.get('view') === 'list';
   return (
     <Page
-      icon={layout?.icon ?? screen?.group.icon}
-      title={title}
-      subtitle={
-        view.kind === "list" && spec
-          ? "Saved records — click one to open it"
-          : layout?.subtitle
-      }
+      icon={Upload}
+      title="Production Plan Upload"
+      subtitle={listing ? 'The plans so far' : 'Import the Excel sheet, then update'}
       actions={
-        spec &&
-        view.kind === "list" &&
-        spec.buttons.add && (
-          <Button size="sm" icon={Plus} onClick={() => fresh()}>
-            Add new
-          </Button>
+        listing ? (
+          <Button size="sm" variant="outline" icon={ArrowLeft} onClick={() => setParams({})}>Back to upload</Button>
+        ) : (
+          <Button size="sm" variant="outline" icon={ListIcon} onClick={() => setParams({ view: 'list' })}>Plans so far</Button>
         )
       }
     >
-        {!spec || view.kind === 'opening' ? (
-          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
-        ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
-        ) : (
-          <RecordForm
-            key={seq}
-            path={path}
-            state={view.state}
-            mode={view.mode}
-            notice={view.notice}
-            buttons={spec.buttons}
-            callNewOnSave={spec.callNewOnSave}
-            copyOptions={spec.copyOptions}
-            print={spec.print}
-            printers={spec.printers}
-            onReload={(key, notice) => open(key, notice)}
-            events={spec.events ?? []}
-            onCopy={copy}
-            onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}
-            onDone={(notice) => fresh(notice)}
-            onListFilter={setListFilter}
-            layout={layout}
-            page={{ ...page, texts }}
-          />
-        )}
+      {listing ? <RecordsList tableId={route} exportName="production-plan-upload" source={source} headers={HEADERS} /> : <SheetUpload />}
     </Page>
   );
 }

@@ -1,8 +1,8 @@
-// FG Scrap's rules (modules/fg-scraps): what the screen sees, the scrapped serial, the request.
+// FG Scrap's rules (modules/production/fg-scraps): what the screen sees, the scrapped serial, the request.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { componentView, scrappedSerial } from '../src/modules/fg-scraps/fg-scraps.service.js';
-import { validateScrap } from '../src/modules/fg-scraps/fg-scraps.validation.js';
+import { componentView, scrappedSerial } from '../src/modules/production/fg-scraps/fg-scraps.service.js';
+import { validateScrap } from '../src/modules/production/fg-scraps/fg-scraps.validation.js';
 
 test('the screen never sees a job card, row or process code', () => {
   const row = { Category: 'Raw Material', Material: 'MOTOR', Process: 'SCAN', Serial: 'M1', PsNo: '9', RowID: '2', ProcessCode: '7', matCode: '5' };

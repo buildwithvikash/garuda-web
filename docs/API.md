@@ -237,9 +237,16 @@ Events: `btnAdd`, `gvTransDataDelete`.
 
 ### Rework Confirmation — `/api/quality/rework-confirmations`
 
-Original: `View/Quality/ReworkConfirmationNew.aspx`. Fields: `id`, `inspectedOn`, `userCode`, `inspectionLotNo`, `businessUnit`, `department`, `tbBarcode`, `sampleBarcode`, `gvInspectionDetails`, `gvProcess`, `status`, `ddlNextAction`, `gvSelfInspection`, `inspectionDefect`, `ddlRootCause`, `sslActionTaken`, `qty`, `uom`, `tbApproverRemark`, `ddlNewAction`, `gvReworkHistory`, `ddlApproverStatus`, `ddlPrinter`, `qc`.
+Original: `View/Quality/ReworkConfirmationNew.aspx`. Its own module (`modules/quality/rework-confirmations`); the screen engine answers 410.
 
-Events: `department`, `ddlApproverStatus`, `go`, `btnUD`, `qcNext`, `qcPrev`, `qcSave`, `qcValue`, `qcList`, `qcGo`, `qcSelect`, `qcFail`, `qcPass`, `qcClose`.
+| Call | Does |
+|---|---|
+| `GET /options` | `{ departments, department, rootCauses, actions, showRootCause, statuses, newActions, checklist }` |
+| `GET /units/:serial` | the rejected unit's inspection: `{ serial, barcodeNo, qty, uom, status, nextAction, hasInspection, details, defects, process, selfInspection, history, checklist }` |
+| `GET /records/:id/serial` | a list row's unit |
+| `POST /checklist` `{ state, rows }` · `POST /checklist/:event` `{ state, arg, index }` | the checklist panel; nothing is stored |
+| `POST /` `{ serial, qty, rootCause, actionTaken, remark, status, newAction, department }` | confirms; the inspection, barcode and quantity are looked up by the server. Takes an `Idempotency-Key` header |
+| `GET /?department=&page=` | the units waiting in a department |
 
 ### Production Capture — `/api/production/wip-capture`
 
@@ -249,7 +256,7 @@ Events: `department`, `btnWorkStationScan`, `btnWorderScan`, `btnRM`, `btnINBarc
 
 ### FG Scrap — `/api/production/fg-scrap`
 
-Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/fg-scraps`), not a screen resource; the screen engine answers 410.
+Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/production/fg-scraps`), not a screen resource; the screen engine answers 410.
 
 | Call | Does |
 |---|---|
@@ -262,7 +269,7 @@ Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/fg-scraps
 
 ### Component Replacement — `/api/production/rm-replacements`
 
-Original: `View/Production/RMReplacementForm.aspx`. Its own module (`modules/rm-replacements`), not a screen resource; the screen engine answers 410.
+Original: `View/Production/RMReplacementForm.aspx`. Its own module (`modules/production/rm-replacements`), not a screen resource; the screen engine answers 410.
 
 | Call | Does |
 |---|---|
@@ -272,9 +279,40 @@ Original: `View/Production/RMReplacementForm.aspx`. Its own module (`modules/rm-
 
 The request carries serials only: the job card and row come from the server's own lookup. `POST /` takes an `Idempotency-Key` header: the same key again gets the first answer, not a second replacement.
 
+### Image Display — `/api/production/image-display`
+
+Original: `View/Production/WRLImageDisply.aspx`. Its own module (`modules/production/image-display`); the screen engine answers 410.
+
+| Call | Does |
+|---|---|
+| `GET /units/:serial` | the unit's material image: `{ image }` (a data URL) |
+
+### Plan Upload — `/api/production/plan-uploads`
+
+Original: `View/Production/ProdPlanUpload.aspx`. Its own module (`modules/production/plan-uploads`); the screen engine answers 410.
+
+| Call | Does |
+|---|---|
+| `POST /read` `{ file: { name, data } }` | the sheet's first page (data: base64 .xlsx): `{ columns, rows }` |
+| `POST /` `{ columns, rows }` | each row applied in order: `{ applied: [true \| false], error? }`; `false` is a row not of this or next month, or of an unknown material; `error` stops at the row that failed, the rows before it stay. Takes an `Idempotency-Key` header |
+| `GET /?page=&column=&op=&value=` | the plans so far; `GET /columns` the columns it can be filtered on, `GET /values/:column` a column's values |
+
+### Process Guide — `/api/production/process-guides`
+
+Original: `View/Production/ProcessGuideForm.aspx`. Its own module (`modules/production/process-guides`); the screen engine answers 410.
+
+| Call | Does |
+|---|---|
+| `GET /options` | `{ departments, department, departmentFixed, stations, users, user, logins }` |
+| `GET /stations/:code?department=` | a station scanned: `{ station, alias, process, department }` |
+| `GET /guide?serial=&station=&department=` | the job card at that station: `{ instructions, files: [{ label, kind, url }], materials: [{ model, material }] }` |
+| `GET /logins` | who is logged in at a station |
+| `POST /logins` `{ station, user, password, qr }` | logs in (a QR holds user\|password), answers `{ logins }` |
+| `DELETE /logins/:userCode` | logs out, answers the logins |
+
 ### Model Transfer — `/api/production/model-transfers`
 
-Original: `View/Production/ModelToModelTransferForm.aspx`. Its own module (`modules/model-transfers`), not a screen resource; the screen engine answers 410.
+Original: `View/Production/ModelToModelTransferForm.aspx`. Its own module (`modules/production/model-transfers`), not a screen resource; the screen engine answers 410.
 
 | Call | Does |
 |---|---|

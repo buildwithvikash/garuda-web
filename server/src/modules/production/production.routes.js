@@ -1,7 +1,6 @@
-// /api/production/<name>: the shop-floor screens (WIP capture, process guide, plan upload, image display) as REST
+// /api/production/<name>: WIP capture as a REST
 // resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders, assignments, RM replacements,
-// FG scrap and model transfers have modules of their own (production-orders/, production-assignments/, rm-replacements/,
-// fg-scraps/, model-transfers/).
+// FG scrap, model transfers, image display, plan uploads and process guides have modules of their own.
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
 import { AppError } from '../../shared/AppError.js';
@@ -15,9 +14,6 @@ import { KINDS } from '../masters/image-kinds.js';
 /** API name -> screen */
 export const PRODUCTION = {
   'wip-capture': '/production/wipcaptureform',
-  'process-guides': '/production/processguideform',
-  'plan-uploads': '/production/prodplanupload',
-  'image-display': '/production/wrlimagedisply',
 };
 
 const router = Router();

@@ -280,7 +280,7 @@ or with a printer. The labels read `VSerial` and `Serial2`; a label for a model 
 
 # Intended difference: RM Replacement on an API of its own (owner, 1 Nov 2026)
 
-A plain React screen on `/api/production/rm-replacements` (`modules/rm-replacements`, API.md); `/api/forms` answers 410 for
+A plain React screen on `/api/production/rm-replacements` (`modules/production/rm-replacements`, API.md); `/api/forms` answers 410 for
 it and the generic screen resource is gone. What the operator does is unchanged: the same steps, list, raw material rule
 and new serial check. Differences: the browser sends serials only, where it used to hold the chosen row's job card, row
 and process codes between scans; the raw material and scrapped checks now also run at the replacement itself, not only at
@@ -294,7 +294,7 @@ format, a used serial and the same serial.
 
 # Intended difference: FG Scrap on an API of its own, with its save corrected (owner, 1 Nov 2026)
 
-A plain React screen on `/api/production/fg-scrap` (`modules/fg-scraps`, API.md); `/api/forms` answers 410 for it and the
+A plain React screen on `/api/production/fg-scrap` (`modules/production/fg-scraps`, API.md); `/api/forms` answers 410 for it and the
 generic screen resource is gone. `fg-scrap-form.js` stays for the events parity only; no route serves it.
 
 The save differs from the original on purpose:
@@ -316,7 +316,7 @@ Not run on the screen.
 
 # Intended difference: Model To Model Transfer on an API of its own, each unit in one transaction (owner, 1 Nov 2026)
 
-`modules/model-transfers` at `/api/production/model-transfers` (API.md); `/api/forms` answers 410 for the screen and the
+`modules/production/model-transfers` at `/api/production/model-transfers` (API.md); `/api/forms` answers 410 for the screen and the
 generic screen resource is gone, so **the original's serial range transfer can no longer be run**, as the page stopped
 offering it on 29 Oct. `model-to-model-transfer-form.js` and `modelToModelTransfer` stay for the parity scripts only.
 
@@ -331,3 +331,47 @@ Checked on TEST, every transaction rolled back and printing stubbed: a real unit
 stock rows and the log inside the transaction and nothing after it; a failure forced at its end also left nothing changed,
 and the next unit in the request was still reported. Events 10/10 on the old handler. Not run: a committed transfer, a real
 label, the screen.
+
+# Intended differences: Image Display, Plan Upload and Process Guide on APIs of their own (owner, 1 Nov 2026)
+
+`modules/production/image-display`, `modules/production/plan-uploads`, `modules/production/process-guides` (API.md); `/api/forms` answers 410 for the three, and
+the plain pages no longer draw from a control list. The old handlers stay for the parity scripts. Plan Upload's row rule and the
+sheet reader are one code, used by both (`plan-uploads.service.js`). What the operator sees differently:
+
+- **Image Display:** "This serial is not known" and "This material has no image" in place of the original's .NET messages.
+- **Plan Upload:** the list of plans is read only (a row used to open an empty upload form, with nothing to change). A failed
+  row's message says which row. "Back to list" is "Plans so far".
+- **Process Guide:** the User box is a plain read-only field (it was a disabled list). Scanning an order before a station says "Scan the
+  station first" (the original's null reference). The station's process is found again from the station on each guide request.
+
+Kept as the original has them, on purpose, and worth a decision:
+
+- **A wrong password at the station login still logs people out:** whoever is at the station, and that user anywhere, are logged out
+  before the password is checked.
+- **Passwords are compared as plain text** against `Users.Password`, and the QR code holds user|password.
+- Any user of the screen can log anyone out.
+
+Checked on TEST: Process Guide's station (by code, by alias, without a department), guide, refusals, and a wrong password's logout on a
+throw-away row, removed after; events 19/19 on its old handler; upload parity identical (4 of 4). Not run: a real login, the
+screens in the browser, a committed Plan Upload through the new route (its row code is what parity ran).
+
+# Intended difference: Rework Confirmation on an API of its own (owner, 1 Nov 2026)
+
+`modules/quality/rework-confirmations` (API.md); `/api/forms` answers 410 for it and `/api/quality` has no engine screens left. The save rule
+(`saveNewRRFConfirmation`) is unchanged; the browser no longer sends the inspection, barcode or inspected quantity, the server looks them up from the serial.
+
+- **A list row used to open a generic edit form** whose Update wrote straight to InspectionTrans with no checks. It now opens the unit in the normal
+  scan and confirm flow, and the generic Update is gone.
+- The inspection's Status, Next Action and Unit are read only: they could be changed on the old form, but nothing read them.
+- The empty printer list is gone: it had no printers and the save never used it.
+
+Kept as the original has it, and worth a decision: **Status and Next action on the confirmation are checked but never stored.** Choosing Rejected or Scrap
+confirms the rework exactly as Approved does.
+
+Checked on TEST, two real rejected units, each save rolled back: new reads match the old Go handler (barcode, details, process, self inspection, history,
+defects, checklist count); refusals for wrong quantity, no remark, no action and an unknown serial; inside the transaction the barcode moved to QC status 11,
+after it stayed 13. Events 9/9 on the old handler. Not run: a committed confirmation, the checklist panel on a unit that has one (both units had none), the screen.
+
+# Server folders follow the client's groups (owner, 1 Nov 2026)
+
+Screen modules moved under their group, as `client/src/pages` has them: `modules/production/<screen>` and `modules/quality/rework-confirmations`. API paths did not change.

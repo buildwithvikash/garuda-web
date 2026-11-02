@@ -1,10 +1,10 @@
 // Production orders (PRODHeader + PRODMaterial): the lookups the order screen uses. SQL text is the original
 // ProductionOrderForm's (WRL branches); codes are checked digits (shared/utils/sql.js) before they go into it.
 // Saving goes through the forms writer (services/forms/write.service.js) as the original's DataWrapper did.
-import { query, scalar } from '../../db/pool.js';
-import { fill } from '../../db/options.js';
-import { netString, netLong, netBool } from '../../shared/net.js';
-import { digitsOrEmpty } from '../../shared/sql.js';
+import { query, scalar } from '../../../db/pool.js';
+import { fill } from '../../../db/options.js';
+import { netString, netLong, netBool } from '../../../shared/net.js';
+import { digitsOrEmpty } from '../../../shared/sql.js';
 
 /** whether the production order exists in the business unit (another unit's order is as good as none) */
 export const exists = async (prodNo, businessUnit) =>

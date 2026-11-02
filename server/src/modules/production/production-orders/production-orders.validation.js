@@ -1,6 +1,6 @@
 // A production order as the API takes it. Required = PRODHeader's NOT NULL columns without a default; lengths = the
 // column sizes. Nothing the original screen saved is refused.
-import { validate, rules } from '../../shared/validate.js';
+import { validate, rules } from '../../../shared/validate.js';
 
 const header = {
   orderDate: rules.date({ required: true }),

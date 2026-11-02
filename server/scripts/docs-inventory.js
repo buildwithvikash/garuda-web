@@ -33,7 +33,7 @@ const writes = (t) => [...new Set([...t.matchAll(/\b(?:insert\s+into|update)\s+\
 const { MASTERS } = await imp('src/modules/masters/masters.routes.js');
 const { QUALITY } = await imp('src/modules/quality/quality.routes.js');
 const { PRODUCTION } = await imp('src/modules/production/production.routes.js');
-const DOMAIN = { ...Object.fromEntries(Object.entries(MASTERS).map(([n, r]) => [r, `/api/masters/${n} (modules/masters)`])), ...Object.fromEntries(Object.entries(QUALITY).map(([n, r]) => [r, `/api/quality/${n} (modules/quality)`])), ...Object.fromEntries(Object.entries(PRODUCTION).map(([n, r]) => [r, `/api/production/${n} (modules/production)`])), '/production/productionorderform': '/api/production/orders (modules/production-orders)', '/production/productionassignmentform': '/api/production/assignments (modules/production-assignments)' };
+const DOMAIN = { ...Object.fromEntries(Object.entries(MASTERS).map(([n, r]) => [r, `/api/masters/${n} (modules/masters)`])), ...Object.fromEntries(Object.entries(QUALITY).map(([n, r]) => [r, `/api/quality/${n} (modules/quality)`])), ...Object.fromEntries(Object.entries(PRODUCTION).map(([n, r]) => [r, `/api/production/${n} (modules/production)`])), '/production/productionorderform': '/api/production/orders (modules/production/production-orders)', '/production/productionassignmentform': '/api/production/assignments (modules/production/production-assignments)' };
 // parity coverage: scripts that name the route or the page
 const parityDir = path.join(server, 'scripts/parity');
 const scripts = fs.readdirSync(parityDir).filter((f) => f.endsWith('-parity.js')).map((f) => [f.replace('-parity.js', ''), fs.readFileSync(path.join(parityDir, f), 'utf8')]);

@@ -8,8 +8,7 @@ import { screensRouter } from '../forms/resource.routes.js';
 //  'final-inspections': '/quality/qualityinspectionform', 'ncmr-confirmations': '/quality/ncmrconfirmation',
 //  'repair-confirmations': '/quality/repairconfirmation', 'finishing-confirmations': '/quality/finishingconfirmation',
 //  'self-inspections': '/ceat/ceatinselfinspectionform', with the routes in menu/keep.js)
-export const QUALITY = {
-  'rework-confirmations': '/quality/reworkconfirmationnew',
-};
+// Rework Confirmation has a module of its own (rework-confirmations/).
+export const QUALITY = {};
 
 export default screensRouter(QUALITY);

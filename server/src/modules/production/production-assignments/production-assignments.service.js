@@ -3,10 +3,10 @@
 // ProductionAssignmentForm). Print replays the user's choices through them on the server (department, order,
 // routing, stage, station), so what is saved (the routing with its stations, the BOM lines, the quantity left) is
 // what the server built, never what a browser sent; every choice must be one the server offered.
-import { FORMS } from '../forms/specs.js';
-import { openForm, formOf, runEvent } from '../forms/events.js';
-import { netString } from '../../shared/net.js';
-import { AppError } from '../../shared/AppError.js';
+import { FORMS } from '../../forms/specs.js';
+import { openForm, formOf, runEvent } from '../../forms/events.js';
+import { netString } from '../../../shared/net.js';
+import { AppError } from '../../../shared/AppError.js';
 import * as repo from './production-assignments.repo.js';
 
 export const SCREEN = '/production/productionassignmentform';

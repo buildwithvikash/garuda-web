@@ -1,7 +1,7 @@
-// Model To Model Transfer by FG serials (modules/model-transfers/model-transfers.service.js): lists it refuses, before the database.
+// Model To Model Transfer by FG serials (modules/production/model-transfers/model-transfers.service.js): lists it refuses, before the database.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_CHECK, MAX_MOVE, checkTransfer, transferMany } from '../src/modules/model-transfers/model-transfers.service.js';
+import { MAX_CHECK, MAX_MOVE, checkTransfer, transferMany } from '../src/modules/production/model-transfers/model-transfers.service.js';
 
 test('a check refuses what is not a usable list', async () => {
   await assert.rejects(checkTransfer('42214260201910'), /as a list/);

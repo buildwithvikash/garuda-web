@@ -18,7 +18,7 @@ import { query, execute } from '../../src/db/pool.js';
 import { loadSettings } from '../../src/modules/settings/settings.service.js';
 import { PAGE_PRINT, PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
 import { newFormState } from '../../src/modules/forms/state.js';
-import * as assignments from '../../src/modules/production-assignments/production-assignments.service.js';
+import * as assignments from '../../src/modules/production/production-assignments/production-assignments.service.js';
 import { MASTERS } from '../../src/modules/masters/masters.routes.js';
 import { QUALITY } from '../../src/modules/quality/quality.routes.js';
 import { validateBody } from '../../src/modules/forms/resource.validation.js';

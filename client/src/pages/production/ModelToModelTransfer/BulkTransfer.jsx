@@ -184,6 +184,7 @@ export default function BulkTransfer({ options: { materials, printers: printerLi
               <label className="grid max-w-md gap-1.5 text-sm font-medium">
                 Printer
                 <NativeSelect value={printer} onChange={(e) => setPrinter(e.target.value)} disabled={moving} aria-label="Printer">
+                  <option value="">Choose a printer…</option>
                   {printerList.map((o, i) => <option key={i} value={o.value}>{o.label}</option>)}
                 </NativeSelect>
               </label>

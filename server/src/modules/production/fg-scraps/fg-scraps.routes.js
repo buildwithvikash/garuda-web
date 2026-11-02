@@ -1,16 +1,16 @@
 // /api/production/fg-scrap: scan a unit, scrap it, and the history.
 import { Router } from 'express';
-import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
-import { portedErrors } from '../../middlewares/errorHandler.js';
-import { idempotent } from '../../middlewares/idempotency.js';
-import { operatorMessages } from '../../middlewares/operatorMessages.js';
-import { validate } from '../../middlewares/validate.js';
-import { AppError } from '../../shared/AppError.js';
-import { ok } from '../../shared/http.js';
-import { netString } from '../../shared/net.js';
-import { sessionContext as ctx } from '../auth/context.js';
-import { scrapHistory } from '../production/production.service.js';
-import { rangeOf } from '../production/production.routes.js';
+import { authorizeScreen, requireAuth } from '../../../middlewares/auth.js';
+import { portedErrors } from '../../../middlewares/errorHandler.js';
+import { idempotent } from '../../../middlewares/idempotency.js';
+import { operatorMessages } from '../../../middlewares/operatorMessages.js';
+import { validate } from '../../../middlewares/validate.js';
+import { AppError } from '../../../shared/AppError.js';
+import { ok } from '../../../shared/http.js';
+import { netString } from '../../../shared/net.js';
+import { sessionContext as ctx } from '../../auth/context.js';
+import { scrapHistory } from '../production.service.js';
+import { rangeOf } from '../production.routes.js';
 import * as scraps from './fg-scraps.service.js';
 import { serialProblem, validateScrap } from './fg-scraps.validation.js';
 

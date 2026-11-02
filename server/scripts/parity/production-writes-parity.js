@@ -2,8 +2,8 @@
 // are read and put back, then the same on the new app; rows, alerts and results compared, everything restored after.
 // Usage: node --env-file=.env scripts/parity/production-writes-parity.js <originalBinDir> [--api] [section name part...]
 import { query, execute } from '../../src/db/pool.js';
-import { replace as replaceComponent } from '../../src/modules/rm-replacements/rm-replacements.service.js';
-import { scrap as scrapUnit } from '../../src/modules/fg-scraps/fg-scraps.service.js';
+import { replace as replaceComponent } from '../../src/modules/production/rm-replacements/rm-replacements.service.js';
+import { scrap as scrapUnit } from '../../src/modules/production/fg-scraps/fg-scraps.service.js';
 import { loadSettings } from '../../src/modules/settings/settings.service.js';
 import { PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
 import { SPECS, specOf, ctx, original as run } from './lib.js';
@@ -47,7 +47,7 @@ section('fg scrap', async () => {
     const afterO = await snap();
     await restore();
     const v = { TBBarcode: fg.Serial, TBRemark: ' ZZP scrap ', DDLScrapCategory: cat, GvDetails: [] };
-    // the screen's own API (modules/fg-scraps): the data must match; it answers no error, where the original's last statement always fails
+    // the screen's own API (modules/production/fg-scraps): the data must match; it answers no error, where the original's last statement always fails
     const n = viaApi ? ((await scrapUnit({ unit: fg.Serial, category: cat, remark: 'ZZP scrap' }, ctx)), {}) : await PAGE_EVENTS[spec.file].btnSave(v, eventHelpers(spec, ctx, v, { viewState: { __Go: 'Clr' } }));
     const afterN = await snap();
     const problems = [];
@@ -101,7 +101,7 @@ section('rm replacement', async () => {
     const [o] = original([{ id: 0, mode: 'event', key: null, viewState: {}, dataTables: tables, steps, ctx, spec: specOf(spec) }]);
     const afterO = await snap();
     await restore();
-    if (viaApi) await replaceComponent({ unit: fg.Serial, existing: comp.Serial, replacement: candidate }, ctx); // the screen's own API (modules/rm-replacements)
+    if (viaApi) await replaceComponent({ unit: fg.Serial, existing: comp.Serial, replacement: candidate }, ctx); // the screen's own API (modules/production/rm-replacements)
     else {
       let vs = { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' };
       let v = { TBBarcode: fg.Serial, GvDetails: [] };

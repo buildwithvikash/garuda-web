@@ -1,16 +1,16 @@
 // /api/production/rm-replacements: scan a unit, replace one of its raw material components, and the history.
 import { Router } from 'express';
-import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
-import { portedErrors } from '../../middlewares/errorHandler.js';
-import { idempotent } from '../../middlewares/idempotency.js';
-import { operatorMessages } from '../../middlewares/operatorMessages.js';
-import { validate } from '../../middlewares/validate.js';
-import { AppError } from '../../shared/AppError.js';
-import { ok } from '../../shared/http.js';
-import { netString } from '../../shared/net.js';
-import { sessionContext as ctx } from '../auth/context.js';
-import { replacementHistory } from '../production/production.service.js';
-import { rangeOf } from '../production/production.routes.js';
+import { authorizeScreen, requireAuth } from '../../../middlewares/auth.js';
+import { portedErrors } from '../../../middlewares/errorHandler.js';
+import { idempotent } from '../../../middlewares/idempotency.js';
+import { operatorMessages } from '../../../middlewares/operatorMessages.js';
+import { validate } from '../../../middlewares/validate.js';
+import { AppError } from '../../../shared/AppError.js';
+import { ok } from '../../../shared/http.js';
+import { netString } from '../../../shared/net.js';
+import { sessionContext as ctx } from '../../auth/context.js';
+import { replacementHistory } from '../production.service.js';
+import { rangeOf } from '../production.routes.js';
 import * as replacements from './rm-replacements.service.js';
 import { serialProblem, validateReplacement } from './rm-replacements.validation.js';
 

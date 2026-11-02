@@ -2,11 +2,11 @@
 // uses. SQL text is the original ProductionAssignmentForm's; codes are checked digits (shared/utils/sql.js) before
 // they go into it. The job cards themselves are written by the screen's print handler (services/forms/pages.service.js
 // btnPrint) in one transaction per piece, as the original did.
-import { query, scalar } from '../../db/pool.js';
-import { fill } from '../../db/options.js';
-import { netInt, netLong, netNum, netDouble, netString } from '../../shared/net.js';
-import { digitsOrEmpty } from '../../shared/sql.js';
-import { dataTable } from '../../db/tables.js';
+import { query, scalar } from '../../../db/pool.js';
+import { fill } from '../../../db/options.js';
+import { netInt, netLong, netNum, netDouble, netString } from '../../../shared/net.js';
+import { digitsOrEmpty } from '../../../shared/sql.js';
+import { dataTable } from '../../../db/tables.js';
 
 const parseString = (v) => (netString(v) === '&nbsp;' ? '' : netString(v));
 const blankCells = (rows) => rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x ?? ''])));

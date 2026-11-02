@@ -3,11 +3,11 @@
 // docs/PARITY-REPORT.md): all of it in one transaction, a unit already scrapped refused, the category checked against the
 // list, and no last statement: the original's had a stray ")", so it always failed after the scrap and the plan
 // quantity it meant to raise never moved. The plan stays as it is.
-import { query, scalar, execute } from '../../db/pool.js';
-import { transaction } from '../../db/tx.js';
-import { AppError } from '../../shared/AppError.js';
-import { netString } from '../../shared/net.js';
-import { componentStatus, fgComponents } from '../production/production.service.js';
+import { query, scalar, execute } from '../../../db/pool.js';
+import { transaction } from '../../../db/tx.js';
+import { AppError } from '../../../shared/AppError.js';
+import { netString } from '../../../shared/net.js';
+import { componentStatus, fgComponents } from '../production.service.js';
 
 export const SCREEN = '/production/fgscrapform';
 

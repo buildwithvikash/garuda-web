@@ -1,8 +1,8 @@
-// RM Replacement's rules (modules/rm-replacements): what the screen sees, which component can be replaced, the request.
+// RM Replacement's rules (modules/production/rm-replacements): what the screen sees, which component can be replaced, the request.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseComponent, componentView } from '../src/modules/rm-replacements/rm-replacements.service.js';
-import { validateReplacement } from '../src/modules/rm-replacements/rm-replacements.validation.js';
+import { chooseComponent, componentView } from '../src/modules/production/rm-replacements/rm-replacements.service.js';
+import { validateReplacement } from '../src/modules/production/rm-replacements/rm-replacements.validation.js';
 
 const raw = { Category: ' Raw Material ', Material: 'MOTOR', Process: 'SCAN', Serial: 'M1 ', PsNo: '9', RowID: '2', ProcessCode: '7', matCode: '5' };
 const inProcess = { Category: 'In Process', Material: 'CABINET', Process: 'FOAM', Serial: 'C1', PsNo: '9', RowID: '3', ProcessCode: '8', matCode: '6' };

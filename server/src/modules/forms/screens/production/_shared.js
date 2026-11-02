@@ -5,7 +5,7 @@ import { digitsOrEmpty, lit } from '../../../../shared/sql.js';
 import { settingText } from '../../../settings/settings.service.js';
 import { dataTable } from '../../../../db/tables.js';
 import { validateWorkStation } from '../../../production/production.service.js';
-import * as assignRepo from '../../../production-assignments/production-assignments.repo.js';
+import * as assignRepo from '../../../production/production-assignments/production-assignments.repo.js';
 import { parseString, select } from '../_shared.js';
 
 export { fgComponents } from '../../../production/production.service.js';
