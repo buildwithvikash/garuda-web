@@ -248,11 +248,31 @@ Original: `View/Quality/ReworkConfirmationNew.aspx`. Its own module (`modules/qu
 | `POST /` `{ serial, qty, rootCause, actionTaken, remark, status, newAction, department }` | confirms; the inspection, barcode and quantity are looked up by the server. Takes an `Idempotency-Key` header |
 | `GET /?department=&page=` | the units waiting in a department |
 
-### Production Capture — `/api/production/wip-capture`
+### WIP Capture — `/api/production/wip-capture`
 
-Original: `View/Production/WIPCaptureForm.aspx`. Fields: `department`, `businessUnit`, `tbWorkStation`, `ddlStationPrinter`, `tbJobCoard`, `tbFG`, `gvHistory`, `gvComponents`, `ddlfgMaterial`, `ddlProdOrder`, `gvProcessingUnit`, `tbqcRemark`, `gvinMaterial`, `tbProcessingMachine`, `tbinhu`, `tbinItemCode`, `tbInQty`, `ddlINUom`, `tbSerialHU`, `tbSerialBarcode`, `gvMaterial`, `tbYieldMachinary`, `tbOutHU`, `ddlPackUom`, `packQty`, `noofPacks`, `tbWeighingScale`, `ddlWeightUnit`, `grossWeight`, `tareWeight`, `tbRejectBarcode`, `tbRejectQty`, `ddlRejectUOM`, `cBdefectCodes`, `tbRejectRemark`, `gvwqcMaterial`, `tbBarcode`, `sampleBarcode`, `tbQty`, `ddlUom`, `ddlwipqcStatus`, `ddlNextAction`, `ddlDefectCate`, `ddlDefectCodes`, `inspectionDefect`, `tbwqcRemark`, `gvDefectHistory`, `tbMachine`, `ddlStatus`, `ddlBreakDownList`, `ddlPauseList`, `tbiDmIN`, `ddlPrinter`, `tbQuantity`, `ddlQuantityUom`, `ddlqcStatus`, `tbqcStatusRemark`, `tbid`, `tbSerialNo`, `tbTotalQty`, `tbNetWt`, `tbFGSerialNo`, `tbASsetTag`, `tbGreenTag`, `tbBEENo`, `ddlqcPrinter`, `lbGuideFiles`, `imgGuideFileDisplay`, `gvInstruction`, `setupCheckList`, `inspectionCheckList`.
+Original: `View/Production/WIPCaptureForm.aspx`. Its own module (`modules/production/wip-capture`); the screen engine answers 410. A station's state (scanned station, process, unit, scan result, QC lot, checklist) stays on the server for a shift; each opened screen has its own. The scan rules are the original page's ported code, unchanged.
 
-Events: `department`, `btnWorkStationScan`, `btnWorderScan`, `btnRM`, `btnINBarcode`, `btnInwardMaterial`, `btnRework`, `btnCloseInputMaterialPanel`, `btnGuide`, `lbGuideFiles`, `btnToggleGuide`, `imbGuideClose`, `go`, `ddlwipqcStatus`, `ddlDefectCate`, `btnAdd`, `gvTransDataDelete`, `btnUD`, `btnQCClose`, `btnQCClear`, `btnQCSave`, `inspectionCheckListNext`, `inspectionCheckListPrev`, `inspectionCheckListSave`, `inspectionCheckListValue`, `inspectionCheckListList`, `inspectionCheckListGo`, `inspectionCheckListSelect`, `inspectionCheckListFail`, `inspectionCheckListPass`, `inspectionCheckListClose`.
+Every call below on `/sessions/:id` answers `{ station, alert?, success?, explain?, model? }`: `station` is the screen to draw; `alert` a refusal (status 200: the scan is answered, and a box may be cleared); `explain` `{ title, text }` where a refused unit is now. A station that is gone answers `{ restarted: true, alert }`.
+
+| Call | Does |
+|---|---|
+| `POST /sessions` | opens a station: `{ id, station, alert? }` |
+| `POST /sessions/:id/department` `{ department }` | chooses the department (ignored when the user's is fixed) |
+| `POST /sessions/:id/station` `{ station }` · `DELETE` | scans / clears the station |
+| `POST /sessions/:id/unit` `{ serial, stationPrinter? }` · `DELETE` | scans / clears the unit; `station.result`: `started`, `completed`, `recorded`, `inputs`, `qc`, `fg` |
+| `GET /sessions/:id/unit` | the scanned unit's `{ route, cabinet }`, each null when its lookup fails |
+| `POST /sessions/:id/inputs/scan` `{ component }` | a component scan |
+| `POST /sessions/:id/inputs/consume` `{ qty, uom }` | consumes it when a quantity is asked |
+| `DELETE /sessions/:id/inputs` | closes the component panel |
+| `POST /sessions/:id/qc/status`, `/qc/defect-category` | a list that answers at once |
+| `POST /sessions/:id/qc/defects` · `/qc/defects/remove` `{ arg, index }` | adds `defectCode` / removes a row |
+| `POST /sessions/:id/qc/checklist` · `/qc/checklist/:event` `{ f, arg, index }` | opens the checklist / its events (`next`, `prev`, `save`, `value`, `list`, `go`, `goto`, `Pass`, `Fail`, `close`); only its typed inputs are taken |
+| `POST /sessions/:id/qc/clear` | clears the inspection |
+| `POST /sessions/:id/qc/save` | saves the result, and for FG the label; takes an `Idempotency-Key` header |
+| `POST /sessions/:id/guide` · `/guide/file` `{ guideFile }` · `/guide/document` · `DELETE /guide` | the station's guide |
+| `GET /units/:label/image/:kind` | the unit's FG material image (`artwork`, `unitframe`, `basket`) |
+
+The QC calls also take what was typed: `status`, `nextAction`, `defectCategory`, `defectCode`, `inspectedQty`, `bee`, `printer`, `fgSerial`, `assetTag`, `greenTag`, `remark`. A box the screen does not show open (a generated tag, a locked status), or a list item that is not listed, is ignored.
 
 ### FG Scrap — `/api/production/fg-scrap`
 
@@ -349,7 +369,6 @@ Many labels at once (e.g. 300 FG labels from their serials): `POST …/reprint/c
 
 Serial Generation Logic also has `POST /api/masters/serial-logics/preview` (owner, 29 Oct 2026; read only): `{ rows, barcodeLength, serialCode?, material? }` (the form's lines, saved or not) answers what the logic makes, built as production builds a serial from its lines (dates today, the model's Alt Name, the serial number padded to its length): `first`, `last` (its Ending No, else the largest the length holds), `count`, `length`, `parts` (each line's part and separator), `problems` (e.g. a length that differs from the Barcode Length, a start after the end), and for a saved logic the `materials` using it (the Model part's material, the first one by default). Nothing is taken or counted.
 
-WIP Capture also has `GET /api/production/wip-capture/units/:label`: route and cabinet details of the scanned unit (`{ route, cabinet }`, each null when its lookup fails), and `GET /api/production/wip-capture/units/:label/image/:kind` (`artwork` | `unitframe` | `basket`): the unit's FG material image of that kind. Which kind a stage shows is set per routing stage: `GET` / `PUT /api/masters/routings/:route/stage-images` (`{ stages: [{ processCode, imageKind | null }] }`, table `RoutingStageImages`, migration `server/db/migrations/2026-11-routing-stage-images.sql`).
 
 
 

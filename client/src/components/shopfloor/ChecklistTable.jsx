@@ -16,7 +16,7 @@ const typeOf = (r) => String(cellOf(r, 'InputType') ?? '').toLowerCase();
 const passed = (r) => String(cellOf(r, 'qcstatus') ?? '') === '1';
 
 /** s: the checklist's state; onChange(next): its inputs typed; onEvent(name, state, arg, index): a server event,
- *  answering the engine's result */
+ *  answering the station ({ station, alert? }) */
 export default function ChecklistTable({ s, busy, onChange, onEvent }) {
   const f = s.f;
   const rows = s.rows ?? [];
@@ -30,7 +30,7 @@ export default function ChecklistTable({ s, busy, onChange, onEvent }) {
     const i = current;
     const r = await onEvent('QC:save', state);
     if (!r || r.alert) return;
-    const next = r.set?.InspectionCheckList?.value ?? state;
+    const next = r.station?.checklist ?? state;
     const done = new Set(saved).add(i);
     setSaved(done);
     if (done.size >= rows.length) return void onEvent('QC:close', next);

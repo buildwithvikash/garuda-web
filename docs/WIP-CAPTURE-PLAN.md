@@ -1,6 +1,6 @@
 # WIP Capture: plan to make it a plain React screen
 
-Status: approved (owner, 31 Oct 2026). Step 1 built, waiting for its test on TEST; steps 2 and 3 to do.
+Status: approved (owner, 31 Oct 2026). Steps 1, 2 and 3 built (2 Nov 2026); waiting for the test at a real station (below).
 
 ## What the screen does
 
@@ -37,7 +37,7 @@ output), production stage type 7, department indicators other than 10000, output
 
 ### Step 1: the server keeps the scan state (no visible change)
 
-Built (`server/src/modules/forms/screenSessions.js`, `server/tests/screen-sessions.test.js`): each page load has a
+Built, then folded into step 2 (`modules/production/wip-capture/wip-capture.station.js`). As first built: each page load has a
 random id; `/forms/spec` starts its state, `/forms/event` uses only the kept ViewState and page state (the request's are
 not read) and keeps the answer. A refresh starts afresh, as before (the id is per page load, so a duplicated tab is a
 station of its own). After a restart the page says so and reloads. `/api/production/wip-capture/events` answers 409
@@ -66,15 +66,14 @@ New calls on `/api/production/wip-capture` (old ones stay until the switch):
 | `POST /sessions/:id/fg` | FG label: tags, save and print (one per click: Idempotency-Key) |
 | `GET /sessions/:id/guide` | instructions and drawings |
 
-Client, `pages/production/WipCapture/` as for the other two screens:
-`wipApi.js`, `useStation.js` (the session; scans queued so a fast scanner never races), and views
-`Station.jsx` (department, printer, station), `UnitScan.jsx` (serial, history, route, cabinet), `Inputs.jsx`,
-`Inspection.jsx` (QC), `FgLabel.jsx`, `Guide.jsx`. Plain labels and messages, texts where they show.
+As built, API.md has the calls. Client: `pages/production/WipCapture.jsx` (the station) and `pages/production/WipCapture/`:
+`wipApi.js`, `useStation.js` (the session; scans queued so a fast scanner never races), `Cabinet.jsx`, `Components.jsx`,
+`Inspection.jsx` (QC and FG label), `Guide.jsx`, `Field.jsx`. Plain labels and messages, texts where they show.
 Kept: the scan sound, mute, the big scan boxes for the shop floor.
 
 ### Step 3: remove the old path
 
-`/api/forms` stops serving the screen (as for the other two); the old events go once nothing uses them.
+Done: `/api/forms` answers 410 for the screen. The page code stays: the station runs it, it holds the scan rules.
 
 ## How it is tested
 

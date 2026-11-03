@@ -1,52 +1,21 @@
-// /api/production/<name>: WIP capture as a REST
-// resources; the calls are in forms/resource.routes.js, the reference in docs/API.md. Orders, assignments, RM replacements,
-// FG scrap, model transfers, image display, plan uploads and process guides have modules of their own.
+// /api/production/<name>: production screens still served by the screen engine (none now); the calls are in
+// forms/resource.routes.js, the reference in docs/API.md. Every production screen has a module of its own under this folder.
 import { Router } from 'express';
-import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
 import { AppError } from '../../shared/AppError.js';
-import { ok } from '../../shared/http.js';
 import { netString } from '../../shared/net.js';
-import { log } from '../../config/logger.js';
 import { screensRouter } from '../forms/resource.routes.js';
-import { artworkByLabel, cabinetByLabel, routeByLabel } from './wip.service.js';
-import { KINDS } from '../masters/image-kinds.js';
 
 /** API name -> screen */
-export const PRODUCTION = {
-  'wip-capture': '/production/wipcaptureform',
-};
+export const PRODUCTION = {};
 
 const router = Router();
-// WIP Capture's unit view: the scanned label's route and cabinet details (read only). Each part fails on its own, so a
-// missing table or column never hides the other.
-router.get('/wip-capture/units/:label', requireAuth, authorizeScreen(PRODUCTION['wip-capture']), async (req, res) => {
-  const label = netString(req.params.label).trim();
-  if (label === '' || label.length > 100) throw AppError.badRequest('Scan a unit serial');
-  const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
-  for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} production/units: ${r.reason?.message}`);
-  ok(res, { route: route.value ?? null, cabinet: cabinet.value ?? null });
-});
-// WIP Capture's cabinet: the scanned unit's FG material image of a kind (the Material screen's "Artwork & Packing
-// Images"), served to the screen's operators (the Material screen's own image route needs that screen's access)
-router.get('/wip-capture/units/:label/image/:kind', requireAuth, authorizeScreen(PRODUCTION['wip-capture']), async (req, res) => {
-  const label = netString(req.params.label).trim();
-  if (label === '' || label.length > 100) throw AppError.badRequest('Scan a unit serial');
-  const kind = netString(req.params.kind);
-  if (!KINDS.includes(kind)) throw AppError.badRequest(`The image must be one of: ${KINDS.join(', ')}.`);
-  const img = await artworkByLabel(label, kind);
-  if (!img) throw AppError.notFound('Image');
-  res.set('Content-Type', img.mimeType);
-  res.set('Cache-Control', 'private, max-age=300');
-  res.set('X-Content-Type-Options', 'nosniff');
-  res.send(img.image);
-});
 /** a history's optional time range: ?start=&end= as a date-time box sends them (YYYY-MM-DDTHH:mm), else refused */
 export function rangeOf(q) {
   const range = {};
   for (const [name, key] of [['start', 'startTime'], ['end', 'endTime']]) {
     const v = netString(q[name]).trim();
     if (v === '') continue;
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(v) || Number.isNaN(Date.parse(v))) throw AppError.badRequest(`The ${name} time is not a date and time`);
+    if (!/^d{4}-d{2}-d{2}Td{2}:d{2}(:d{2})?$/.test(v) || Number.isNaN(Date.parse(v))) throw AppError.badRequest(`The ${name} time is not a date and time`);
     range[key] = v.length === 16 ? `${v}:00` : v; // SQL Server reads YYYY-MM-DDTHH:mm:ss (with the seconds)
   }
   if (range.startTime && range.endTime && range.startTime > range.endTime) throw AppError.badRequest('The start time is after the end time');

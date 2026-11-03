@@ -4,18 +4,15 @@ import { Router } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { operatorMessages } from '../../middlewares/operatorMessages.js';
 import { clearSession, writeSession, sessionContext } from '../auth/sessions.js';
-import { log } from '../../config/logger.js';
 import { canOpen, userMenu } from '../menu/menu.service.js';
 import { netString } from '../../shared/net.js';
 import { displayState, copyState, engineControls } from './state.js';
 import { comboRows } from './children.js';
 import { PAGE_EVENTS, PAGE_POSTBACK, PAGE_LIST_TAG, PAGE_SAVE, PAGE_UPDATE, PAGE_CANCEL, PAGE_PRINT, CUSTOM_DISPLAY, eventHelpers } from './pages.js';
-import { cabinetByLabel, routeByLabel } from '../production/wip.service.js';
 import { listPage, distinctValues } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
 import { FORMS } from './specs.js';
 import { specPayload } from './resource.js';
-import * as tabs from './screenSessions.js';
 import { SCREEN as PRODUCTION_ORDER } from '../production/production-orders/production-orders.service.js';
 import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production/production-assignments/production-assignments.service.js';
 import { SCREEN as RM_REPLACEMENT } from '../production/rm-replacements/rm-replacements.service.js';
@@ -24,13 +21,14 @@ import { SCREEN as MODEL_TRANSFER } from '../production/model-transfers/model-tr
 import { SCREEN as PLAN_UPLOAD } from '../production/plan-uploads/plan-uploads.service.js';
 import { SCREEN as PROCESS_GUIDE } from '../production/process-guides/process-guides.service.js';
 import { SCREEN as REWORK } from '../quality/rework-confirmations/rework-confirmations.service.js';
+import { SCREEN as WIP_CAPTURE } from '../production/wip-capture/wip-capture.service.js';
 
 /** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
  *  (Production Order: no change or cancel after create, one business unit's orders only; Production Assignment: every
  *  choice checked, one print per click; RM Replacement: the job card and row looked up by the server, one replacement per
  *  scan; FG Scrap: all in one transaction, one scrap per click; Model Transfer: serials checked, each unit in one transaction)
  *  cannot be gone around. */
-const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap', [MODEL_TRANSFER]: '/api/production/model-transfers', [PLAN_UPLOAD]: '/api/production/plan-uploads', [PROCESS_GUIDE]: '/api/production/process-guides', [REWORK]: '/api/quality/rework-confirmations', '/production/wrlimagedisply': '/api/production/image-display' };
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap', [MODEL_TRANSFER]: '/api/production/model-transfers', [PLAN_UPLOAD]: '/api/production/plan-uploads', [PROCESS_GUIDE]: '/api/production/process-guides', [REWORK]: '/api/quality/rework-confirmations', [WIP_CAPTURE]: '/api/production/wip-capture', '/production/wrlimagedisply': '/api/production/image-display' };
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();
@@ -52,13 +50,6 @@ async function getSpec(req, res) {
   if (!spec) return;
   try {
     const payload = await specPayload(spec, ctxOf(req));
-    // a screen whose page state the server keeps: this tab starts afresh (a page load, as the original's)
-    const path = netString(req.query.path).toLowerCase();
-    if (tabs.SERVER_STATE.has(path)) {
-      const tab = tabs.tabOf(req.query.tab);
-      if (!tab) return void res.status(400).json({ message: 'Reload the page.' });
-      tabs.start(req.session.userCode, path, tab, payload);
-    }
     res.json(payload);
   } catch (e) {
     fail(res, e);
@@ -119,25 +110,10 @@ async function postEvent(req, res) {
   const handler = PAGE_EVENTS[spec.file]?.[netString(req.body?.control)];
   if (!handler) return void res.status(404).json({ message: 'No such event' });
   const v = Object.fromEntries(Object.entries(await posted(req, spec)).map(([k, x]) => [k, x !== null && typeof x === 'object' ? x : netString(x)]));
-  // a screen whose page state the server keeps: the tab's own copy, never the request's (screenSessions.js)
-  const path = netString(req.body?.path).toLowerCase();
-  const kept = tabs.SERVER_STATE.has(path);
-  const tab = kept ? tabs.tabOf(req.body?.tab) : null;
-  if (kept && !tab) return void res.status(400).json({ message: 'Reload the page.' });
-  let state = kept ? tabs.stateOf(req.session.userCode, path, tab) : null;
-  // nothing kept (the server restarted, or a shift went by): the tab starts afresh and the screen says so
-  const restarted = kept && !state;
-  if (restarted) state = tabs.start(req.session.userCode, path, tab, await specPayload(spec, ctxOf(req)));
-  const vs = kept
-    ? state.viewState
-    : req.body?.viewState && typeof req.body.viewState === 'object'
-      ? Object.fromEntries(Object.entries(req.body.viewState).map(([k, x]) => [k, x !== null && typeof x === 'object' ? x : netString(x)]))
-      : {};
+  const vs = req.body?.viewState && typeof req.body.viewState === 'object' ? Object.fromEntries(Object.entries(req.body.viewState).map(([k, x]) => [k, x !== null && typeof x === 'object' ? x : netString(x)])) : {};
   try {
-    const ui = kept ? state.ui : req.body?.ui && typeof req.body.ui === 'object' ? req.body.ui : {};
-    if (restarted) return void res.json({ restarted: true, alert: 'The station was reset (the server restarted or the shift ended). Scan the station again.', viewState: vs });
+    const ui = req.body?.ui && typeof req.body.ui === 'object' ? req.body.ui : {};
     const r = await handler(v, eventHelpers(spec, ctxOf(req), v, { viewState: vs, arg: req.body?.arg, index: Number(req.body?.index ?? -1), ui }));
-    if (kept) tabs.save(req.session.userCode, path, tab, tabs.applyAnswer(state, r));
     // page code that sets a session value (WrapperAvatar.Department = ...): only the department is allowed
     if (r.session && 'department' in r.session) writeSession(res, { ...req.session, department: netString(r.session.department) });
     const { session: _, ...rest } = r;
@@ -198,22 +174,6 @@ async function postSave(req, res) {
   }
 }
 
-// WIP Capture's unit view: the scanned label's route and cabinet details (read only; the WIP events are unchanged).
-// Each part fails on its own, so a missing table or column never hides the other.
-async function getUnit(req, res) {
-  if (netString(req.query.path).toLowerCase() !== '/production/wipcaptureform') return void res.status(404).json({ message: 'Form not found' });
-  const spec = await load(req, res);
-  if (!spec) return;
-  const label = netString(req.query.label).trim();
-  if (label === '' || label.length > 100) return void res.status(400).json({ message: 'Scan a unit serial' });
-  // the process of the station this tab scanned (kept on the server, step 1): which image the routing shows there
-  const kept = tabs.stateOf(req.session.userCode, '/production/wipcaptureform', tabs.tabOf(req.query.tab));
-  const process = kept?.viewState?.ProcessCode ?? null;
-  const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label, process)]);
-  for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} forms/unit: ${r.reason?.message}`);
-  res.json({ route: route.value ?? null, cabinet: cabinet.value ?? null });
-}
-
 async function postUpdate(req, res) {
   const spec = await load(req, res);
   if (!spec) return;
@@ -259,7 +219,6 @@ router.post('/event', postEvent);
 router.post('/print', postPrint);
 router.get('/combo', getCombo);
 router.post('/save', postSave);
-router.get('/unit', getUnit);
 router.post('/update', postUpdate);
 router.post('/cancel', postCancel);
 

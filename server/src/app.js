@@ -18,6 +18,7 @@ import processGuidesRoutes from './modules/production/process-guides/process-gui
 import reworkConfirmationsRoutes from './modules/quality/rework-confirmations/rework-confirmations.routes.js';
 import mastersRoutes from './modules/masters/masters.routes.js';
 import qualityRoutes from './modules/quality/quality.routes.js';
+import wipCaptureRoutes from './modules/production/wip-capture/wip-capture.routes.js';
 import productionRoutes, { PRODUCTION } from './modules/production/production.routes.js';
 
 export const app = express();
@@ -28,7 +29,7 @@ app.use(requestLog);
 app.use(securityHeaders(`${dist}/index.html`));
 
 // screens send whole forms (grids, images, picked files) as the original pages posted them
-for (const p of ['/api/forms', '/api/masters', '/api/quality', '/api/production/plan-uploads', ...Object.keys(PRODUCTION).map((n) => `/api/production/${n}`)]) app.use(p, express.json({ limit: '100mb' }));
+for (const p of ['/api/forms', '/api/masters', '/api/quality', '/api/production/plan-uploads', '/api/production/wip-capture', ...Object.keys(PRODUCTION).map((n) => `/api/production/${n}`)]) app.use(p, express.json({ limit: '100mb' }));
 app.use('/api', express.json({ limit: '1mb' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/forms', formsRoutes);
@@ -40,6 +41,7 @@ app.use('/api/production/model-transfers', modelTransfersRoutes);
 app.use('/api/production/image-display', imageDisplayRoutes);
 app.use('/api/production/plan-uploads', planUploadsRoutes);
 app.use('/api/production/process-guides', processGuidesRoutes);
+app.use('/api/production/wip-capture', wipCaptureRoutes);
 app.use('/api/masters', mastersRoutes);
 app.use('/api/quality/rework-confirmations', reworkConfirmationsRoutes);
 app.use('/api/quality', qualityRoutes);

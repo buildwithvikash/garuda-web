@@ -67,7 +67,6 @@ function engine(path) {
       api(
         `/forms/combo?${p}&id=${enc(id)}${search == null ? "" : `&search=${enc(search)}`}`,
       ),
-    unit: (label) => api(`/forms/unit?${p}&label=${enc(label)}`),
   };
 }
 
@@ -140,8 +139,6 @@ function rest(base) {
         `${base}/pickers/${enc(maps.names[id] ?? id)}${search == null ? "" : `?search=${enc(search)}`}`,
       );
     },
-    // WIP Capture's unit view (route and cabinet of a scanned serial)
-    unit: (label) => api(`${base}/units/${enc(label)}`),
   };
 }
 

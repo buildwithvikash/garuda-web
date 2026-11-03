@@ -1,88 +1,51 @@
-// ════════════════════════════════════════════════════════════════════════════════
-//  WIP Capture
-//  Sidebar: Production › WIP Capture
-//
-//  THIS FILE IS THE WHOLE PAGE. Change how it works or looks right here: nothing in this
-//  file is used by any other page. Only the UI pieces are shared (@/components/ui = shadcn,
-//  @/components/shared = Page, Section, DataTable, Modal ...).
-//
-//  Map of this file
-//    1. SETTINGS         route and header                                  <- start here
-//    2. SMALL HELPERS    scan sound, first load, table cell styles
-//    3. STATE + ENGINE   events to the server and the reply
-//    4. THE SCANNED UNIT route and components of the scanned serial
-//    5. CARDS            cabinet, history, components, inspection, guide
-//    6. STATION          the screen itself
-//    7. PAGE             loads the screen
-// ════════════════════════════════════════════════════════════════════════════════
+// WIP Capture (sidebar: Production › WIP Capture): scan the work station, scan a serial, and the cards react.
+//   WipCapture/useStation.js    the station: its calls, one at a time, and what the operator typed
+//   WipCapture/wipApi.js        /api/production/wip-capture
+//   WipCapture/Cabinet.jsx      the scanned unit's cabinet and image
+//   WipCapture/Components.jsx   components scanned, components to scan
+//   WipCapture/Inspection.jsx   QC and FG label
+//   WipCapture/Guide.jsx        the station's instructions and drawings
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AlertTriangle, BookOpen, CheckCircle2, RefreshCcw, RotateCw, ScanBarcode, ScanLine, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+import Grid from '@/components/shared/DataGrid.jsx';
+import Loader from '@/components/shared/Loader.jsx';
+import Page from '@/components/shared/Page.jsx';
+import ChecklistTable from '@/components/shopfloor/ChecklistTable.jsx';
+import { fittedCount } from '@/components/shopfloor/ComponentChecklist.jsx';
+import MuteButton from '@/components/shopfloor/MuteButton.jsx';
+import ScanBox from '@/components/shopfloor/ScanBox.jsx';
+import ScanFlashHost, { flashError } from '@/components/shopfloor/ScanFlash.jsx';
+import SectionCard from '@/components/shopfloor/SectionCard.jsx';
+import { Badge } from '@/components/ui/badge.jsx';
+import { Button } from '@/components/ui/button.jsx';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog.jsx';
+import { loadPref } from '@/utils/prefs.js';
+import Cabinet from './WipCapture/Cabinet.jsx';
+import { ComponentDetails, ComponentScan } from './WipCapture/Components.jsx';
+import Field from './WipCapture/Field.jsx';
+import Guide from './WipCapture/Guide.jsx';
+import Inspection from './WipCapture/Inspection.jsx';
+import { useStation } from './WipCapture/useStation.js';
+import { wipApi } from './WipCapture/wipApi.js';
 
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  RotateCw, AlertTriangle,
-  BookOpen,
-  Boxes,
-  CheckCircle2,
-  ClipboardList,
-  Info,
-  ListChecks,
-  MessageSquare,
-  Plus,
-  RefreshCcw,
-  Refrigerator,
-  Save,
-  ScanBarcode,
-  ScanLine,
-  X,
-  ZoomIn,
-} from "lucide-react";
-import toast from "react-hot-toast";
-import { api } from "@/api.js";
-import Grid from "@/components/shared/DataGrid.jsx";
-import { GuideView, Panel } from "@/components/shared/FormControls.jsx";
-import Loader from "@/components/shared/Loader.jsx";
-import Page from "@/components/shared/Page.jsx";
-import ChecklistTable from "@/components/shopfloor/ChecklistTable.jsx";
-import ComponentChecklist, { fittedCount } from "@/components/shopfloor/ComponentChecklist.jsx";
-import Ctl from "@/components/shopfloor/Ctl.jsx";
-import MuteButton from "@/components/shopfloor/MuteButton.jsx";
-import ImageZoom from "@/components/shopfloor/ImageZoom.jsx";
-import QuickPrinters from "@/components/shopfloor/QuickPrinters.jsx";
-import ScanBox from "@/components/shopfloor/ScanBox.jsx";
-import ScanFlashHost, { flashError } from "@/components/shopfloor/ScanFlash.jsx";
-import SectionCard from "@/components/shopfloor/SectionCard.jsx";
-import { Button } from "@/components/ui/button.jsx";
-import { Badge } from "@/components/ui/badge.jsx";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog.jsx";
-import { when } from "@/utils/dates.js";
-import { loadPref } from "@/utils/prefs.js";
-
-// ────────────────────────────────────────────────────────────────────────────
-// 1. SETTINGS
-// The route (what the sidebar opens) and the page header.
-// ────────────────────────────────────────────────────────────────────────────
-export const route = "/production/wipcaptureform";
+export const route = '/production/wipcaptureform';
 
 const header = {
   icon: ScanBarcode,
-  title: "WIP Capture",
-  subtitle: "Capture, inspect and track WIP at each process",
+  title: 'WIP Capture',
+  subtitle: 'Capture, inspect and track WIP at each process',
 };
-const PATH = route;
-const TITLE = header;
 
-// ────────────────────────────────────────────────────────────────────────────
-// 2. SMALL HELPERS
-// Scan sound, first load of the screen, table cell styles.
-// ────────────────────────────────────────────────────────────────────────────
 /** a short tone: high for OK, a low buzz for an error (off when the operator muted it) */
 function beep(ok) {
-  if (loadPref("flow-mute", false)) return;
+  if (loadPref('flow-mute', false)) return;
   try {
     const a = new AudioContext();
     const o = a.createOscillator();
     const g = a.createGain();
-    o.type = ok ? "sine" : "square";
+    o.type = ok ? 'sine' : 'square';
     o.frequency.value = ok ? 880 : 200;
     g.gain.value = 0.06;
     o.connect(g).connect(a.destination);
@@ -94,727 +57,11 @@ function beep(ok) {
   }
 }
 
-/** This page load's own id: the server keeps the station state of each one apart (two tabs, two stations) and never
- *  takes it from a request. A new page load starts afresh, as before. */
-const TAB = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-
-/** the screen's first state (/forms/spec: Page_Load already run) */
-function useSpec(path) {
-  const [spec, setSpec] = useState(null);
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  useEffect(() => {
-    api(`/forms/spec?path=${encodeURIComponent(path)}&tab=${TAB}`).then(setSpec, (e) =>
-      setError(e.message),
-    );
-  }, [path]);
-  return { spec, error };
-}
-
-// Shared table cell classes of the unit detail tables.
-const th =
-  "px-4 py-2.5 text-left text-xs font-medium whitespace-nowrap text-muted-foreground";
-const td = "px-4 py-3 align-middle text-sm whitespace-nowrap";
-
-// ────────────────────────────────────────────────────────────────────────────
-// 3. STATE + ENGINE
-// The form's state, and the hook that sends events to the server and applies its reply.
-// ────────────────────────────────────────────────────────────────────────────
-/** control id -> value (GridViews: their rows) */
-const valuesOf = (state) =>
-  Object.fromEntries(
-    state.controls
-      .filter((c) => c.id)
-      .map((c) => [c.id, c.type === "GridView" ? c.rows : c.value]),
-  );
-
-/** Applies a server patch { id: { options?, index?, value?, rows?, visible?, text?, enabled?, maxLength?, guide? } }:
- *  options first, then SelectedIndex / SelectedValue. Returns the new controls and values. */
-function applyPatch(controls, values, patch = {}) {
-  const ctl = controls.map((c) => {
-    const p = patch[c.id];
-    if (!p) return c;
-    const next = { ...c };
-    if (p.options) Object.assign(next, { options: p.options, refilled: true });
-    for (const k of ["visible", "text", "enabled", "maxLength"])
-      if (k in p) next[k] = p[k];
-    if (p.guide) next.guide = p.guide;
-    return next;
-  });
-  const vals = { ...values };
-  for (const c of ctl) if (c.type === "FileUpload") vals[c.id] = null; // a postback clears a file input, as the browser did
-  for (const [k, p] of Object.entries(patch)) {
-    if ("index" in p)
-      vals[k] = ctl.find((c) => c.id === k)?.options?.[p.index]?.value ?? "";
-    if ("value" in p) vals[k] = p.value;
-    if (p.rows) vals[k] = p.rows;
-  }
-  return { controls: ctl, values: vals };
-}
-
-/** Panel.Visible / Panel.Enabled = false hide / disable everything inside the panel. */
-function panelState(controls) {
-  const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
-  const up = (c, key) => {
-    for (let p = c.parent; p; p = byId.get(p)?.parent)
-      if (byId.get(p)?.[key] === false) return false;
-    return true;
-  };
-  return {
-    shown: (c) => up(c, "visible"),
-    live: (c) => (up(c, "enabled") ? c : { ...c, enabled: false }),
-  };
-}
-
-function useEngine({
-  path,
-  state,
-  events,
-  onDone,
-  onListFilter,
-  onResult,
-  initialError,
-}) {
-  const [controls, setControls] = useState(state.controls);
-  const [values, setValues] = useState(() => valuesOf(state));
-  const [viewState, setViewState] = useState(state.viewState ?? {});
-  const [buttonPatch, setButtonPatch] = useState({});
-  const [busy, setBusy] = useState(false);
-  // Errors are never drawn on the page: they pop up as toasts.
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  useEffect(() => {
-    const first = initialError ?? state.statusMessage;
-    if (first) setError(first);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const report = (r) => {
-    if (r.alert) setError(r.alert);
-    else {
-      setError("");
-      if (r.success)
-        toast.success(r.message && r.message !== "✔" ? r.message : "Done");
-    }
-  };
-
-  async function fire(control, next = values, arg, base = controls, index) {
-    setBusy(true);
-    try {
-      const r = await api("/forms/event", {
-        method: "POST",
-        // the station state (ViewState, the page as shown) is kept on the server for this page load (TAB)
-        body: { path, tab: TAB, control, values: next, arg, index },
-      });
-      // the server lost this page's station state (it restarted, or a shift went by): start the page afresh
-      if (r.restarted) {
-        setError(r.alert);
-        return void setTimeout(() => window.location.reload(), 2500);
-      }
-      const p = applyPatch(base, next, r.set);
-      setControls(p.controls);
-      setValues(p.values);
-      setViewState(r.viewState ?? viewState);
-      if (r.redirect) return void window.location.assign(r.redirect);
-      if (r.list) onListFilter?.(r.list);
-      if (r.buttons) setButtonPatch((b) => ({ ...b, ...r.buttons }));
-      // FooterControl's Save succeeded: the form starts again
-      if (r.reset && onDone)
-        return void onDone(
-          r.alert
-            ? { ok: false, text: r.alert }
-            : { ok: true, text: r.message || "Saved" },
-        );
-      onResult ? onResult(r, control) : report(r);
-      return r;
-    } catch (e) {
-      setError(e.message);
-      onResult?.({ alert: e.message }, control);
-    } finally {
-      setBusy(false);
-    }
-  }
-  function change(id, v) {
-    const next = { ...values, [id]: v };
-    setValues(next);
-    if (events.includes(id)) fire(id, next);
-  }
-  // ComboBox: the picked row becomes the list's only item, then its handler (if the page wired one) runs
-  const pick = (id) => (item) => {
-    const ctl = controls.map((c) =>
-      c.id === id ? { ...c, options: [item] } : c,
-    );
-    const next = { ...values, [id]: item.value };
-    setControls(ctl);
-    setValues(next);
-    if (events.includes(id)) fire(id, next, undefined, ctl);
-  };
-
-  const { shown, live } = panelState(controls);
-  const byId = new Map(controls.filter((c) => c.id).map((c) => [c.id, c]));
-  /** the control as the page shows it (disabled when a panel above it is) */
-  const ctl = (id) => (byId.has(id) ? live(byId.get(id)) : null);
-  /** visible, with every panel above it */
-  const vis = (id) => {
-    const c = byId.get(id);
-    return !!c && c.visible !== false && shown(c);
-  };
-
-  return {
-    controls,
-    setControls,
-    values,
-    setValues,
-    viewState,
-    buttonPatch,
-    busy,
-    setBusy,
-    error,
-    setError,
-    report,
-    fire,
-    change,
-    pick,
-    shown,
-    live,
-    ctl,
-    vis,
-  };
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// 4. THE SCANNED UNIT
-// The scanned unit's route and components (/forms/unit).
-// ────────────────────────────────────────────────────────────────────────────
-/** the scanned unit's route and cabinet (read only); refetched after every event while the serial stays scanned */
-function useUnit(label, tick) {
-  const [unit, setUnit] = useState(null);
-  useEffect(() => {
-    if (!label) return void setUnit(null);
-    let live = true;
-    api(
-      `/forms/unit?path=${encodeURIComponent(PATH)}&label=${encodeURIComponent(label)}&tab=${TAB}`,
-    ).then(
-      (d) => live && setUnit(d),
-      () => live && setUnit(null),
-    );
-    return () => {
-      live = false;
-    };
-  }, [label, tick]);
-  return unit;
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// 5. CARDS
-// The panels of the screen: cabinet, route history, components, inspection, guide.
-// ────────────────────────────────────────────────────────────────────────────
-function Cabinet({ unit, label, e, line, className }) {
-  const { values, ctl } = e;
-  const [zoomed, setZoomed] = useState(false); // the artwork full screen
-  const c = unit?.cabinet;
-  const [model, serial] = String(values.tbFG ?? "").split("|");
-  // only what the operator matches the unit against (owner, 1 Nov 2026): the FG material's model and category, its
-  // graphics and customer variant fields; before the cabinet answers, the model the scan gave
-  const a0 = c?.artwork ?? {};
-  const rows = c
-    ? [
-        ["Model", a0.name || c.name || model],
-        ["Category", a0.category || c.category],
-        ["Graphics", a0.graphics],
-        ["Customer", a0.customer || c.customer],
-      ]
-    : model
-      ? [["Model", model]]
-      : [];
-  // The image the routing shows at this station's stage (Routing screen, "Images on WIP Capture": artwork, unit frame or
-  // basket; owner, 1 Nov 2026), large, with only what the operator matches it against. Graphics and customer are the
-  // model's own variant fields. A stage set to show no image: the details below, no picture.
-  if (c?.artwork?.kind) {
-    // the FG material's (the artwork is uploaded there, not on the in-process material)
-    const a = c.artwork ?? {};
-    const artworkUrl = `/api/production/wip-capture/units/${encodeURIComponent(label ?? "")}/image/${a.kind}`;
-    const kindName = { artwork: "artwork", unitframe: "unit frame image", basket: "basket image" }[a.kind] ?? "image";
-    const facts = [
-      ["Model", a.name || model],
-      ["Category", a.category],
-      ["Graphics", a.graphics],
-      ["Customer", a.customer],
-    ];
-    return (
-      <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-stretch">
-          {/* the FG material's Artwork ("Artwork & Packing Images" on the Material screen): an image (click to zoom),
-              or a PDF (opens in its own viewer, which zooms) */}
-          {a.hasArtwork && label ? (
-            a.artworkType === "application/pdf" ? (
-              <div className="w-full sm:w-3/5">
-                <object
-                  data={`${artworkUrl}#toolbar=0&view=FitH`}
-                  type="application/pdf"
-                  aria-label={`Artwork of ${a.name}`}
-                  className="h-80 w-full rounded-lg border bg-muted/30"
-                >
-                  <a className="text-sm underline" href={artworkUrl} target="_blank" rel="noreferrer">Open the artwork</a>
-                </object>
-                <a className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline" href={artworkUrl} target="_blank" rel="noreferrer">
-                  <ZoomIn className="size-4" aria-hidden="true" /> Open full size
-                </a>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setZoomed(true)}
-                className="group relative w-full cursor-zoom-in overflow-hidden rounded-lg border bg-muted/30 p-2 sm:w-3/5"
-                aria-label={`Artwork of ${a.name}: open full screen`}
-              >
-                <img src={artworkUrl} alt={`Artwork of ${a.name}`} className="mx-auto max-h-96 w-full object-contain" />
-                <span className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1.5 text-xs font-medium text-white opacity-90 group-hover:opacity-100">
-                  <ZoomIn className="size-4" aria-hidden="true" /> Click to zoom
-                </span>
-              </button>
-            )
-          ) : (
-            <div className="grid h-56 w-full place-items-center rounded-lg border border-dashed text-sm text-muted-foreground sm:w-3/5">
-              No {kindName} for this model
-            </div>
-          )}
-          {/* the details spread over the card's height, large enough to read from the line */}
-          <dl className="flex min-w-0 flex-1 flex-col justify-around gap-5 py-1">
-            {facts.map(([k, v]) => (
-              <div key={k} className="min-w-0">
-                <dt className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{k}</dt>
-                <dd className="mt-1 text-xl leading-snug font-bold break-words">{v || "—"}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-        {zoomed && <ImageZoom src={artworkUrl} alt={`Artwork of ${a.name}`} onClose={() => setZoomed(false)} />}
-      </SectionCard>
-    );
-  }
-  return (
-    <SectionCard icon={Refrigerator} title="Cabinet" className={className}>
-      {rows.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Scan a serial to see the cabinet.
-        </p>
-      ) : (
-        <div className="flex h-full gap-5">
-          {/* no picture here: a stage shows an image only when its routing says so (above) */}
-          <dl className="grid min-w-0 flex-1 content-center gap-x-8 gap-y-8 py-2 sm:grid-cols-2">
-            {rows.map(([k, v]) => (
-              <div key={k} className="min-w-0">
-                <dt className="text-sm font-medium tracking-wide text-muted-foreground uppercase">{k}</dt>
-                <dd className="mt-1 text-xl leading-snug font-bold break-words">{v || "—"}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      )}
-    </SectionCard>
-  );
-}
-
-/** the whole route (done / in process / pending); before /forms/unit answers, the stages started so far */
-
-/** the components scanned into the unit so far (GVComponents) */
-function ComponentDetails({ e, className }) {
-  const rows = e.vis("PnlComponents") ? (e.values.GVComponents ?? []) : [];
-  return (
-    <SectionCard
-      icon={Boxes}
-      title="Components"
-      flush
-      className={className}
-      actions={
-        rows.length > 0 && (
-          <span className="text-xs text-muted-foreground tabular">
-            {rows.length} scanned
-          </span>
-        )
-      }
-    >
-      {rows.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-          No components scanned into this unit yet.
-        </p>
-      ) : (
-        <div className="max-h-80 overflow-auto">
-          <table className="w-full min-w-160">
-            <thead className="sticky top-0 bg-muted/80 backdrop-blur">
-              <tr>
-                <th className={th}>#</th>
-                <th className={th}>Category</th>
-                <th className={th}>Material</th>
-                <th className={th}>Station</th>
-                <th className={th}>Serial</th>
-                <th className={th}>Operator</th>
-                <th className={th}>Scanned on</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map((r, i) => (
-                <tr key={i}>
-                  <td className={`${td} tabular text-muted-foreground`}>
-                    {i + 1}
-                  </td>
-                  <td className={td}>{r.Category}</td>
-                  <td className={`${td} font-medium`}>{r.Material}</td>
-                  <td className={td}>{r.Station}</td>
-                  <td className={`${td} tabular`}>{r.Serial}</td>
-                  <td className={td}>{r.Operator}</td>
-                  <td className={`${td} tabular`}>{when(r.ScannedOn)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </SectionCard>
-  );
-}
-
-/** result 10: the stage's components, scanned one by one (BtnINBarcode, then Consume when a quantity is asked) */
-function ComponentScan({ e }) {
-  const { values, busy, fire, vis } = e;
-  const count = fittedCount(values.GVINMaterial);
-  const ref = useRef(null);
-  // the component box keeps the cursor after every scan until all are fitted (then the page moves it to the serial)
-  const left = count.total > 0 && count.fitted < count.total;
-  useEffect(() => {
-    if (!busy && left) ref.current?.focus();
-  }, [busy, left, count.fitted]);
-  return (
-    <SectionCard
-      icon={Boxes}
-      title="Scan components"
-      tone="green"
-      actions={
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={X}
-          onClick={() => fire("BTNCloseInputMaterialPanel")}
-        >
-          Close
-        </Button>
-      }
-    >
-      <div className="space-y-4">
-        {/* the scan box, and how many of the stage's components are fitted */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          {vis("ScanINbarcodePanel") && (
-            <div className="min-w-0 flex-1">
-              <ScanBox
-                ref={ref}
-                size="lg"
-                label="Component barcode"
-                placeholder="Scan a component barcode"
-                value={values.TBINItemCode}
-                onChange={(v) => e.change("TBINItemCode", v)}
-                onScan={() => fire("BtnINBarcode")}
-                busy={busy}
-              />
-            </div>
-          )}
-          {count.total > 0 && (
-            <div className={`flex h-16 shrink-0 items-center gap-2 rounded-xl border px-5 ${count.fitted === count.total ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200" : "bg-muted/40"}`}>
-              <span className="text-3xl font-bold tabular">
-                {count.fitted} / {count.total}
-              </span>
-              <span className="text-sm font-medium">
-                {count.fitted === count.total ? "All fitted ✓" : `fitted · ${count.total - count.fitted} to go`}
-              </span>
-            </div>
-          )}
-        </div>
-        {vis("InQtyPanel") && (
-          <div className="flex flex-wrap items-end gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-            <Ctl
-              e={e}
-              id="TBInQty"
-              label="Quantity to consume"
-              className="w-40"
-            />
-            <Ctl e={e} id="ddlINUom" label="Unit" className="w-32" />
-            <Button
-              icon={Plus}
-              loading={busy}
-              onClick={() => fire("BtnInwardMaterial")}
-            >
-              Consume
-            </Button>
-          </div>
-        )}
-        <ComponentChecklist rows={values.GVINMaterial} />
-      </div>
-    </SectionCard>
-  );
-}
-
-/** results 30 / 40: inspection lot, pass or fail with defects and remark, and for the FG stage serial / asset / tags */
-function Inspection({ e, fg }) {
-  const { values, busy, fire, vis, ctl } = e;
-  const lot = values.GVWQCMaterial?.[0];
-  const status = values.DDLWIPQCStatus;
-  // 12 Approved, 13 Rejected (AVQuality status codes): defects and a remark only for a rejected unit (owner, 31 Oct 2026)
-  const rejected = status === "13";
-  const statusTint =
-    status === "13"
-      ? "[&_select]:border-rose-300 [&_select]:bg-rose-500/10"
-      : status === "12"
-        ? "[&_select]:border-emerald-300 [&_select]:bg-emerald-500/10"
-        : "";
-  return (
-    <SectionCard
-      icon={ClipboardList}
-      title={fg ? "FG Label & Inspection" : "Inspection & Defect Recording"}
-      tone="violet"
-      actions={
-        vis("btnQCClose") && (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={X}
-            onClick={() => fire("btnQCClose")}
-          >
-            Close
-          </Button>
-        )
-      }
-    >
-      <div className="space-y-4">
-        {vis("BarcodePanel") && (
-          <ScanBox
-            size="md"
-            label="Barcode"
-            value={values.TBBarcode}
-            onChange={(v) => e.change("TBBarcode", v)}
-            onScan={() => fire("Go")}
-            locked={ctl("Go")?.text === "Clr"}
-            onClear={() => fire("Go")}
-            busy={busy}
-          />
-        )}
-        {vis("OtherFields") && (
-          <div className={rejected ? "grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]" : "grid gap-4"}>
-            {/* inspection information and the verdict */}
-            <div className="space-y-4 min-w-0">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Info className="w-4 h-4 text-primary" /> Inspection Information
-              </h3>
-              {lot && (
-                <div className="max-w-2xl text-sm">
-                  <div className="min-w-0">
-                    <span className="text-sm leading-none font-medium">
-                      Description
-                    </span>
-                    <p
-                      className="truncate rounded-lg bg-muted px-3 py-2 font-medium text-foreground"
-                      title={lot.Description}
-                    >
-                      {lot.Description}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Ctl
-                  e={e}
-                  id="DDLWIPQCStatus"
-                  label="Status"
-                  className={statusTint}
-                />
-                <Ctl e={e} id="DDLNextAction" label="Next Action" />
-                <Ctl e={e} id="DDLDefectCate" label="Defect Category" />
-              </div>
-              <div className="flex flex-wrap items-end gap-3">
-                <Ctl e={e} id="TBQty" label="Quantity" className="w-32" />
-                <Ctl e={e} id="TbBEENo" label="BEE number" className="w-48" />
-                {vis("QCPrinterPanel") && (
-                  // two saved printers as buttons, the last one used picked by itself (per department, this device)
-                  <QuickPrinters
-                    e={e}
-                    id="DDLQCPrinter"
-                    label="Label printer"
-                    scope={values.DDLDepartment}
-                    className="min-w-56"
-                  />
-                )}
-                {vis("BtnUD") && (
-                  <Button
-                    variant="outline"
-                    icon={ListChecks}
-                    loading={busy}
-                    onClick={() => fire("BtnUD")}
-                  >
-                    Checklist
-                  </Button>
-                )}
-              </div>
-              {vis("FGLabelPanel") && (
-                <div className="grid gap-3 sm:grid-cols-3 rounded-xl border border-primary/30 bg-primary/5 p-3">
-                  <Ctl e={e} id="TbFGSerialNo" label="FG serial number" />
-                  <Ctl e={e} id="TbASsetTag" label="Asset tag" />
-                  <Ctl e={e} id="TBGreenTag" label="Green tag" />
-                </div>
-              )}
-            </div>
-
-            {/* defects: only for a rejected unit */}
-            {rejected && (
-            <div className="min-w-0 space-y-3 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-rose-700 dark:text-rose-300">
-                <AlertTriangle className="w-4 h-4" /> Add Defect Codes
-              </h3>
-              {vis("PanelDefects") ? (
-                <>
-                  <div className="flex items-end gap-2">
-                    <Ctl
-                      e={e}
-                      id="DDLDefectCodes"
-                      label="Defect Code"
-                      className="min-w-0 flex-1"
-                    />
-                    {vis("btnAdd") && (
-                      <Button
-                        icon={Plus}
-                        loading={busy}
-                        onClick={() => fire("btnAdd")}
-                      >
-                        Add
-                      </Button>
-                    )}
-                  </div>
-                  <Grid
-                    c={ctl("GVTransData")}
-                    rows={values.GVTransData}
-                    onDelete={(k, i) =>
-                      fire("GVTransData:delete", values, k, e.controls, i)
-                    }
-                  />
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Choose the defect category to add defect codes.
-                </p>
-              )}
-            </div>
-            )}
-
-            {/* remark: only for a rejected unit */}
-            {rejected && (
-              <div className="flex min-w-0 flex-col gap-3">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <MessageSquare className="w-4 h-4 text-primary" /> Remark
-                </h3>
-                {vis("TBWQCRemark") ? (
-                  <Ctl e={e} id="TBWQCRemark" label="" />
-                ) : (
-                  <p className="text-sm text-muted-foreground">A remark can be added with the defects.</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-        {/* clear / save, whatever the status */}
-        {vis("OtherFields") && (vis("btnQCClear") || vis("btnQCSave")) && (
-          <div className="flex flex-wrap gap-2 border-t pt-4">
-            {vis("btnQCClear") && (
-              <Button variant="ghost" onClick={() => fire("btnQCClear")}>
-                Clear
-              </Button>
-            )}
-            {vis("btnQCSave") && (
-              <Button size="lg" icon={Save} loading={busy} className="min-w-44" onClick={() => fire("btnQCSave")}>
-                {fg ? "Save and Print Label" : "Save Record"}
-              </Button>
-            )}
-          </div>
-        )}
-      </div>
-    </SectionCard>
-  );
-}
-
-/** the station's instructions and guide files */
-function Guide({ e }) {
-  const { values, fire, vis, ctl } = e;
-  const files = ctl("LBGuideFiles");
-  return (
-    <Panel
-      title={
-        <span className="flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-primary" /> Station guide
-        </span>
-      }
-      actions={
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={X}
-          onClick={() => fire("IMBGuideClose")}
-        >
-          Hide
-        </Button>
-      }
-    >
-      <div className="space-y-3">
-        {files?.options?.length > 1 && (
-          <div className="flex flex-wrap gap-2">
-            {!vis("RightTop") && ctl("GuideFileDisplayPanel")?.guide && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fire("BtnToggleGuide")}
-              >
-                Show document
-              </Button>
-            )}
-            {files.options
-              .filter((o) => o.value !== "")
-              .map((o) => (
-                <Button
-                  key={o.value}
-                  variant={
-                    values.LBGuideFiles === o.value ? "default" : "outline"
-                  }
-                  size="sm"
-                  onClick={() => e.change("LBGuideFiles", o.value)}
-                >
-                  {o.text}
-                </Button>
-              ))}
-          </div>
-        )}
-        {vis("RightBottom") && values.GVInstruction?.length > 0 && (
-          <Grid c={ctl("GVInstruction")} rows={values.GVInstruction} />
-        )}
-        {vis("GuideFileDisplayPanel") &&
-          ctl("GuideFileDisplayPanel")?.guide && (
-            <GuideView g={ctl("GuideFileDisplayPanel").guide} />
-          )}
-      </div>
-    </Panel>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// 6. STATION
-// The screen itself: scan the work station, scan a serial, then the cards react.
-// ────────────────────────────────────────────────────────────────────────────
 /** One popup per scan result (a new result replaces the previous popup, so they never pile up). */
 function notify(kind, title, text) {
   // a refused scan: large in the middle of the screen, without stopping the scanning (ScanFlash)
-  if (kind === "error") {
-    toast.dismiss("wip-scan");
+  if (kind === 'error') {
+    toast.dismiss('wip-scan');
     return void flashError(title, text);
   }
   const body = (
@@ -823,78 +70,72 @@ function notify(kind, title, text) {
       {text && <p className="text-sm opacity-80">{text}</p>}
     </div>
   );
-  (kind === "error" ? toast.error : toast.success)(body, {
-    id: "wip-scan",
-    duration: kind === "error" ? 7000 : 2500,
-  });
+  toast.success(body, { id: 'wip-scan', duration: 2500 });
 }
 
-function Station({ spec }) {
+/** what a recorded scan did */
+const scanned = (result) => ({ started: 'Stage started', completed: 'Stage completed' })[result] ?? 'Scan recorded';
+
+/** the scanned unit's route and cabinet (read only); read again after every answer while the serial stays scanned */
+function useUnit(id, serial, tick) {
+  const [unit, setUnit] = useState(null);
+  useEffect(() => {
+    if (!serial) return void setUnit(null);
+    let live = true;
+    wipApi.unit(id).then(
+      (d) => live && setUnit(d),
+      () => live && setUnit(null),
+    );
+    return () => {
+      live = false;
+    };
+  }, [id, serial, tick]);
+  return unit;
+}
+
+function Station({ opened }) {
   const navigate = useNavigate();
   const stationRef = useRef(null);
   const serialRef = useRef(null);
-  const [unitTick, setUnitTick] = useState(0);
   // the last serial scanned at this station, shown under the scan boxes once the box is cleared for the next one
   const [last, setLast] = useState(null); // { serial, model, ok, note, at }
-  const sentSerial = useRef(""); // the serial of the scan being answered
-  const e = useEngine({
-    path: PATH,
-    state: spec,
-    events: spec.events ?? [],
-    onResult: (r, control) => {
-      setUnitTick((t) => t + 1); // a scan, a QC save or a consume can move the unit along its route
-      if (control === "BtnWorderScan" && sentSerial.current) {
-        // the model comes with the scan's history (tbFG = "model|serial"), even when the scan is refused
-        const model = String(r.set?.tbFG?.value ?? "").split("|")[0];
-        setLast({
-          serial: sentSerial.current,
-          model,
-          ok: !r.alert,
-          note: r.alert
-            ? (r.explain?.title ?? "Not accepted")
-            : ({ 11: "Stage started", 21: "Stage completed" }[r.viewState?.I] ?? "Scan recorded"),
-          at: new Date(),
-        });
-        sentSerial.current = "";
-      }
-      if (r.alert) {
-        beep(false);
-        // a refused scan explained (already completed here / not reached yet / not on its route, and where it is now)
-        if (r.explain) notify("error", r.explain.title, r.explain.text);
-        else notify("error", "Not accepted", r.alert);
-      } else if (control === "BtnWorkStationScan")
-        notify("success", "Station ready", "Scan a serial");
-      else if (r.success) {
-        beep(true);
-        // scanStageLabelNew's result: 11 the stage started (nothing to scan), 21 the stage completed
-        const scanned =
-          { 11: "Stage started", 21: "Stage completed" }[r.viewState?.I] ??
-          "Scan recorded";
-        notify(
-          "success",
-          control === "btnQCSave"
-            ? "Quality result saved"
-            : control === "BtnInwardMaterial"
-              ? "Component consumed"
-              : scanned,
-          r.viewState?.LastScanned
-            ? `Serial ${r.viewState.LastScanned}`
-            : undefined,
-        );
-      }
-    },
+  const sentSerial = useRef(''); // the serial of the scan being answered
+
+  const s = useStation(opened, (r, action) => {
+    const v = r.station;
+    if (action === 'unit' && sentSerial.current) {
+      setLast({
+        serial: sentSerial.current,
+        model: r.model ?? '', // comes with the scan's history, even when the scan is refused
+        ok: !r.alert,
+        note: r.alert ? (r.explain?.title ?? 'Not accepted') : scanned(v?.result),
+        at: new Date(),
+      });
+      sentSerial.current = '';
+    }
+    if (r.alert) {
+      beep(false);
+      // a refused scan explained (already completed here / not reached yet / not on its route, and where it is now)
+      if (r.explain) notify('error', r.explain.title, r.explain.text);
+      else notify('error', 'Not accepted', r.alert);
+    } else if (action === 'station') notify('success', 'Station ready', 'Scan a serial');
+    else if (r.success) {
+      beep(true);
+      notify(
+        'success',
+        action === 'saveQC' ? 'Quality result saved' : action === 'consume' ? 'Component consumed' : scanned(v?.result),
+        v?.lastScanned ? `Serial ${v.lastScanned}` : undefined,
+      );
+    }
   });
-  const { values, viewState: vs, busy, fire, vis, ctl } = e;
-  const text = (id) => ctl(id)?.text ?? "";
-  const stationLocked = text("BtnWorkStationScan") === "Clr";
-  const serialLocked = text("BtnWorderScan") === "Clr" || vis("QCPanel");
-  const result = Number(vs.I ?? 0);
-  const unitLabel = serialLocked ? String(values.TBJobCoard ?? "").trim() : "";
-  const unit = useUnit(unitLabel, unitTick);
+  const { view, busy } = s;
+  const stationLocked = view.station.locked;
+  const serialLocked = view.unit.locked || !!view.inspection;
+  const unit = useUnit(s.id, view.unit.serial, s.tick);
 
   // components still to fit at this stage: the scanner stays in the component box until the last one is fitted
-  const parts = fittedCount(values.GVINMaterial);
-  const scanningComponents = vis("InputMaterialPanel") && vis("ScanINbarcodePanel") && parts.total > 0 && parts.fitted < parts.total;
+  const parts = fittedCount(view.inputs?.rows);
+  const scanningComponents = !!view.inputs?.canScan && parts.total > 0 && parts.fitted < parts.total;
 
   // the scanner always types into the box the operator needs next: the component box while components are left
   // (ComponentScan keeps it there), then the serial, or the station before that
@@ -903,46 +144,28 @@ function Station({ spec }) {
     (stationLocked ? serialRef : stationRef).current?.focus();
   }, [busy, stationLocked, serialLocked, scanningComponents]);
 
-  const scan = (button) => {
-    // a serial scan (not the box being cleared with Change): remember what was scanned for "Last scanned"
-    if (button === "BtnWorderScan" && text("BtnWorderScan") !== "Clr") sentSerial.current = String(values.TBJobCoard ?? "").trim();
-    return fire(button, values);
+  const scanUnit = () => {
+    sentSerial.current = String(s.value('serial')).trim(); // for "Last scanned"
+    return s.scanUnit();
   };
-  const line = text("lblLine");
 
   return (
     <Page
-      {...TITLE}
+      {...header}
       width="full"
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          {vis("DDLDepartment") && (
+          {view.fields.department && (
             <div className="flex items-center gap-2">
-              <label
-                htmlFor="f-DDLDepartment"
-                className="text-sm text-muted-foreground"
-              >
+              <label htmlFor="f-department" className="text-sm text-muted-foreground">
                 Department
               </label>
-              <Ctl e={e} id="DDLDepartment" label="" className="w-52" />
+              <Field s={s} name="department" label="" className="w-52" onChange={s.department} />
             </div>
           )}
-          <Button
-            variant="outline"
-            icon={BookOpen}
-            aria-label="Station instructions"
-            title="Station instructions"
-            disabled={!stationLocked || busy}
-            onClick={() => fire("BtnGuide")}
-          />
+          <Button variant="outline" icon={BookOpen} aria-label="Station instructions" title="Station instructions" disabled={!stationLocked || busy} onClick={s.openGuide} />
           <MuteButton />
-          <Button
-            variant="outline"
-            icon={X}
-            aria-label="Close WIP Capture"
-            title="Close"
-            onClick={() => navigate("/start")}
-          />
+          <Button variant="outline" icon={X} aria-label="Close WIP Capture" title="Close" onClick={() => navigate('/start')} />
         </div>
       }
     >
@@ -951,71 +174,60 @@ function Station({ spec }) {
       {/* the scan card only as wide as its boxes, the scanned unit's cabinet (its artwork) taking the rest. Frozen at
           the top of the page (owner, 31 Oct 2026): components, inspection and the rest scroll under it */}
       <div className="sticky top-0 z-20 -mx-2 -mt-2 bg-background px-2 pt-2 pb-2 sm:-mx-3 sm:-mt-3 sm:px-3 sm:pt-3">
-          {/* with an image (the stage's routing shows one) the scan card stays narrow so the picture has the room;
-              without one, scan and cabinet share the row half and half (owner, 1 Nov 2026) */}
-          <div className={`grid items-stretch gap-4 ${unit?.cabinet?.artwork?.kind ? "lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]" : "lg:grid-cols-2"}`}>
+        {/* with an image (the stage's routing shows one) the scan card stays narrow so the picture has the room;
+            without one, scan and cabinet share the row half and half (owner, 1 Nov 2026) */}
+        <div className={`grid items-stretch gap-4 ${unit?.cabinet?.artwork?.kind ? 'lg:grid-cols-[minmax(20rem,28rem)_minmax(0,1fr)]' : 'lg:grid-cols-2'}`}>
           <SectionCard
             icon={ScanLine}
             title="Scan"
             className="h-full"
             actions={
-              line && (
+              view.line && (
                 <Badge variant="success" dot>
-                  Line: {line}
+                  Line: {view.line}
                 </Badge>
               )
             }
           >
             <div className="max-w-xl space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
-                {vis("WorkStationPanel") && (
+                {view.station.shown && (
                   <div className="grid min-w-0 gap-2">
-                    <span className="text-sm leading-none font-medium">
-                      Work station
-                    </span>
+                    <span className="text-sm leading-none font-medium">Work station</span>
                     <ScanBox
                       ref={stationRef}
                       size="md"
                       label="Work station"
                       placeholder="Scan the station"
-                      value={values.TBWorkStation}
-                      onChange={(v) => e.change("TBWorkStation", v)}
+                      value={s.value('station')}
+                      onChange={(v) => s.type('station', v)}
                       locked={stationLocked}
-                      onScan={() => scan("BtnWorkStationScan")}
-                      onClear={() => scan("BtnWorkStationScan")}
+                      onScan={s.scanStation}
+                      onClear={s.clearStation}
                       busy={busy && !stationLocked}
                     />
                   </div>
                 )}
-                {vis("JobCardPanel") && (
+                {view.unit.shown && (
                   <div className="grid min-w-0 gap-2">
-                    <span className="text-sm leading-none font-medium">
-                      Serial number
-                    </span>
+                    <span className="text-sm leading-none font-medium">Serial number</span>
                     <ScanBox
                       ref={serialRef}
                       size="md"
                       label="Unit serial"
-                      placeholder={
-                        stationLocked ? "Scan the serial" : "Scan the station first"
-                      }
-                      value={values.TBJobCoard}
-                      onChange={(v) => e.change("TBJobCoard", v)}
-                      locked={serialLocked && text("BtnWorderScan") === "Clr"}
-                      onScan={() => scan("BtnWorderScan")}
-                      onClear={() => scan("BtnWorderScan")}
+                      placeholder={stationLocked ? 'Scan the serial' : 'Scan the station first'}
+                      value={s.value('serial')}
+                      onChange={(v) => s.type('serial', v)}
+                      locked={view.unit.locked}
+                      onScan={scanUnit}
+                      onClear={s.clearUnit}
                       busy={busy && stationLocked}
                     />
                   </div>
                 )}
-                <Ctl
-                  e={e}
-                  id="DDLStationPrinter"
-                  label="Station printer"
-                  className="md:col-span-2 lg:col-span-1"
-                />
+                <Field s={s} name="stationPrinter" label="Station printer" className="md:col-span-2 lg:col-span-1" />
               </div>
-              {vis("BtnRework") && (
+              {view.rework && (
                 <div className="flex justify-end">
                   {/* Rework Confirmation in a new tab, so this station stays as it is (the screen's BtnRework only
                       redirected there) */}
@@ -1028,14 +240,14 @@ function Station({ spec }) {
                 </div>
               )}
               {last && (
-                <div className={`rounded-lg border px-3 py-2.5 ${last.ok ? "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20" : "border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20"}`}>
+                <div className={`rounded-lg border px-3 py-2.5 ${last.ok ? 'border-emerald-200 bg-emerald-50/60 dark:border-emerald-900 dark:bg-emerald-950/20' : 'border-rose-200 bg-rose-50/60 dark:border-rose-900 dark:bg-rose-950/20'}`}>
                   <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                     <span>Last scanned</span>
-                    <span className="tabular">{last.at.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                    <span className="tabular">{last.at.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
                   </div>
                   <p className="mt-1 font-mono text-base font-semibold break-all">{last.serial}</p>
                   {last.model && <p className="text-sm font-medium break-words">{last.model}</p>}
-                  <p className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold ${last.ok ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>
+                  <p className={`mt-1 inline-flex items-center gap-1 text-xs font-semibold ${last.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'}`}>
                     {last.ok ? <CheckCircle2 className="size-3.5" aria-hidden="true" /> : <X className="size-3.5" aria-hidden="true" />}
                     {last.note}
                   </p>
@@ -1043,19 +255,16 @@ function Station({ spec }) {
               )}
             </div>
           </SectionCard>
-            <Cabinet unit={unit} label={unitLabel} e={e} line={line} className="h-full" />
-          </div>
+          <Cabinet unit={unit} serial={view.unit.serial} model={view.unit.model} className="h-full" />
+        </div>
       </div>
-      <ComponentDetails e={e} />
+      <ComponentDetails rows={view.components} />
 
-      {vis("InputMaterialPanel") && <ComponentScan e={e} />}
-      {vis("QCPanel") && <Inspection e={e} fg={result === 40} />}
+      {view.inputs && <ComponentScan s={s} />}
+      {view.inspection && <Inspection s={s} />}
       {/* the checklist as a pop-up over the station (owner, 1 Nov 2026): the server opens it as soon as the serial is
           scanned (when the stage has one); Close checklist or Esc closes it, a click outside does not */}
-      <Dialog
-        open={!!vis("InspectionCheckList")}
-        onOpenChange={(open) => !open && !busy && fire("InspectionCheckList:close", values)}
-      >
+      <Dialog open={!!view.checklist} onOpenChange={(open) => !open && !busy && s.checklistEvent('QC:close')}>
         <DialogContent
           showCloseButton={false}
           onInteractOutside={(ev) => ev.preventDefault()}
@@ -1063,53 +272,40 @@ function Station({ spec }) {
         >
           <DialogTitle className="sr-only">Checklist</DialogTitle>
           <DialogDescription className="sr-only">Check each item of the stage, then close the checklist</DialogDescription>
-          {vis("InspectionCheckList") && values.InspectionCheckList && (
-            <ChecklistTable
-              s={values.InspectionCheckList}
-              busy={busy}
-              onChange={(next) =>
-                e.setValues({ ...values, InspectionCheckList: next })
-              }
-              onEvent={(name, next = values.InspectionCheckList, arg, i) =>
-                fire(
-                  name.replace(/^QC:/, "InspectionCheckList:"),
-                  { ...values, InspectionCheckList: next },
-                  arg,
-                  e.controls,
-                  i,
-                )
-              }
-            />
-          )}
+          {s.checklist && <ChecklistTable s={s.checklist} busy={busy} onChange={s.setChecklist} onEvent={s.checklistEvent} />}
         </DialogContent>
       </Dialog>
-      {vis("DefectHistoryPanel") && (
+      {view.defectHistory && (
         <Grid
-          c={ctl("GVDefectHistory")}
-          rows={values.GVDefectHistory}
+          c={view.defectHistory}
+          rows={view.defectHistory.rows}
           title={
             <span className="flex items-center gap-2">
-              <AlertTriangle className="size-4 text-destructive" /> Defect
-              history
+              <AlertTriangle className="size-4 text-destructive" /> Defect history
             </span>
           }
         />
       )}
-      {vis("RightTopPanel") && <Guide e={e} />}
+      {view.guide && <Guide s={s} />}
     </Page>
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 7. PAGE
-// Loads the first state from the server and hands it to <Station>.
-// ────────────────────────────────────────────────────────────────────────────
 export default function WipCapture() {
-  const { spec, error } = useSpec(route);
-  if (spec) return <Station spec={spec} />;
-  return (
-    <Page {...header}>
-      {(error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)}
-    </Page>
-  );
+  const [opened, setOpened] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    wipApi.open().then(
+      (o) => {
+        setOpened(o);
+        if (o.alert) toast.error(o.alert, { id: o.alert, duration: 6000 });
+      },
+      (e) => {
+        setFailed(true);
+        toast.error(e.message, { id: e.message, duration: 6000 });
+      },
+    );
+  }, []);
+  if (opened) return <Station opened={opened} />;
+  return <Page {...header}>{failed ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />}</Page>;
 }

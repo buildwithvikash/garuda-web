@@ -375,3 +375,20 @@ after it stayed 13. Events 9/9 on the old handler. Not run: a committed confirma
 # Server folders follow the client's groups (owner, 1 Nov 2026)
 
 Screen modules moved under their group, as `client/src/pages` has them: `modules/production/<screen>` and `modules/quality/rework-confirmations`. API paths did not change.
+
+# Intended difference: WIP Capture on an API of its own (owner, approved 31 Oct 2026; built 2 Nov 2026)
+
+`modules/production/wip-capture` (API.md); `/api/forms` answers 410 for it. The scan rules are the original page's ported code, unchanged; only where its state lives and how the browser calls it changed.
+
+- **The server keeps the station.** The browser sends what the operator did and typed, never the scanned station, process, order, scan result, QC lot or checklist rows. A box the screen does not show open is ignored, so a generated FG serial or asset tag, a locked status, a fixed department, or a printer not in the list cannot be sent in.
+- **A scan or clear applies only when the screen offers it**; calls on a station run one at a time, in order.
+- **A scan box empties as soon as the scan is sent.** Before, it held the scan until the answer, so a second fast scan was typed onto the end of the first.
+- Left out because nothing could reach them: the inspection's Barcode box and Go, its Close button (both stages always hide them), and the input panel's open button (the screen has none).
+- `GET /api/production/wip-capture/units/:label` is gone (nothing used it); `GET /sessions/:id/unit` answers with the image this station's routing asks for.
+- The server keeps the 1,000 most recently used stations.
+
+Kept: every message, the sound, the large refused-scan flash, the saved printer buttons on each device, the layout.
+
+Checked on TEST: `wip-parity.js comp | qc | fg --api` against the original, every row and label identical, except the unit's scan answer at inspection showing Change (owner, 1 Nov 2026). The built screen run in a browser on a throw-away copy of the app with a test session, each run's rows put back: wrong station and serial refused; components with three scans sent straight after each other, all fitted in order, stage completed; QC reject (defect category, add, duplicate refused, remove, remark kept), approve, no printer refused, saved with 2 labels; FG with serial and asset tag locked, saved with 3 labels.
+
+Not run: a real station with a scanner, a real printer, two stations at once, a server restart in a shift, the checklist panel and the guide on a real unit (the test units have none; the guide's view has a unit test), a rejected save through the screen.
