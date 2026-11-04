@@ -79,9 +79,9 @@ the original's list query does.
 Send the whole `record` the API gave you back (with your changes), and the `viewState` of the last answer: the screen's
 code works on the full form, as the original page did.
 
-### Plain pages: Authorization, Business Setup, Settings, Material Setup
+### Plain pages: Authorization, Business Setup, Settings, Material Setup, Production Setup
 
-These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, the 10 of Settings and 8 of Material Setup (`modules/masters/plain-masters.js`; Material Barcode is its reprint page, below); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` where the screen copies: Department, Variant Field, Model, Material, Serial Generation Logic, Bill of Material); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (the screens that copy) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values, Shift, Model, Material, Serial Generation Logic and Bill of Material run their option changes and table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, ui, arg, index }` (arg: the line's key for `edit` / `remove`; index: the line's position, for a row command such as BOM's `openAlternatives`; ui: `{ field: { options } }`, the `lists` the page holds) answers `{ record (what changed), options, lists, ui, viewState, alert, success? }`; their records also bring `ui` (the panels the screen shows or hides, the Add button's text), `viewState` and `lists` (the lists the screen's code filled, as the screen has them, "Select" item included), sent back with the next event. Fields the page does not show (Material's batch / FIFO / inspection settings, Material Category's tag design and inspection, BOM's weight and business unit) are not fields: a saved record keeps them, a new one gets the screen's defaults. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
+These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, the 10 of Settings, 8 of Material Setup and the 5 of Production Setup (`modules/masters/plain-masters.js`; Material Barcode is its reprint page, below); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` where the screen copies: Department, Variant Field, Model, Material, Serial Generation Logic, Bill of Material, Work Center, Routing); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). Routing Guide's page has no Add, as the screen had none (routings are made on Routing). A picked file (Routing Guide's `guideFile`) is `{ name, data }` (base64). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (the screens that copy) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values, Shift, Model, Material, Serial Generation Logic, Bill of Material, Routing and Routing Guide run their option changes and table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, ui, arg, index }` (arg: the line's key for `edit` / `remove`; index: the line's position, for a row command such as BOM's `openAlternatives`; ui: `{ field: { options } }`, the `lists` the page holds) answers `{ record (what changed), options, lists, ui, viewState, alert, success? }`; their records also bring `ui` (the panels the screen shows or hides, the Add button's text), `viewState` and `lists` (the lists the screen's code filled, as the screen has them, "Select" item included), sent back with the next event. Fields the page does not show (Material's batch / FIFO / inspection settings, Material Category's tag design and inspection, BOM's weight and business unit, Production Process's cost / tag / serial logic ..., Work Center's group and cost, the business unit Production Line and Work Center keep hidden) are not fields: a saved record keeps them, a new one gets the screen's defaults. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
 
 ### Change Password — `/api/masters/change-password`
 
@@ -165,27 +165,29 @@ Original: `View/MaterialSetup/VariantFieldValueForm.aspx`. Plain page; the scree
 
 ### Production Line — `/api/masters/production-lines`
 
-Original: `View/ProductionSetup/ProductionLineForm.aspx`. Fields: `lineCode`, `businessUnit`, `status`, `department`, `name`, `alias`.
+Original: `View/ProductionSetup/ProductionLineForm.aspx`. Plain page; the screen engine answers 410. Fields: `lineCode`, `status`, `department`, `name`, `alias`.
 
 ### Production Process — `/api/masters/production-processes`
 
-Original: `View/ProductionSetup/ProductionProcess.aspx`. Fields: `processCode`, `status`, `name`, `alias`, `cost`, `unit`, `prodcutionStage`, `model`, `seq`, `prefix`, `tag`, `serialLogic`, `checkPoints`, `checkingMethod`, `showInHistory`.
+Original: `View/ProductionSetup/ProductionProcess.aspx`. Plain page; the screen engine answers 410. Fields: `processCode`, `status`, `name`, `alias`, `stage`, `showInHistory`.
 
 ### Routing — `/api/masters/routings`
 
-Original: `View/ProductionSetup/RoutingForm.aspx`. Fields: `routeCode`, `status`, `name`, `alias`, `type`, `model`, `material`, `tbSeq`, `ddlProcess`, `tbProcessTime`, `tbSetupTime`, `tbMinHoldP`, `tbMaxHoldP`, `tbAutoProcess`, `ddlqcStatus`, `ddlConsession`, `ddlValidate`, `ddlWorkStation`, `ddlPallet`, `tbDrawaingNo`, `ddlCheckList`, `ddlInspection`, `ddlBatchFreq`, `ddlStageLabel`, `ddlNextStageLabel`, `tbNoOfCopy`, `routingTrans`, `routeInstruction`, `ddlGuideFileType`, `tbGuideDesc`, `ddlExistingGuide`, `routingGuide`, `ddlMaterialSeq`, `ddlStageQC`, `tbInstruction`, `fileUploadGuide`, `tbGuideFilePath`.
+Original: `View/ProductionSetup/RoutingForm.aspx`. Plain page; the screen engine answers 410. Fields: `routeCode`, `status`, `name`, `alias`, `type`, `model`, `material`, `lines`, `seqNo`, `process`, `concession`, `materialSeq`, `inspection`, `stageLabel`, `stageQc`, `nextStageLabel`, `autoProcess`, `copies`, `grouping`, `inputQcStatus`, `processTime`, `setupTime`, `minHold`, `maxHold`, `validateSeq`, `palletScan`, `drawingNo`, `setupChecklist`, `batchFrequency` (the line editors after `lines`; a line's ✏ fills them, Update writes them back).
 
-Events: `model`, `btnAdd`, `gvTransDataDelete`, `gvTransDataSelect`, `gvTransDataInstruction`, `gvTransDataGuide`, `imbInstructionClose`, `imbGuideClose`, `btnInstructionAdd`, `gvInstructionDelete`, `gvGuideDelete`, `ddlExistingGuide`, `ddlGuideFileType`, `btnGuideAdd`.
+Events: `model`, `add`, `edit`, `cancelEdit`, `remove`.
 
-### Routing — `/api/masters/routing-guides`
+Routing also has its images per stage on WIP Capture: `/api/masters/routings/:route/stage-images` (`routing-stage-images.js`).
 
-Original: `View/ProductionSetup/RoutingGuideForm.aspx`. Fields: `routeCode`, `status`, `name`, `alias`, `model`, `material`, `routingTrans`, `routeInstruction`, `ddlGuideFileType`, `tbGuideDesc`, `ddlExistingGuide`, `routingGuide`, `tbInstruction`, `fileUploadGuide`, `tbGuideFilePath`.
+### Routing Guide — `/api/masters/routing-guides`
 
-Events: `model`, `gvTransDataInstruction`, `gvTransDataGuide`, `imbInstructionClose`, `imbGuideClose`, `btnInstructionAdd`, `gvInstructionDelete`, `gvGuideDelete`, `ddlExistingGuide`, `ddlGuideFileType`, `btnGuideAdd`.
+Original: `View/ProductionSetup/RoutingGuideForm.aspx`. Plain page; the screen engine answers 410. Fields: `routeCode`, `status`, `name`, `alias`, `model`, `material`, `lines`, `instructions`, `instruction`, `guides`, `guideType`, `existingGuide`, `guideDescription`, `guideFile`, `guidePath`.
+
+Events: `model`, `openInstructions`, `closeInstructions`, `addInstruction`, `removeInstruction`, `openGuides`, `closeGuides`, `guideType`, `existingGuide`, `addGuide`, `removeGuide` (`openInstructions` / `openGuides` take the line's `index`). `ui`: `instructionsPanel`, `guidesPanel`, `instructionLine` / `guideLine` (the line's "Seq No." text).
 
 ### Work Center — `/api/masters/work-centers`
 
-Original: `View/ProductionSetup/WorkCenterForm.aspx`. Fields: `stationCode`, `businessUnit`, `status`, `department`, `groupID`, `name`, `alias`, `tbCheckListSearch`, `workCenterProcesses`, `manfLine`, `cost`, `jobWork`.
+Original: `View/ProductionSetup/WorkCenterForm.aspx`. Plain page; the screen engine answers 410. Fields: `stationCode`, `status`, `department`, `name`, `alias`, `line`, `jobWork`, `processes` (the ticked process codes).
 
 ### Defect Code Master — `/api/masters/defect-codes`
 

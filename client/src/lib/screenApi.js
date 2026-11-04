@@ -1,7 +1,5 @@
-// How a screen page talks to the server: the screen engine (/api/forms) or, for the screens in API_SCREENS, the
-// screen's own REST API. Both give the page the same answers (control states and patches), so a page draws and
-// behaves the same either way; ./screenApiCore.js does the translation. A screen switches by adding its route here and
-// switches back by removing it (docs/CLIENT-SWITCH-PLAN.md).
+// How an engine-style control talks to a screen's own REST API (for the screens in API_SCREENS), answering as the old
+// screen engine (/api/forms) did; ./screenApiCore.js does the translation. The engine itself is gone from the client.
 import { api } from "@/api.js";
 import {
   eventOf,
@@ -19,25 +17,6 @@ export const API_SCREENS = {
 
 const enc = encodeURIComponent;
 const post = (path, body) => api(path, { method: "POST", body });
-
-/** the screen engine, as the pages called it */
-function engine(path) {
-  const p = `path=${enc(path)}`;
-  return {
-    spec: () => api(`/forms/spec?${p}`),
-    record: (key) => api(`/forms/record?${p}&key=${enc(key)}`),
-    copy: (key) => api(`/forms/copy?${p}&key=${enc(key)}`),
-    list: (query) => api(`/forms/list?${p}${query}`),
-    distinct: (column) => api(`/forms/distinct?${p}&column=${enc(column)}`),
-    event: (body) => post("/forms/event", { path, ...body }),
-    write: (kind, body) => post(`/forms/${kind}`, { path, ...body }),
-    print: (body) => post("/forms/print", { path, ...body }),
-    combo: (id, search) =>
-      api(
-        `/forms/combo?${p}&id=${enc(id)}${search == null ? "" : `&search=${enc(search)}`}`,
-      ),
-  };
-}
 
 /** the screen's REST API, answering as the engine does */
 function rest(base) {
@@ -114,7 +93,9 @@ function rest(base) {
 const cache = new Map();
 /** the transport for a screen route (one per screen: the API's keeps the layout it fetched) */
 export function screenApi(path) {
-  if (!cache.has(path))
-    cache.set(path, API_SCREENS[path] ? rest(API_SCREENS[path]) : engine(path));
+  if (!cache.has(path)) {
+    if (!API_SCREENS[path]) throw new Error(`No API for ${path}`);
+    cache.set(path, rest(API_SCREENS[path]));
+  }
   return cache.get(path);
 }
