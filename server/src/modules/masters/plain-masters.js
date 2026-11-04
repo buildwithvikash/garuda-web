@@ -101,6 +101,65 @@ export const PLAIN = {
     },
     events: { add: 'btnAdd', remove: 'gvTransDataDelete' },
   },
+  // Material Setup. Fields the pages do not show (inspection, batch, FIFO ... settings, owner 28 Oct / 1 Nov 2026; what
+  // the screen itself keeps hidden) are not named: a saved record keeps its values, a new one the screen's defaults
+  'units-of-measure': { route: '/materialsetup/unitofmeasureform', fields: { uomCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'TextBox4', uomType: 'DropDownList1' } },
+  'variant-fields': { route: '/materialsetup/variantfieldform', fields: { fieldCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3' } },
+  'variant-values': { route: '/materialsetup/variantfieldvalueform', fields: { code: 'PrimaryKey', status: 'ddlStatus', field: 'Ddl', value: 'TextBox3', prefix: 'TextBox1' } },
+  'material-categories': {
+    route: '/materialsetup/materialcategoryform',
+    fields: { categoryCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'TextBox4', prefix: 'TextBox1', categoryType: 'DropDownList1' },
+  },
+  models: {
+    route: '/materialsetup/modelform',
+    fields: {
+      modelCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'Alias', category: 'DDLCategory', prefix: 'TextBox1', beeCode: 'TextBox2',
+      variants: 'GVTransData', variantGroup: 'DDLGroup', variantField: 'DdlName', variantValue: 'DdlValue', newValue: 'TbNewValue',
+    },
+    events: { variantGroup: 'ddlGroup', variantField: 'ddlName', add: 'btnAdd', remove: 'gvTransDataDelete' },
+  },
+  'serial-logics': {
+    route: '/materialsetup/serialgenerationlogicform',
+    fields: {
+      serialCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'Alias', type: 'DdlType', barcodeLength: 'TextBox1', useFor: 'DDLUseFor',
+      parts: 'GVTransData', sequenceField: 'DdlName', description: 'TbDescription', seqNo: 'tbSeqNo', separator: 'DDLSeperator', startingNo: 'tbStartingNo',
+      seed: 'tbSeed', length: 'tbLenth', endingNo: 'tbEndingNo', format: 'tbFormat', value: 'tbValue',
+    },
+    events: { type: 'type', sequenceField: 'ddlName', add: 'btnAdd', edit: 'gvTransDataSelect', cancelEdit: 'gvTransDataCancel', remove: 'gvTransDataDelete' },
+    ui: { serialPanel: 'Serial', datePanel: 'dateFormat', valuePanel: 'Value' },
+  },
+  materials: {
+    route: '/materialsetup/materialform',
+    fields: {
+      matCode: 'PrimaryKey', status: 'ddlStatus', type: 'DdlType', ledger: 'DDLLedger', category: 'DdlMaterialCategory', model: 'DdlModel', tagDesign: 'DDLTag',
+      name: 'TextBox2', itemCode: 'TextBox1', alias: 'Alias', baseUom: 'DdlBaseUom', mrp: 'TbRetailRate', routing: 'DDLRoute',
+      track: 'DropDownList24', fgSerialLogic: 'ddlTrackSerialLogic', assetTagLogic: 'DropDownList6', greenTagLogic: 'DDLGreenLogic',
+      purchaseTax: 'DdlPurchaseTax', purchaseRate: 'TbPurchaseRate', purchaseUom: 'DdlPurchaseUom', purchaseConvQty: 'TbPConvQty',
+      salesTax: 'DdlSalesTax', wholesaleRate: 'TbWholeSaleRate', salesUom: 'DdlSalesUom', salesConvQty: 'TbSConvQty',
+      variants: 'GVTransData', variantGroup: 'DDLGroup', variantField: 'DdlName', variantValue: 'DdlValue', newValue: 'TbNewValue', image: 'UploadImage',
+    },
+    events: { type: 'type', category: 'category', model: 'model', baseUom: 'baseUom', variantGroup: 'ddlGroup', variantField: 'ddlName', add: 'btnAdd', remove: 'gvTransDataDelete' },
+    ui: { purchasePanel: 'PurchaseConfigPanel', salesPanel: 'SalesConfigPanel', variantPanel: 'VariantPanel' },
+  },
+  'bills-of-material': {
+    route: '/materialsetup/billofmaterial',
+    fields: {
+      bomCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox1', version: 'TextBox5', remark: 'TextBox2', model: 'ddlModel', material: 'DDLMaterial',
+      baseQty: 'TextBox10', baseUom: 'DDLBaseUom', process: 'DdlProcess',
+      inputs: 'GVBOMInput', inputType: 'DDLInputMaterialType', inputMaterial: 'DDLInputMaterial', inputQty: 'TbInputQuantity', inputUom: 'DdlInputUom',
+      inputScan: 'DDLInputScan', outputScan: 'DDLOutputScan', subRouting: 'DDLRouting',
+      alternatives: 'GVAltMaterial', lineAlternatives: 'GVCurrentAltMaterial', alternative: 'DDlAltInputMaterial',
+      outputs: 'GVOutput', outputType: 'DDLOutoutMaterialType', outputMaterial: 'DDLOutputMaterial', outputQty: 'TBOutputQty', outputUom: 'DDLOutputUom',
+    },
+    events: {
+      material: 'material', inputType: 'ddlInputMaterialType', inputMaterial: 'ddlInputMaterial', outputType: 'ddlOutoutMaterialType', outputMaterial: 'ddlOutputMaterial',
+      addInput: 'btnInputAdd', editInput: 'gvbomInputSelect', cancelInput: 'gvbomInputCancel', removeInput: 'gvbomInputDelete',
+      addOutput: 'btnOutputAdd', editOutput: 'gvOutputSelect', cancelOutput: 'gvOutputCancel', removeOutput: 'gvOutputDelete',
+      openAlternatives: 'gvbomInputAlternativeMat', closeAlternatives: 'btnAltPanelClose', addAlternative: 'btnAddAltMaterial',
+      updateAlternatives: 'btnUpdateAltMaterial', removeAlternative: 'gvCurrentAltMaterialDelete',
+    },
+    ui: { subRoutingPanel: 'SubRoutingPanel', outputScanPanel: 'OutputScanPanel', alternativesPanel: 'AltMaterialPanel' },
+  },
 };
 
 /** one screen as a plain service: its fields by name over the screen's own resource */
@@ -113,6 +172,10 @@ export function plainMaster({ route, fields, tree, events = {}, ui = {} }) {
   const NESTED = new Set(Object.keys(fields).filter((f) => m.NESTED.has(auto[fields[f]])));
   /** { field: value } -> the resource's { record } */
   const toResource = (record = {}) => ({ record: Object.fromEntries(Object.entries(record).filter(([f]) => fields[f]).map(([f, v]) => [auto[fields[f]], v])) });
+  /** the lists of fields whose control passes `keep`, unchanged */
+  const raw = (o, keep) => Object.fromEntries(Object.entries(fields).filter(([, id]) => keep(id) && o?.[auto[id]]).map(([f, id]) => [f, o[auto[id]]]));
+  /** the lists the page holds ({ field: items }) -> the resource's ui ({ control: { options } }), as the engine's client posts them */
+  const held = (l = {}) => Object.fromEntries(Object.entries(l).filter(([f, x]) => fields[f] && Array.isArray(x?.options)).map(([f, x]) => [fields[f], { options: x.options }]));
   const lists = (o) => Object.fromEntries(Object.entries(o ?? {}).filter(([a]) => fieldOf[a]).map(([a, x]) => [fieldOf[a], x.filter((i) => i.value !== '')]));
   /** what the screen shows or hides of the controls named in `ui` (a panel, the Add button's text) */
   const shown = (u = {}) =>
@@ -128,8 +191,9 @@ export function plainMaster({ route, fields, tree, events = {}, ui = {} }) {
     options: lists(r.options),
     status: r.status,
     statusMessage: r.statusMessage,
-    // a screen with row events: what its rows' editor shows, and the screen's own state between events
-    ...(Object.keys(events).length && { ui: shown(r.ui), viewState: r.viewState ?? {} }),
+    // a screen with events: what its rows' editor shows, the screen's own state between events, and the lists its code
+    // filled (as the screen has them, "Select" included), which the page sends back with each event
+    ...(Object.keys(events).length && { ui: shown(r.ui), viewState: r.viewState ?? {}, lists: raw(r.options, (id) => r.ui?.[m.NAMES[id]]?.refilled) }),
   });
   const withTree = async (r) => (tree ? { ...r, tree: await roleTree() } : r);
   const answer = (r) => ({ key: netString(r.key), message: r.message, alert: r.alert ?? null, ...(r.logout && { logout: true }) });
@@ -158,9 +222,10 @@ export function plainMaster({ route, fields, tree, events = {}, ui = {} }) {
     /** a row event (add, remove, edit a line ...) run by the screen's own handler on the record the page holds:
      *  { record (only what changed), options, ui, viewState, alert } */
     event: async (c, name, body) => {
-      const r = await m.event(c, events[name], { ...toResource(body.record), viewState: body.viewState, arg: body.arg });
+      // ui: { field: { options } }, the lists the page holds; index: the grid line (Material's, BOM's row commands)
+      const r = await m.event(c, events[name], { ...toResource(body.record), viewState: body.viewState, ui: held(body.ui), arg: body.arg, index: body.index });
       const record = Object.fromEntries(Object.entries(r.record).filter(([a]) => fieldOf[a]).map(([a, v]) => [fieldOf[a], v]));
-      return { record, options: lists(r.options), ui: shown(r.ui), viewState: r.viewState ?? {}, alert: r.alert ?? null };
+      return { record, options: lists(r.options), lists: raw(r.options, () => true), ui: shown(r.ui), viewState: r.viewState ?? {}, alert: r.alert ?? null, ...(r.success && { success: true }) };
     },
     list: (c, q) => m.list(c, q),
     searchFields: (c) => m.searchFields(c),

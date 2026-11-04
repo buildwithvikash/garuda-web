@@ -79,9 +79,9 @@ the original's list query does.
 Send the whole `record` the API gave you back (with your changes), and the `viewState` of the last answer: the screen's
 code works on the full form, as the original page did.
 
-### Plain pages: Authorization, Business Setup, Settings
+### Plain pages: Authorization, Business Setup, Settings, Material Setup
 
-These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, and the 10 of Settings (`modules/masters/plain-masters.js`); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` for Department); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (Department) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values and Shift add their table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, arg }` (arg: the line's key for `edit` / `remove`) answers `{ record (what changed), options, ui, viewState, alert }`; their records also bring `ui` (the editor's panels, the Add button's text) and `viewState`, sent back with the next event. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
+These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, the 10 of Settings and 8 of Material Setup (`modules/masters/plain-masters.js`; Material Barcode is its reprint page, below); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` where the screen copies: Department, Variant Field, Model, Material, Serial Generation Logic, Bill of Material); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (the screens that copy) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values, Shift, Model, Material, Serial Generation Logic and Bill of Material run their option changes and table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, ui, arg, index }` (arg: the line's key for `edit` / `remove`; index: the line's position, for a row command such as BOM's `openAlternatives`; ui: `{ field: { options } }`, the `lists` the page holds) answers `{ record (what changed), options, lists, ui, viewState, alert, success? }`; their records also bring `ui` (the panels the screen shows or hides, the Add button's text), `viewState` and `lists` (the lists the screen's code filled, as the screen has them, "Select" item included), sent back with the next event. Fields the page does not show (Material's batch / FIFO / inspection settings, Material Category's tag design and inspection, BOM's weight and business unit) are not fields: a saved record keeps them, a new one gets the screen's defaults. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
 
 ### Change Password — `/api/masters/change-password`
 
@@ -117,9 +117,9 @@ Original: `View/BusinessSetup/LedgerForm.aspx`. Fields: `ledgerCode`, `departmen
 
 ### Bill of Material — `/api/masters/bills-of-material`
 
-Original: `View/MaterialSetup/BillOfMaterial.aspx`. Fields: `bomCode`, `businessUnit`, `status`, `alias`, `version`, `remark`, `model`, `material`, `baseQty`, `baseUom`, `weight`, `weightUom`, `ddlProcess`, `ddlInputMaterialType`, `ddlInputMaterial`, `ddlInputUom`, `ddlRouting`, `bomInput`, `bomInputAltMaterial`, `dDlAltInputMaterial`, `gvCurrentAltMaterial`, `ddlOutoutMaterialType`, `ddlOutputMaterial`, `ddlOutputUom`, `bomOutput`, `tbInputQuantity`, `ddlInputScan`, `ddlOutputScan`, `tbOutputQty`.
+Original: `View/MaterialSetup/BillOfMaterial.aspx`. Plain page; the screen engine answers 410. Fields: `bomCode`, `status`, `name`, `version`, `remark`, `model`, `material`, `baseQty`, `baseUom`, `process`, `inputs`, `inputType`, `inputMaterial`, `inputQty`, `inputUom`, `inputScan`, `outputScan`, `subRouting`, `alternatives`, `lineAlternatives`, `alternative`, `outputs`, `outputType`, `outputMaterial`, `outputQty`, `outputUom`.
 
-Events: `material`, `ddlInputMaterialType`, `ddlOutoutMaterialType`, `ddlInputMaterial`, `ddlOutputMaterial`, `gvbomInputCancel`, `gvOutputCancel`, `btnInputAdd`, `btnOutputAdd`, `gvbomInputSelect`, `gvOutputSelect`, `gvbomInputDelete`, `gvOutputDelete`, `gvbomInputAlternativeMat`, `btnAltPanelClose`, `btnAddAltMaterial`, `btnUpdateAltMaterial`, `gvCurrentAltMaterialDelete`.
+Events: `material`, `inputType`, `inputMaterial`, `outputType`, `outputMaterial`, `addInput`, `editInput`, `cancelInput`, `removeInput`, `addOutput`, `editOutput`, `cancelOutput`, `removeOutput`, `openAlternatives`, `closeAlternatives`, `addAlternative`, `updateAlternatives`, `removeAlternative`. `ui`: `subRoutingPanel`, `outputScanPanel`, `alternativesPanel` (the pop-up of a line's alternates).
 
 ### Material Barcode — `/api/masters/material-barcodes`
 
@@ -131,39 +131,37 @@ Print: yes.
 
 ### Material Category — `/api/masters/material-categories`
 
-Original: `View/MaterialSetup/MaterialCategoryForm.aspx`. Fields: `categoryCode`, `status`, `name`, `alias`, `prefix`, `categoryType`, `tagCode`, `isInspectionReq`, `inspectionType`, `inspectionCheckList`, `certificateControl`.
-
-Events: `isInspectionReq`.
+Original: `View/MaterialSetup/MaterialCategoryForm.aspx`. Plain page; the screen engine answers 410. Fields: `categoryCode`, `status`, `name`, `alias`, `prefix`, `categoryType`.
 
 ### Material — `/api/masters/materials`
 
-Original: `View/MaterialSetup/MaterialForm.aspx`. Fields: `matCode`, `status`, `type`, `category`, `model`, `ledger`, `name`, `altName`, `alias`, `baseUom`, `hsnCode`, `greenTagLogic`, `barcode`, `tagCode`, `sRetailRate`, `batch`, `supBatch`, `manDate`, `expiry`, `exipiryMonths`, `serial`, `assetTagType`, `track`, `trackNoType`, `isPacket`, `grossWeight`, `alterUOM`, `convVal`, `classification`, `isFIFO`, `fifoAge`, `reorderLevel`, `reorderQty`, `depreciationMethod`, `isInspectionReq`, `inspectionType`, `inspectionCheckList`, `retestIn`, `certificateControl`, `materialImage`, `purchaseTax`, `purchaseRate`, `purchaseUnit`, `pConvQty`, `salesTax`, `wholesaleRate`, `salesUnit`, `sConvQty`, `ddlGroup`, `ddlName`, `tbNewValue`, `materialVariant`, `ddlVendor`, `dDlSerialLogic`, `materialLedgerMap`, `route`, `ddlValue`, `tbVendorMat`.
+Original: `View/MaterialSetup/MaterialForm.aspx`. Plain page; the screen engine answers 410. Fields: `matCode`, `status`, `type`, `ledger`, `category`, `model`, `tagDesign`, `name`, `itemCode`, `alias`, `baseUom`, `mrp`, `routing`, `track`, `fgSerialLogic`, `assetTagLogic`, `greenTagLogic`, `purchaseTax`, `purchaseRate`, `purchaseUom`, `purchaseConvQty`, `salesTax`, `wholesaleRate`, `salesUom`, `salesConvQty`, `variants`, `variantGroup`, `variantField`, `variantValue`, `newValue`, `image`.
 
-Events: `baseUom`, `type`, `isInspectionReq`, `category`, `model`, `ddlName`, `ddlGroup`, `btnAdd`, `gvTransDataDelete`, `btnLedgerMap`, `gvLedgerCodeDelete`.
+Events: `type`, `category`, `model`, `baseUom`, `variantGroup`, `variantField`, `add`, `remove`. `ui`: `purchasePanel`, `salesPanel`, `variantPanel`.
 
 ### Model — `/api/masters/models`
 
-Original: `View/MaterialSetup/ModelForm.aspx`. Fields: `modelCode`, `status`, `name`, `alias`, `category`, `prefix`, `variant`, `ddlGroup`, `ddlName`, `tbNewValue`, `modelVariant`, `ddlValue`.
+Original: `View/MaterialSetup/ModelForm.aspx`. Plain page; the screen engine answers 410. Fields: `modelCode`, `status`, `name`, `alias`, `category`, `prefix`, `beeCode`, `variants`, `variantGroup`, `variantField`, `variantValue`, `newValue`.
 
-Events: `ddlName`, `ddlGroup`, `btnAdd`, `gvTransDataDelete`.
+Events: `variantGroup`, `variantField`, `add`, `remove`.
 
 ### Serial Generation Logic — `/api/masters/serial-logics`
 
-Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `serialLength`, `useFor`, `ddlName`, `tbDescription`, `tbSeqNo`, `ddlSeperator`, `tbStartingNo`, `tbSeed`, `tbLenth`, `tbEndingNo`, `tbFormat`, `tbValue`, `serialGenerationLogicDetail`.
+Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Plain page; the screen engine answers 410. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `barcodeLength`, `useFor`, `parts`, `sequenceField`, `description`, `seqNo`, `separator`, `startingNo`, `seed`, `length`, `endingNo`, `format`, `value`.
 
-Events: `ddlName`, `type`, `btnAdd`, `gvTransDataSelect`, `gvTransDataCancel`, `gvTransDataDelete`.
+Events: `type`, `sequenceField`, `add`, `edit`, `cancelEdit`, `remove`. `ui`: `serialPanel`, `datePanel`, `valuePanel`.
 
 ### Unit of Measure — `/api/masters/units-of-measure`
 
-Original: `View/MaterialSetup/UnitOfMeasureForm.aspx`. Fields: `uomCode`, `status`, `name`, `alias`, `uomType`.
+Original: `View/MaterialSetup/UnitOfMeasureForm.aspx`. Plain page; the screen engine answers 410. Fields: `uomCode`, `status`, `name`, `alias`, `uomType`.
 
 ### Variant Field — `/api/masters/variant-fields`
 
-Original: `View/MaterialSetup/VariantFieldForm.aspx`. Fields: `fieldCode`, `status`, `name`.
+Original: `View/MaterialSetup/VariantFieldForm.aspx`. Plain page; the screen engine answers 410. Fields: `fieldCode`, `status`, `name`.
 
 ### Variant Field Value — `/api/masters/variant-values`
 
-Original: `View/MaterialSetup/VariantFieldValueForm.aspx`. Fields: `code`, `status`, `field`, `name`, `prefix`.
+Original: `View/MaterialSetup/VariantFieldValueForm.aspx`. Plain page; the screen engine answers 410. Fields: `code`, `status`, `field`, `value`, `prefix`.
 
 ### Production Line — `/api/masters/production-lines`
 
@@ -361,9 +359,9 @@ Original: `View/Production/WRLImageDisply.aspx`. Fields: `primaryKey`, `imgGuide
 
 Events: `btnGo`.
 
-Material also has its artwork, unit frame and basket images (`:kind` = `artwork`, `unitframe` or `basket`; table MaterialImages), each stored on its own as soon as it is uploaded, apart from the record's Save / Update: `GET /api/masters/materials/:code/images` (which ones it has: `kind`, `fileName`, `mimeType`, `size`, `updatedOn`), `GET …/images/:kind` (the file itself), `PUT …/images/:kind` with `{ fileName, data }` (base64; PNG, JPEG, WebP or PDF, told by the file's bytes, up to 10 MB; 404 for a material that does not exist) and `DELETE …/images/:kind`. Same access as the Material screen. The original screen had only the one image (`materialImage`); added by the owner, 28 Oct 2026.
+Material also has its artwork, unit frame and basket images (`:kind` = `artwork`, `unitframe` or `basket`; table MaterialImages), each stored on its own as soon as it is uploaded, apart from the record's Save / Update: `GET /api/masters/materials/:code/images` (which ones it has: `kind`, `fileName`, `mimeType`, `size`, `updatedOn`), `GET …/images/:kind` (the file itself), `PUT …/images/:kind` with `{ fileName, data }` (base64; PNG, JPEG, WebP or PDF, told by the file's bytes, up to 10 MB; 404 for a material that does not exist) and `DELETE …/images/:kind`. Same access as the Material screen. The original screen had only the one image (`image`); added by the owner, 28 Oct 2026.
 
-Material's `route` is the material's routing (`Material.Route`): Production Assignment selects it when an order of that material is chosen. The original screen had no such field; added by the owner, 28 Oct 2026, as on LIVE.
+Material's `routing` is the material's routing (`Material.Route`): Production Assignment selects it when an order of that material is chosen. The original screen had no such field; added by the owner, 28 Oct 2026, as on LIVE.
 
 Material Barcode is a reprint page (owner, 29 Oct 2026): `GET /api/masters/material-barcodes/reprint/:serial` finds the FG label, assembly or foaming barcode with that serial (or barcode number) in the user's business unit (`kind`, `serial`, `barcodeNo`, material, job card, production order, process, reprints; 404 for any other barcode), `GET …/reprint/printers` lists the unit's printers, and `POST …/reprint` with `{ barcodeNo, printer, remark }` prints the label again (the in-process label, as the original Print) and logs it in BarcodePrintTrail; `GET …/reprint/history?page=&start=&end=` lists those reprints, newest first, read only (reprinted on, label, serial, material, job card, reason, reprinted by; 1000 a page; the same time range as the histories below).
 

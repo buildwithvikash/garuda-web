@@ -14,17 +14,9 @@ import {
 
 /** route -> its API (under /api) */
 export const API_SCREENS = {
-  "/materialsetup/unitofmeasureform": "/masters/units-of-measure",
-  "/materialsetup/variantfieldform": "/masters/variant-fields",
-  "/materialsetup/variantfieldvalueform": "/masters/variant-values",
   "/productionsetup/productionlineform": "/masters/production-lines",
   "/productionsetup/productionprocess": "/masters/production-processes",
   "/productionsetup/workcenterform": "/masters/work-centers",
-  "/materialsetup/materialcategoryform": "/masters/material-categories",
-  "/materialsetup/modelform": "/masters/models",
-  "/materialsetup/materialform": "/masters/materials",
-  "/materialsetup/serialgenerationlogicform": "/masters/serial-logics",
-  "/materialsetup/billofmaterial": "/masters/bills-of-material",
   "/productionsetup/routingform": "/masters/routings",
   "/productionsetup/routingguideform": "/masters/routing-guides",
   "/materialsetup/materialbarcode": "/masters/material-barcodes",

@@ -3,8 +3,11 @@
 //   <MasterScreen name="departments" title="Department" icon={Building2} sections={[{ title, subtitle, icon, fields: [
 //     { f: 'name', label: 'Name', required: true, max: 100 }, { f: 'deptType', label: 'Type', kind: 'select' } ] }]} />
 // Field kinds: text (default; `type` number / date / password), select (the server's list), key (the record's number,
-// locked), checks (a tick list), tree (the role tree), image (a PNG). The record keeps every field the server gave, shown
-// or not, and is sent back whole. After Save / Update the form starts a new record, as the original's did.
+// locked), checks (a tick list), tree (the role tree), image (a PNG), textarea, custom (drawn by the page), rows (a table
+// edited in place, RowFormGrid), variants (Model's / Material's variant table, VariantGrid), button (runs a screen event).
+// A section can follow one of the screen's panels (`panel`: shown while the screen shows it), be a pop-up (`dialog`), or
+// take part of the row (`width` in tenths). The record keeps every field the server gave, shown or not, and is sent
+// back whole. After Save / Update the form starts a new record, as the original's did.
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Copy, Plus, Printer, RotateCw, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -14,11 +17,13 @@ import { openedRecord, useRememberView } from '@/lib/recordParam.js';
 import { cn } from '@/lib/utils';
 import { CheckList, ImageField, RoleTree } from '@/components/shared/FormControls.jsx';
 import { Select, TextArea, TextInput } from '@/components/shared/FormField.jsx';
-import { LockedValue, STEP_COLS, Step, TONE_CYCLE } from '@/components/shared/FormStep.jsx';
+import { LockedValue, STEP_COLS, STEP_SPAN, Step, TONE_CYCLE } from '@/components/shared/FormStep.jsx';
 import Loader from '@/components/shared/Loader.jsx';
+import Modal from '@/components/shared/Modal.jsx';
 import Page from '@/components/shared/Page.jsx';
 import RecordsList from '@/components/shared/RecordsList.jsx';
 import RowFormGrid from '@/components/shared/RowFormGrid.jsx';
+import VariantGrid from '@/components/shared/VariantGrid.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
@@ -130,19 +135,23 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
   }
 
   /** a row event (Add, Edit, Delete ... of a table, an input type picked) run by the screen on the record as it is now;
-   *  its answer merged in. rec: the record with a change not yet in the state. */
-  async function run(event, arg, rec = form.record) {
+   *  its answer merged in. rec: the record with a change not yet in the state; index: the table line (a row command).
+   *  The lists the screen's code filled go back with it, as the screen has them (its handlers read them). */
+  async function run(event, arg, rec = form.record, index) {
     setBusy(true);
     try {
-      const r = await m.event(event, { record: rec, viewState: form.viewState, arg });
+      const ui = Object.fromEntries(Object.entries(form.lists ?? {}).map(([f, o]) => [f, { options: o }]));
+      const r = await m.event(event, { record: rec, viewState: form.viewState, ui, arg, ...(Number.isInteger(index) && { index }) });
       setForm((x) => ({
         ...x,
         record: { ...x.record, ...r.record },
         options: { ...x.options, ...r.options },
+        lists: { ...x.lists, ...r.lists },
         ui: Object.fromEntries([...new Set([...Object.keys(x.ui ?? {}), ...Object.keys(r.ui)])].map((k) => [k, { ...x.ui?.[k], ...r.ui[k] }])),
         viewState: r.viewState,
       }));
       if (r.alert) toast.error(r.alert, { id: r.alert, duration: 6000 });
+      else if (r.success) toast.success('Done');
       return r;
     } catch (err) {
       toast.error(err.alert ?? err.message, { id: err.message, duration: 6000 });
@@ -190,13 +199,20 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
   const opts = (f) => (options[f] ?? []).map((o) => ({ value: o.value, label: o.text }));
 
   function field(x) {
-    const { f, label, kind = 'text', required, max, type, span, selectAll, rows, render, on } = x;
+    const { f, label, kind = 'text', required, max, type, span, selectAll, rows, render, on, icon: Icon } = x;
     const cls = cn('min-w-0', span === 'full' ? 'col-span-full' : span === 2 && 'sm:col-span-2');
     if (kind === 'rows') return <div key={f} className="col-span-full min-w-0">{grid(x)}</div>;
+    if (kind === 'variants') return <div key={f} className="col-span-full min-w-0">{variants(x)}</div>;
+    if (kind === 'button')
+      return (
+        <div key={label} className={cls}>
+          <Button type="button" icon={Icon} loading={busy} disabled={cancelled} onClick={() => run(x.event)}>{label}</Button>
+        </div>
+      );
     // a pick the screen answers (Check List's input type shows its editors)
     if (kind === 'select' && on)
       return <Select key={f} label={label} required={required} value={record[f]} options={opts(f)} onChange={(v) => { set(f)(v ?? ''); run(on, undefined, { ...record, [f]: v ?? '' }); }} className={cls} />;
-    if (kind === 'custom') return <div key={f} className={cls}>{render(record)}</div>; // something the page draws from the record (Tag Design's PRN preview)
+    if (kind === 'custom') return <div key={f} className={cls}>{render(record, { isNew })}</div>; // something the page draws from the record (Tag Design's PRN preview)
     if (kind === 'textarea') return <TextArea key={f} label={label} required={required} rows={rows} maxLength={max} value={record[f] ?? ''} onChange={(e) => set(f)(e.target.value)} className={cls} />;
     if (kind === 'key') return <LockedValue key={f} label={label} value={/^0?$/.test(String(record[f] ?? '').trim()) ? '' : record[f]} placeholder="Auto-generated" className={cls} />;
     if (kind === 'select') return <Select key={f} label={label} required={required} value={record[f]} options={opts(f)} onChange={(v) => set(f)(v ?? '')} className={cls} />;
@@ -235,19 +251,21 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
   }
 
   /** a table whose lines are added, edited and deleted by the screen's events, in the table itself (shared RowFormGrid).
-   *  x = { f, rowKey, columns: [{ col, header, editor?: field }], more: [fields under the editors], events: { add,
-   *  select?, delete, cancel? } }; an editor with `panel` shows while the screen shows that panel */
+   *  x = { f, rowKey, columns: [{ col, header, editor?: field } | { command, text }], more: [fields under the editors],
+   *  events: { add, select?, delete?, cancel?, commands?: { command: event } } }; an editor with `panel` shows while the
+   *  screen shows that panel; a command is a button on each line (BOM Input's Alternative) */
   function grid(x) {
     const inCells = x.columns.filter((k) => k.editor);
     const editors = Object.fromEntries([...inCells.map((k) => k.editor), ...(x.more ?? [])].map((e) => [e.f, e]));
     const ev = x.events;
-    const byId = { add: ev.add, [`${x.f}:select`]: ev.select, [`${x.f}:delete`]: ev.delete, cancel: ev.cancel };
+    const byId = { add: ev.add, [`${x.f}:select`]: ev.select, [`${x.f}:delete`]: ev.delete, cancel: ev.cancel, ...Object.fromEntries(Object.entries(ev.commands ?? {}).map(([k, e]) => [`${x.f}:${k}`, e])) };
+    const column = (k) => (k.command ? { kind: 'templatefield', template: { type: 'Button', command: k.command, text: k.text } } : { kind: 'boundfield', dataField: k.col, header: k.header });
     return (
       <RowFormGrid
-        c={{ id: x.f, keyName: x.rowKey, columns: x.columns.map((k) => ({ kind: 'boundfield', dataField: k.col, header: k.header })) }}
+        c={{ id: x.f, keyName: x.rowKey, columns: x.columns.map(column) }}
         cfg={{ fields: Object.fromEntries(inCells.map((k) => [k.col, k.editor.f])), more: (x.more ?? []).map((e) => e.f), add: 'add', cancel: ev.cancel && 'cancel' }}
         rows={record[x.f] ?? []}
-        fire={(id, _values, arg) => run(byId[id], arg)}
+        fire={(id, _values, arg, _controls, index) => run(byId[id], arg, undefined, index)}
         values={record}
         events={Object.keys(byId).filter((id) => byId[id])}
         busy={busy}
@@ -259,6 +277,37 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
     );
   }
 
+  /** Model's / Material's variants, added and edited in their table (shared VariantGrid) by the screen's own events.
+   *  x = { f, group, field, value, newValue, category?, events: { group, field, add, delete } } (field names) */
+  function variants(x) {
+    const ev = x.events;
+    const byId = { [x.group]: ev.group, [x.field]: ev.field, add: ev.add, [`${x.f}:delete`]: ev.delete };
+    // VariantGrid speaks the screen's patches: { set: { field: { options, rows } }, alert }
+    async function fire(id, vals, arg, _controls, index) {
+      if (vals) setForm((s) => ({ ...s, record: { ...s.record, ...vals } }));
+      const r = await run(byId[id], arg, vals ?? record, index);
+      if (!r) return null;
+      const set = Object.fromEntries([...new Set([...Object.keys(r.record), ...Object.keys(r.lists ?? {})])].map((k) => [k, { options: r.lists?.[k], ...(Array.isArray(r.record[k]) && { rows: r.record[k] }) }]));
+      return { set, alert: r.alert };
+    }
+    return (
+      <VariantGrid
+        c={{ id: x.f, keyName: 'RowID' }}
+        cfg={{ grid: x.f, group: x.group, field: x.field, value: x.value, newValue: x.newValue, add: 'add', category: x.category }}
+        values={record}
+        setValues={(v) => setForm((s) => ({ ...s, record: v }))}
+        ctl={(n) => ({ options: form.lists?.[n] ?? options[n] ?? [] })}
+        fire={fire}
+        busy={busy}
+        cancelled={cancelled}
+        setError={(t) => toast.error(t, { id: t, duration: 6000 })}
+      />
+    );
+  }
+
+  // the numbered sections: not a pop-up, and not one whose panel the screen hides (Material's purchase / sales)
+  const shownSections = sections.filter((s) => !s.dialog && !(s.panel && form.ui?.[s.panel]?.visible === false));
+  const widths = sections.some((s) => s.width); // sections side by side: `width` in tenths of the row
   const showStatus = !isNew && 'status' in record && options.status;
   const actions = (
     <div className="flex flex-wrap items-end gap-3">
@@ -296,12 +345,23 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
 
   return shell(
     <form id={formId} onSubmit={submit}>
-      <fieldset disabled={cancelled} className={cn('grid min-w-0 items-start gap-2', layout)}>
-        {sections.map((s, i) => (
-          <Step key={s.title} n={i + 1} tone={s.tone ?? TONE_CYCLE[i % TONE_CYCLE.length]} icon={s.icon} title={s.title} subtitle={s.subtitle}>
-            <div className={STEP_COLS[s.cols ?? 4]}>{s.fields.map(field)}</div>
-          </Step>
-        ))}
+      <fieldset disabled={cancelled} className={cn('grid min-w-0 items-start gap-2', widths && 'lg:grid-cols-10', layout)}>
+        {shownSections.map((s, i) => {
+          const step = (
+            <Step key={s.title} n={i + 1} tone={s.tone ?? TONE_CYCLE[i % TONE_CYCLE.length]} icon={s.icon} title={s.title} subtitle={s.subtitle}>
+              <div className={STEP_COLS[s.cols ?? 4]}>{s.fields.map(field)}</div>
+            </Step>
+          );
+          return widths ? <div key={s.title} className={cn('min-w-0', STEP_SPAN[s.width ?? 10])}>{step}</div> : step;
+        })}
+        {/* a pop-up section, open while the screen shows its panel; closing it runs the screen's close (BOM's alternates) */}
+        {sections
+          .filter((s) => s.dialog && form.ui?.[s.dialog.panel]?.visible)
+          .map((s) => (
+            <Modal key={s.title} title={s.title} subtitle={s.subtitle} size="lg" onClose={() => run(s.dialog.close)}>
+              <div className={STEP_COLS[s.cols ?? 1]}>{s.fields.map(field)}</div>
+            </Modal>
+          ))}
       </fieldset>
     </form>,
     actions,
