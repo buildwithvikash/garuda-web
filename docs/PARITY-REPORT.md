@@ -225,3 +225,227 @@ the screen's own editors in its cells, its Add (Update after a Select), Select a
 (`screens/settings/parameter-form.js`, `GVTransData:cancel`: the editors back to Add, the lines unchanged), where the
 original stayed in Update until the next Add. Checked on TEST in memory: Select opens all 72 lines of 20 checklists,
 an edit changed only its description, a cancel left the lines as they were.
+
+# Intended difference: an inspection with no lot at WIP Capture and Rework Confirmation (owner, 1 Nov 2026)
+
+In the original, when an older rejection had left a lot open at the unit's next stage, the unit got no lot of its own
+and its inspection was saved on lot 0. A rejection on lot 0 then completed the stage (its empty quantities compared
+equal), and Rework Confirmation failed with "There is no row at position 0" at a stage of type 6 or 8. Three changes,
+all in the server:
+
+- WIP Capture's scan: a unit with lot 0 takes the lot open at this stage (`wip.service.js` `openLot`, `wip-capture-form.js`).
+- `saveQCINProcess`: a rejected unit never completes its stage, as `saveQCFinalProcess` already did.
+- `saveNewRRFConfirmation`: an inspection with no lot header is confirmed; its new lot takes the barcode's DocLine and
+  the job card's current process.
+
+Checked on TEST with the transactions rolled back, for S42620261101406: before, the rejection took the job card from 8
+stages done to 9 and the confirmation failed; after, it stays at 8 and the confirmation opens lot 626961362 on the
+current process. `saveRRFConfirmation` (the Repair and Finishing confirmations) is unchanged.
+
+# Intended difference: the rework scan loads the newest unconfirmed inspection (owner, 1 Nov 2026)
+
+`validateBarcodeRRF` (Rework, Repair and Finishing Confirmation) took the first matching row, and a confirmed inspection
+keeps its rejected status. So a unit failed a second time had its older inspection confirmed again: the unit was released
+while the new failure stayed unconfirmed and its lot open, which is how the lot-0 case above starts. Now: the newest
+inspection not yet confirmed, else the newest. A unit with one inspection behaves as before.
+
+# Intended difference: WIP Capture's serial box offers Change at an inspection (owner, 1 Nov 2026)
+
+After a serial is scanned at an inspection or FG label stage (results 30 and 40), `BtnWorderScan` now reads Clr, as it
+already did at a component stage: the box locks and shows Change, which clears the serial and closes the inspection (now
+also `QCPanel`) so another can be scanned. The original left the button on Go there, so a new serial could be typed over
+the old one with the inspection open. A save still clears the box as before.
+
+# Intended difference: asset and green tags follow a Serial Generation Logic (owner, 1 Nov 2026)
+
+New columns (`db/migrations/2026-11-tag-logic.sql`, on TEST; to be run on LIVE before deploying): `SerialGenerationLogicHeader.UseFor`
+(Generate, or Check scanned tag) and `Material.GreenTagLogic`. At WIP Capture's FG label stage (`production/tag-check.js`,
+`wip-capture-form.js`, `saveQCFinalProcess`) each tag follows the logic on the unit's material:
+
+- No logic: the box is empty and locked; the unit is saved with no tag (a green tag already on it stays). In the original,
+  Asset Tag Type 0 meant a scanned tag, checked for length only.
+- Generate: filled in and locked. A green tag from a logic is new; the original never generated one. A green tag already
+  on the unit is kept. Green tags count apart from asset tags when the two logics differ (`SerialBarcode.AssetLogic`).
+- Check scanned tag: empty, and scanned. At the save of a passed unit the tag must match the logic: fixed text, model and
+  separators exactly, the number by length and range, year / month / week by format only (a tag printed last month passes).
+  A green tag already on the unit is scanned too and must be the same number. The counters are not touched.
+
+On the Material screen Green Tag Require and the green and asset tag lengths are hidden and no longer used (their columns
+stay); Asset Tag Type reads Asset Tag Logic. The duplicate and customer green tag checks stay. A failed unit is not checked.
+
+Checked on TEST: 517 of 518 logics with lines pass the check with what they generate (the other has a Year line with no
+format, and no material uses it). The screen's handlers, with temporary settings put back afterwards and every save
+rolled back: each setting fills the boxes as above, and an empty, wrong or different tag is refused. Not run on the screen
+or with a printer. The labels read `VSerial` and `Serial2`; a label for a model with no tag was not printed.
+
+# Intended difference: RM Replacement on an API of its own (owner, 1 Nov 2026)
+
+A plain React screen on `/api/production/rm-replacements` (`modules/production/rm-replacements`, API.md); `/api/forms` answers 410 for
+it and the generic screen resource is gone. What the operator does is unchanged: the same steps, list, raw material rule
+and new serial check. Differences: the browser sends serials only, where it used to hold the chosen row's job card, row
+and process codes between scans; the raw material and scrapped checks now also run at the replacement itself, not only at
+the scan; a repeated request (Idempotency-Key) does not replace twice; a refused unit clears its box; the page's form is
+at `?view=replace`. `rm-replacement-form.js` stays for the events parity only; no route serves it.
+
+Checked on TEST against the original DLLs: `production-writes --api "rm replacement"` IDENTICAL through the new service
+(the database rows restored after); events 9/10 on the old handler, the one difference being the serial format case above.
+On TEST data the service refused an unknown unit, a scrapped unit, a serial not in the unit, a non-raw component, a wrong
+format, a used serial and the same serial.
+
+# Intended difference: FG Scrap on an API of its own, with its save corrected (owner, 1 Nov 2026)
+
+A plain React screen on `/api/production/fg-scrap` (`modules/production/fg-scraps`, API.md); `/api/forms` answers 410 for it and the
+generic screen resource is gone. `fg-scrap-form.js` stays for the events parity only; no route serves it.
+
+The save differs from the original on purpose:
+
+- **No error after a good scrap.** The original's last statement has a stray `)`, so every scrap answered "Incorrect syntax
+  near )" after it was done, and cleared the boxes. That statement is gone. Owner's decision: **the plan quantity does not
+  change**, which is what has always happened in practice, since the statement never ran.
+- **One transaction**: all of it or none (the original had none, so a failure could leave a unit half scrapped).
+- **A unit already scrapped is refused**, at the scan and the save. The original's check compared a serial with 99 and never
+  fired, so a second scrap marked the components again and logged them again.
+- **The category must be in the list** (the original took the empty choice); a repeated request does not scrap twice; a
+  refused save keeps what was typed; the form is at `?view=scrap`; the job card, row and process codes no longer reach the
+  page.
+
+Checked on TEST against the original DLLs: `production-writes --api "fg scrap"` IDENTICAL in the data through the new service
+(barcodes, scans and FGScrap rows, restored after), its only difference being the original's error; events 6/6 on the old
+handler. On TEST data the service refused an unknown unit, a scrapped unit, a repeat scrap and a category not in the list.
+Not run on the screen.
+
+# Intended difference: Model To Model Transfer on an API of its own, each unit in one transaction (owner, 1 Nov 2026)
+
+`modules/production/model-transfers` at `/api/production/model-transfers` (API.md); `/api/forms` answers 410 for the screen and the
+generic screen resource is gone, so **the original's serial range transfer can no longer be run**, as the page stopped
+offering it on 29 Oct. `model-to-model-transfer-form.js` and `modelToModelTransfer` stay for the parity scripts only.
+
+Each unit's move (stock row, barcode, job card, location) and its ModelToModel row are now one transaction, where the
+original's statements each stood alone and a failure partway left stock wrong. The unit is locked and checked again inside
+it, so a second request finds it already moved. The label still prints after the commit: a printer failure reports
+"moved, label not printed". A repeated request (Idempotency-Key) gets the first answer. The list of materials and printers
+no longer comes from the screen's spec. The statements themselves are unchanged, including that the stock step always
+takes from ReleasedQty, whatever the unit's QC status (not addressed).
+
+Checked on TEST, every transaction rolled back and printing stubbed: a real unit's move changed the barcode, job card, both
+stock rows and the log inside the transaction and nothing after it; a failure forced at its end also left nothing changed,
+and the next unit in the request was still reported. Events 10/10 on the old handler. Not run: a committed transfer, a real
+label, the screen.
+
+# Intended differences: Image Display, Plan Upload and Process Guide on APIs of their own (owner, 1 Nov 2026)
+
+`modules/production/image-display`, `modules/production/plan-uploads`, `modules/production/process-guides` (API.md); `/api/forms` answers 410 for the three, and
+the plain pages no longer draw from a control list. The old handlers stay for the parity scripts. Plan Upload's row rule and the
+sheet reader are one code, used by both (`plan-uploads.service.js`). What the operator sees differently:
+
+- **Image Display:** "This serial is not known" and "This material has no image" in place of the original's .NET messages.
+- **Plan Upload:** the list of plans is read only (a row used to open an empty upload form, with nothing to change). A failed
+  row's message says which row. "Back to list" is "Plans so far".
+- **Process Guide:** the User box is a plain read-only field (it was a disabled list). Scanning an order before a station says "Scan the
+  station first" (the original's null reference). The station's process is found again from the station on each guide request.
+
+Kept as the original has them, on purpose, and worth a decision:
+
+- **A wrong password at the station login still logs people out:** whoever is at the station, and that user anywhere, are logged out
+  before the password is checked.
+- **Passwords are compared as plain text** against `Users.Password`, and the QR code holds user|password.
+- Any user of the screen can log anyone out.
+
+Checked on TEST: Process Guide's station (by code, by alias, without a department), guide, refusals, and a wrong password's logout on a
+throw-away row, removed after; events 19/19 on its old handler; upload parity identical (4 of 4). Not run: a real login, the
+screens in the browser, a committed Plan Upload through the new route (its row code is what parity ran).
+
+# Intended difference: Rework Confirmation on an API of its own (owner, 1 Nov 2026)
+
+`modules/quality/rework-confirmations` (API.md); `/api/forms` answers 410 for it and `/api/quality` has no engine screens left. The save rule
+(`saveNewRRFConfirmation`) is unchanged; the browser no longer sends the inspection, barcode or inspected quantity, the server looks them up from the serial.
+
+- **A list row used to open a generic edit form** whose Update wrote straight to InspectionTrans with no checks. It now opens the unit in the normal
+  scan and confirm flow, and the generic Update is gone.
+- The inspection's Status, Next Action and Unit are read only: they could be changed on the old form, but nothing read them.
+- The empty printer list is gone: it had no printers and the save never used it.
+
+Kept as the original has it, and worth a decision: **Status and Next action on the confirmation are checked but never stored.** Choosing Rejected or Scrap
+confirms the rework exactly as Approved does.
+
+Checked on TEST, two real rejected units, each save rolled back: new reads match the old Go handler (barcode, details, process, self inspection, history,
+defects, checklist count); refusals for wrong quantity, no remark, no action and an unknown serial; inside the transaction the barcode moved to QC status 11,
+after it stayed 13. Events 9/9 on the old handler. Not run: a committed confirmation, the checklist panel on a unit that has one (both units had none), the screen.
+
+# Server folders follow the client's groups (owner, 1 Nov 2026)
+
+Screen modules moved under their group, as `client/src/pages` has them: `modules/production/<screen>` and `modules/quality/rework-confirmations`. API paths did not change.
+
+# Intended difference: WIP Capture on an API of its own (owner, approved 31 Oct 2026; built 2 Nov 2026)
+
+`modules/production/wip-capture` (API.md); `/api/forms` answers 410 for it. The scan rules are the original page's ported code, unchanged; only where its state lives and how the browser calls it changed.
+
+- **The server keeps the station.** The browser sends what the operator did and typed, never the scanned station, process, order, scan result, QC lot or checklist rows. A box the screen does not show open is ignored, so a generated FG serial or asset tag, a locked status, a fixed department, or a printer not in the list cannot be sent in.
+- **A scan or clear applies only when the screen offers it**; calls on a station run one at a time, in order.
+- **A scan box empties as soon as the scan is sent.** Before, it held the scan until the answer, so a second fast scan was typed onto the end of the first.
+- Left out because nothing could reach them: the inspection's Barcode box and Go, its Close button (both stages always hide them), and the input panel's open button (the screen has none).
+- `GET /api/production/wip-capture/units/:label` is gone (nothing used it); `GET /sessions/:id/unit` answers with the image this station's routing asks for.
+- The server keeps the 1,000 most recently used stations.
+
+Kept: every message, the sound, the large refused-scan flash, the saved printer buttons on each device, the layout.
+
+Checked on TEST: `wip-parity.js comp | qc | fg --api` against the original, every row and label identical, except the unit's scan answer at inspection showing Change (owner, 1 Nov 2026). The built screen run in a browser on a throw-away copy of the app with a test session, each run's rows put back: wrong station and serial refused; components with three scans sent straight after each other, all fitted in order, stage completed; QC reject (defect category, add, duplicate refused, remove, remark kept), approve, no printer refused, saved with 2 labels; FG with serial and asset tag locked, saved with 3 labels.
+
+Not run: a real station with a scanner, a real printer, two stations at once, a server restart in a shift, the checklist panel and the guide on a real unit (the test units have none; the guide's view has a unit test), a rejected save through the screen.
+
+# Authorization and Business Setup on plain pages (owner, approved 3 Nov 2026)
+
+User Master, User Roles, Change Password, Reset Password, Business Unit, Company, Department and Ledger Master are plain React pages on `/api/masters/<name>` with their own field names (`modules/masters/plain-masters.js`, API.md); `/api/forms` answers 410 for them. Their fields are grouped in numbered sections (owner, 3 Nov 2026), as Production Order's are. Saves still run the screens' parity-tested code (the forms writer and the password handlers), so keys, EventLog, child rows and messages are unchanged.
+
+Intended differences:
+
+- **Retype Password is masked** on both password pages (it was plain text).
+- **Business Unit's "Combo trial" picker and its empty tree are gone**: the picker listed nothing and neither was saved.
+- **User Master's "Select all"** ticks every process in the page itself; before, the server's event did the same.
+- **Delete stays hidden** on every page, as on the old form.
+- **Department's Control Indicator is required** on the page (owner, 3 Nov 2026): left empty it saved as 0 and failed on
+  FK_Department_DeptControlIndicator, on the original too. The server still takes what it is sent, as before.
+
+Checked on TEST against the original DLLs, through the new services: `forms-write-parity.js --api` for User Master, Business Unit, Department and Ledger Master: identical; User Roles fails alike on cancel (UserRoles has no Status column). `page-writes-parity.js --api`: the 10 Change / Reset Password cases and the Company update identical. Built pages run in a browser with a TEST system-user session: every page opens, lists name coded values (Company's licence type), the role tree and the tick lists show the saved choices, a department created, updated and copied through the page (removed afterwards), and the old engine path answers 410.
+
+Not run: Change / Reset Password through the page (the comparison runs them on a temporary user), a user's photo or a logo uploaded through the page.
+
+# Settings on plain pages (owner, approved 4 Nov 2026)
+
+Defect Codes, Employee, Identification Tag Designs, Barcode Printer, Rework Resolution, Root Cause and Material Scrap Reason are plain pages on `/api/masters/<name>` the same way (`plain-masters.js`, API.md), fields grouped in sections; `/api/forms` answers 410 for them. Saves run the same writer. Employee keeps its Print (a saved, not cancelled record, on one of the unit's printers: `POST /:key/print`, the screen's own print handler); Tag Design keeps its PRN preview beside the command. Check List, Check List Values and Shift (owner, 4 Nov 2026) add, edit and delete their rows through the screen's own handlers (`POST /events/:event`), in the table itself with the shared row editor (RowFormGrid, as Bill of Material): duplicate checks, line numbers, the input type's Min / Max and List editors and the editor's Cancel are the screen's.
+
+Intended differences:
+
+- **Dates are date pickers** on Employee (Join, Birth, Anniversary); they were plain text boxes holding the same yyyy-mm-dd.
+- **Delete stays hidden**, as on the old form.
+- **Check List's line editors not in a column** (Min, Max, Pass Value, Unit, Result Defined By, List Items, Instrument, Guide Image) sit under the line being added or edited, shown as the input type asks.
+
+Checked on TEST against the original DLLs: `forms-write-parity.js --api` for the 10 screens: identical, except Scrap Reason's cancel, which fails alike on both sides (ScrapReasons has no Status column). `events-parity.js --api` for the 3 table screens: 7 of 10 cases identical, 2 fail alike, 1 is the original host's known `ctl00` error. Built pages run in a browser with a TEST system-user session: Shift adds a break, refuses a duplicate ("Value Already Added") and deletes it; Check List edits a line, shows the numeric and list editors as the input type changes, and cancels the edit; Check List Values adds a value on a new record (nothing saved); each page opens a saved record with its values, the lists open, Tag Design draws the preview, Print without a printer is refused ("Choose a printer first."), the old engine path answers 410 and Shift is still served.
+
+Not run: a label actually printed, a tag image uploaded through the page.
+
+# Material Setup on plain pages (owner, approved 4 Nov 2026)
+
+Unit of Measure, Variant Field, Variant Values, Material Category, Model, Material Master, Serial Generation Logic and Bill Of Material are plain pages on `/api/masters/<name>` the same way (`plain-masters.js`, API.md), fields grouped in sections; `/api/forms` answers 410 for them. Material Barcode was already a page of its own (the reprint views) and is unchanged. Saves run the same writer. Every option change and table row runs the screen's own handler (`POST /events/:event`): Material's type, category, model and base UOM picks; Model's and Material's variants in the shared VariantGrid (Add builds the Alias, a new value is created as before); Serial Generation Logic's parts and Bill Of Material's input / output lines in the shared row editor (RowFormGrid), the editors shown as the screen's panels say (serial / date / value editors, Output Scan, the sub-routing); an input line's Alternative opens its alternates in a pop-up (add, remove, Update, close: the screen's buttons). The lists the screen's code filled (a type's categories, a field's values, a type's materials) go back with each event as the screen has them, as the engine's client posted them, so its handlers read the same items. Serial Generation Logic keeps its preview; Material keeps its artwork / unit frame / basket images.
+
+Intended differences:
+
+- **Fields the old pages already hid are not part of the API** (Material's batch, FIFO, reorder, depreciation, inspection, tag lengths, ledger map; Material Category's tag design and inspection; BOM's weight and business unit, which the screen keeps hidden). As before, a saved record keeps their values and a new one gets the screen's defaults; they can no longer be sent.
+- **The record's code shows locked on every screen** (BOM Code included, which the screen kept hidden), as on the other plain pages.
+
+Checked on TEST against the original DLLs: `forms-write-parity.js --api` for the 8 screens: Unit of Measure, Variant Field, Variant Values and Model identical. The other four differ only in fields the page does not name, which the script fills on the original side: Material Category's TagCode / inspection / CertificateControl, BOM's Weight / WeightUom, Material's HSNCode / Barcode / ExipiryMonths / DepreciationMethod and its ledger map (so the original's update fails on the ledger map with the known `REFID` error and the new side's does not; a record with stored ledger map rows still loads and saves them as before), and Serial Generation Logic's `UseFor`, the new column the original does not have. `events-parity.js --api` for the 5 screens with events: 39 of 42 cases identical, 3 fail with the same error on both sides (Model's Add on a category without `~`, Material's ledger-map delete), shown as different only because the original's message carries its line number. A plain-service run of the events (Model: field → values, Add, refused repeat, delete; Material: type → categories (list held with its Select item), category → models, base UOM → purchase / sales units; Serial Generation Logic: the serial editors shown, add, edit, cancel, delete; BOM: type → materials, material → unit / sub-routing, add a line, Alternative opens the pop-up, add / Update / remove an alternate, close, edit and cancel a line): 23 of 23 as expected, nothing saved. Built pages run in a browser with a TEST system-user session: BOM opens with its tables, Alternative opens the pop-up and ✕ closes it; Material opens with its sections (purchase / sales hidden by TEST's finance settings), ✏ on a variant lists its field's values; Serial Generation Logic draws the preview and ✏ on its serial part shows the serial editors only; Model opens beside its variants; the old engine path answers 410 for all 8.
+
+Not run: a record saved through these pages in the browser (the writes are covered by forms-write-parity), an image uploaded.
+
+# Production Setup on plain pages (owner, 4 Nov 2026)
+
+Production Line, Production Process, Work Center, Routing and Routing Guide are plain pages on `/api/masters/<name>` the same way (`plain-masters.js`, API.md), fields grouped in sections; `/api/forms` answers 410 for them. With them every setup screen is on a plain page. Saves run the same writer. Work Center keeps its process list with its search. Routing's model lists its materials, and its lines are added, changed and deleted in their table by the screen's own events (shared RowFormGrid: the SeqNo checks, the next SeqNo); the line editors the old page hid (process / setup time, hold periods, setup checklist, drawing no, batch frequency, pallet scan, sequence check) stay hidden but are fields, so a changed line keeps their values. A saved routing keeps its images per stage on WIP Capture, under the form. Routing Guide's line buttons Instruction and Guide open the line's instructions and guide files (the existing files of a type, an uploaded file saved under GuideFiles, add and delete: the screen's own code); it has no Add, as before.
+
+Intended differences:
+
+- **Fields the old pages already hid are not part of the API** (Production Process's cost, unit, model, sequence, prefix, tag design, serial logic, check points and checking methods; Work Center's group and cost; the business unit Production Line and Work Center keep hidden). A saved record keeps them, a new one gets the screen's defaults; they can no longer be sent.
+- **Routing Guide's instructions and guide files open in pop-ups** (as BOM's alternates), titled with the line's "Seq No." as the screen writes it; the old page showed the screen's panels in the page.
+
+Checked on TEST against the original DLLs: `forms-write-parity.js --api` for the 5 screens: Production Line, Work Center and Routing Guide identical. Production Process differs only in the hidden fields the script fills on the original side (Prefix, Tag, SerialLogic, Cost). Routing differs only in its instructions and guide files, which the script fills and the Routing page does not have (they are Routing Guide's; a saved routing keeps its stored ones). `events-parity.js --api` for Routing and Routing Guide: 16 of 18 cases identical; the 2 others are the known Select fix (owner, 29 Oct 2026, above: the original fails on `ddlBatchFreq` on every TEST line). A plain-service run of the events: 13 of 13 as expected, nothing saved (Routing: model → materials; ✏ a line puts its hidden process time in and Update keeps it; add at the next SeqNo, delete, cancel back to Add; Routing Guide: Instruction opens its pop-up with "Seq No.", an empty instruction refused, one added, closed; Guide opens, a type lists its existing files, no description refused). Built pages run in a browser with a TEST system-user session: Routing Guide has no Add new, a line's Instruction opens the pop-up and adds an instruction (not saved), Guide shows the file type, path, existing file and upload; Routing shows its lines with the next SeqNo and the images per stage under the form; Work Center opens with its 57 processes, the ticked one and the search; the old engine path answers 410 for all 5.
+
+Not run: a guide file uploaded or an existing guide picked (TEST has no files of the first type), a record saved through these pages in the browser (the writes are covered by forms-write-parity).

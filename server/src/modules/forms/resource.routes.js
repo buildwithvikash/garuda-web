@@ -55,7 +55,9 @@ export function resourceRouter(route) {
   router.get('/pickers/:field', async (req, res) => {
     ok(res, found(await m.picker(ctx(req), netString(req.params.field), req.query.search == null ? null : netString(req.query.search)), req.params.field));
   });
-  router.post('/events/:event', body, async (req, res) => ok(res, session(req, res, await m.event(ctx(req), netString(req.params.event), req.valid.body))));
+  router.post('/events/:event', body, async (req, res) => {
+    ok(res, session(req, res, await m.event(ctx(req), netString(req.params.event), req.valid.body)));
+  });
   router.post('/print', body, async (req, res) => ok(res, await m.printRecord(ctx(req), req.valid.body)));
   router.get('/:key', async (req, res) => ok(res, found(await m.get(ctx(req), keyOf(req)), req.params.key)));
   router.get('/:key/copy', async (req, res) => {

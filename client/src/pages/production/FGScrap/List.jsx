@@ -1,19 +1,12 @@
-// FGScrap: the list view. The original screen had no list of its own; this one is the scrap history (owner,
-// 28 Oct 2026): every unit / item scrapped on a job card of the business unit, newest first, read only
-// (GET /api/production/fg-scrap/history). The page (../FGScrap.jsx) shows it; its header button goes back to the form
-// (./Form.jsx).
-
+// FG Scrap: the history (owner, 28 Oct 2026; the original screen had no list): every unit / item scrapped on a job card of
+// the business unit, newest first, read only.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
-import { api } from '@/api.js';
 import DataTable from '@/components/shared/DataTable.jsx';
 import DateRangeFilter from '@/components/shared/DateRangeFilter.jsx';
+import { scrapsApi } from './scrapsApi.js';
 
-// ────────────────────────────────────────────────────────────────────────────
-// 4. LIST VIEW
-// The scraps done so far.
-// ────────────────────────────────────────────────────────────────────────────
-function RecordList({ path }) {
+export default function ScrapHistory() {
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -23,7 +16,7 @@ function RecordList({ path }) {
   const load = useCallback(() => {
     setLoading(true);
     const q = Object.entries(range).filter(([, v]) => v).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
-    api(`/production/fg-scrap/history?page=${page}${q}`)
+    scrapsApi.history(`page=${page}${q}`)
       .then((d) => (setData(d), setError(null)))
       .catch((e) => (setError({ data: { message: e.message } }), toast.error(e.message, { id: e.message, duration: 6000 })))
       .finally(() => setLoading(false));
@@ -36,7 +29,7 @@ function RecordList({ path }) {
 
   return (
     <DataTable
-      tableId={`${path}:history`}
+      tableId="/production/fgscrapform:history"
       title="Scrap history"
       toolbar={<DateRangeFilter value={range} onApply={(r) => (setPage(0), setRange(r))} />}
       columns={columns}
@@ -49,5 +42,3 @@ function RecordList({ path }) {
     />
   );
 }
-
-export default RecordList;

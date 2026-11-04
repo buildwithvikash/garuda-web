@@ -5,6 +5,8 @@
 import { query, scalar, execute } from '../../db/pool.js';
 import { transaction } from '../../db/tx.js';
 import { netString, netInt, netLong, netDouble, netNum, netBool } from '../../shared/net.js';
+import { pendingText } from './wip-words.js';
+import { CUSTOMER, GRAPHICS, labelKind, variantValue } from './cabinet-view.js';
 import { tableSchema } from '../forms/schema.js';
 import { insert, generateKey } from '../forms/write.js';
 import { num, lit } from '../../shared/sql.js';
@@ -357,6 +359,20 @@ export async function createBarcodeDw(psObj, nObj, sObj, pObj, wObj, printer, ct
 /** MaterialConfiguration(material, dw) */
 const materialConfiguration = async (material, tx) => first(await q(`select Batch,SupBatch,ManDate,GrossWeight, Serial, Expiry, ExipiryMonths, isPacket,CaptureMrp,Track,IsInspectionReq,InspectionType,[PurchaseUnit],VariantCode,[type],TrackNoType from Material where MatCode=${num(material)}`, tx));
 
+/** Where a unit is when its scan is refused with "Pending Process- <name>" (read only): this station's stage, the unit's
+ *  next pending stage, and whether this stage is already done for it, later in its route, or not in it at all.
+ *  { title, text } in plain words for the operator; null when the unit or station is not known. */
+export async function explainPending(barcodeStage, station) {
+  const ps = await q(`Select top 1 PSNo from ProcessStageLabel where BarcodeNo=${lit(barcodeStage)}`);
+  if (!ps.length || !/^\d+$/.test(str(station))) return null;
+  const psNo = num(ps[0].PSNo);
+  const [here] = await q(`Select top 1 wp.ProcessCode, pp.Name from WorkCenterProcesses wp left join ProductionProcess pp on pp.ProcessCode=wp.ProcessCode where wp.StationCode=${num(station)}`);
+  if (!here) return null;
+  const route = await q(`Select pr.ProcessCode, pr.Status, pr.SeqNo, pp.Name from ProcessRouting pr left join ProductionProcess pp on pp.ProcessCode=pr.ProcessCode where pr.PSNo=${psNo} order by pr.SeqNo`);
+  return pendingText({ code: str(here.ProcessCode), name: str(here.Name) }, route.map((r) => ({ code: str(r.ProcessCode), name: str(r.Name), status: netInt(r.Status) })));
+}
+
+
 /** ScanStageLabelNew(barcode, station, printer): the stage-label (serial) scanned at a station. Returns { code, rows }:
  *  -1 another station's stage, 30 / 40 a QC / FG-label stage (started), 10 more inputs to scan, 11 inputs done,
  *  20 output still to capture, 21 stage completed, 1 nothing to do. rows: [{ PsNo, Process, Station, RowID }]. */
@@ -525,21 +541,75 @@ export async function routeByLabel(label) {
 /** The label's cabinet for the flow screen's details card (read only, not in the original): its FG material (name,
  *  alias, category, model, image), the material's variant values (colour, dimension...) and the sales order's customer.
  *  Null when the label has no job card. */
-export async function cabinetByLabel(label) {
-  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo] from ProcessStageLabel psl inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
+/** a material's image of a kind (table MaterialImages: 'artwork' | 'unitframe' | 'basket'): { hasArtwork, artworkType }
+ *  without the bytes; nothing when it has none (or the table is not there yet on this database) */
+async function artworkOf(matCode, kind = 'artwork') {
+  if (!matCode || !kind) return { hasArtwork: false, artworkType: null };
+  try {
+    const [row] = await query('select top 1 MimeType from MaterialImages where MatCode=@m and Kind=@k', { m: Number(matCode), k: kind });
+    return row ? { hasArtwork: true, artworkType: str(row.MimeType) } : { hasArtwork: false, artworkType: null };
+  } catch {
+    return { hasArtwork: false, artworkType: null };
+  }
+}
+
+/** the image a routing shows at a stage (Routing screen, "Images on WIP Capture"; table RoutingStageImages): its kind,
+ *  or null for none (also when the table is not there yet on this database) */
+export async function stageImageKind(route, process) {
+  if (!/^\d+$/.test(str(route)) || !/^\d+$/.test(str(process))) return null;
+  try {
+    const [row] = await query('select ImageKind from RoutingStageImages where RouteCode=@r and ProcessCode=@p', { r: Number(route), p: Number(process) });
+    return row ? str(row.ImageKind) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** the scanned unit's FG material image of a kind, with its bytes (the cabinet card shows it); null when there is none */
+export async function artworkByLabel(label, kind = 'artwork') {
+  const [r] = await query("Select top 1 coalesce(ph.Material, po.Material) MatCode from ProcessStageLabel psl inner join ProcessOrder po on po.PSNo=psl.PSNo left join PRODHeader ph on po.PRODNo=ph.PRODNo where psl.BarcodeNo=@label", { label: netString(label) });
+  if (!r) return null;
+  const [img] = await query('select Image image, MimeType mimeType from MaterialImages where MatCode=@m and Kind=@k', { m: Number(r.MatCode), k: kind });
+  return img ?? null;
+}
+
+export async function cabinetByLabel(label, process = null) {
+  const rows = await query(`Select top 1 m.MatCode,m.Name,m.Alias,mc.Name[Category],md.Name[Model],m.MaterialImage,l.Name[Customer],ph.Alias[OrderNo],lp.ProdcutionStage[LabelStage],fg.MatCode[FgCode],fg.Name[FgName],fmc.Name[FgCategory],po.Routing[RouteCode] from ProcessStageLabel psl left join ProductionProcess lp on lp.ProcessCode=psl.ProcessCode inner join ProcessOrder po on po.PSNo=psl.PSNo inner join Material m on po.Material=m.MatCode left join MaterialCategory mc on m.Category=mc.CategoryCode left join Model md on m.Model=md.ModelCode left join PRODHeader ph on po.PRODNo=ph.PRODNo left join Material fg on fg.MatCode=ph.Material left join MaterialCategory fmc on fg.Category=fmc.CategoryCode left join SOHeader so on ph.SalesOrder=so.SONo left join Ledger l on so.Customer=l.LedgerCode where psl.BarcodeNo=@label`, { label: netString(label) });
   if (!rows.length) return null;
   const r = rows[0];
-  const variants = await query(`Select vf.Name,vfv.Name[Value] from MaterialVariant mv inner join VariantFieldValue vfv on mv.ValueCode=vfv.Code inner join VariantField vf on vfv.Field=vf.FieldCode where mv.MatCode=@mat order by mv.RowID`, { mat: r.MatCode });
+  const variantsOf = async (mat) =>
+    (await query(`Select vf.Name,vfv.Name[Value] from MaterialVariant mv inner join VariantFieldValue vfv on mv.ValueCode=vfv.Code inner join VariantField vf on vfv.Field=vf.FieldCode where mv.MatCode=@mat order by mv.RowID`, { mat })).map((v) => ({ name: str(v.Name), value: str(v.Value) }));
+  const named = await variantsOf(r.MatCode);
+  // the FG material (the production order's): its artwork and its own variant fields; the job card's material is an
+  // in-process one at the foaming stages, with no artwork uploaded (owner, 31 Oct 2026)
+  const fgNamed = r.FgCode && String(r.FgCode) !== String(r.MatCode) ? await variantsOf(r.FgCode) : named;
+  const imageKind = await stageImageKind(r.RouteCode, process);
+  const pic = (img) => (Buffer.isBuffer(img) && img.length ? `data:image/png;base64,${img.toString('base64')}` : typeof img === 'string' && img.startsWith('data:image/') ? img : null);
   const img = r.MaterialImage;
   return {
+    // the label the unit carries: up to the assembly label (a foaming serial) the screen shows the artwork view
+    kind: labelKind(label, r.LabelStage),
+    // the artwork view: the FG material's image, model, category, and its graphics / customer variant fields whatever
+    // the model names them (else the job card material's, else the sales order's customer)
+    artwork: {
+      // the image the routing shows at this station's stage (owner, 1 Nov 2026: set on the Routing screen, one per
+      // stage, none unless set): the FG material's image of that kind (Material screen, "Artwork & Packing Images"),
+      // served by /api/production/wip-capture/units/:label/image/:kind
+      kind: imageKind,
+      ...(imageKind ? await artworkOf(r.FgCode || r.MatCode, imageKind) : { hasArtwork: false, artworkType: null }),
+      name: str(r.FgName) || str(r.Name),
+      category: str(r.FgCategory) || str(r.Category),
+      graphics: variantValue(fgNamed, GRAPHICS) || variantValue(named, GRAPHICS),
+      customer: variantValue(fgNamed, CUSTOMER) || variantValue(named, CUSTOMER) || str(r.Customer),
+    },
     name: str(r.Name),
     alias: str(r.Alias),
     category: str(r.Category),
     model: str(r.Model),
     customer: str(r.Customer),
     order: str(r.OrderNo),
-    image: Buffer.isBuffer(img) && img.length ? `data:image/png;base64,${img.toString('base64')}` : typeof img === 'string' && img.startsWith('data:image/') ? img : null,
-    variants: variants.map((v) => ({ name: str(v.Name), value: str(v.Value) })),
+    image: pic(img),
+    variants: named,
   };
 }
 
@@ -558,6 +628,10 @@ export async function validateProductionBarcodeforQC(barcode, ps) {
   }
   return rows.map(ci);
 }
+/** Rule fix (owner, 1 Nov): the lot open at this stage, for a unit that has none of its own: the original saved its
+ *  inspection on lot 0 when an older rejection had left the stage's lot open */
+export const openLot = async (ps, process) =>
+  str(await sc(`Select top 1 InspectionLotNo from InspectionHeader where DocNo=${num(ps)} and Process=${num(process)} and DocType=${DOC_PROCESS_ORDER} and Status=1 order by InspectionLotNo desc`));
 /** AVQuality.GetUDListInProcess: the routing step's checklist, with empty result columns */
 export async function udListInProcess(ps, process) {
   const rows = await dataTable(`select * from ParameterTran where ParameterCode=(select ParameterCode from ProcessRouting where PSno=${num(ps)} and ProcessCode=${num(process)})`);
@@ -698,6 +772,9 @@ export async function saveQCINProcess({ ud, defects, status, nextAction, barcode
         if (!tables.InspectionTrans.rows.length) throw new Error('There is no row at position 0.');
         const l = num(lot);
         await ex(`Update InspectionHeader set ${status === String(STATUS.Approved) ? 'ApprovedQty=ApprovedQty' : 'RejectedQty=RejectedQty'}+${netNum(sQty)} where InspectionLotNo=${l}`, tx);
+        // Rule fix (owner, 1 Nov): a rejected unit stays at its stage. In the original a lot with no quantities (lot 0)
+        // compared equal below and completed the stage, sending the failed unit on.
+        if (status !== String(STATUS.Approved)) return '0';
         const ip = await q(`select Sum(Qty)[SQty],Sum(ApprovedQty)[ApprovedQty],Sum(RejectedQty)[RejectedQty] from InspectionHeader where InspectionLotNo=${l} and DocNo = ${num(ps)} and DocLine=${num(rowID)}`, tx);
         if (!ip.length || netDouble(ip[0].SQty) !== netDouble(ip[0].ApprovedQty)) return '0';
         const material = first(bars).Material;
@@ -832,7 +909,8 @@ export async function saveNewRRFConfirmation({ id, barcode, qty, aqty, rootCause
         if (t === null || t === undefined) throw NRE();
         return str(t);
       };
-      if ((netBool(cfg.IsInspectionReq) && netInt(first(type).InspectionType) === 300) || selfApproval === 0) {
+      // Rule fix (owner, 1 Nov): an inspection saved on lot 0 has no header; it no longer stops the confirmation
+      if ((netBool(cfg.IsInspectionReq) && netInt(type[0]?.InspectionType) === 300) || selfApproval === 0) {
         const current = str(await sc(currentSql, tx));
         if (current === '') return;
         const t = await stageOf(current);
@@ -846,7 +924,7 @@ export async function saveNewRRFConfirmation({ id, barcode, qty, aqty, rootCause
           const lot = String(netInt(key));
           const now = new Date();
           now.setMilliseconds(0);
-          const ty = first(type);
+          const ty = type[0] ?? { DocLine: d.DocLine, Process: current };
           const ds = await newRow('InspectionHeader', {
             InspectionLotNo: lot, Alias: `${prefix}${lot}`, DocType: d.DocType, DocDate: now, DocNo: d.DocNo, DocLine: ty.DocLine, Process: ty.Process, Material: d.Material,
             InspectionType: cfg.InspectionType, Qty: d.CurrentQty, Uom: d.Uom, Department: ctx.department, BusinessUnit: ctx.businessUnit, Status: 1,
@@ -925,7 +1003,7 @@ export async function assetSegment(dr, material, tx) {
   }
   return str(dr.Value).trim();
 }
-const assetLogicRows = (logic, tx) => q(`select sd.*,sv.VariantType from SerialGenerationLogicDetail sd inner join SequenceVariant sv on sd.variantCode=sv.VariantCode where SerialCode =${num(logic)} order by Seq`, tx);
+export const assetLogicRows = (logic, tx) => q(`select sd.*,sv.VariantType from SerialGenerationLogicDetail sd inner join SequenceVariant sv on sd.variantCode=sv.VariantCode where SerialCode =${num(logic)} order by Seq`, tx);
 const yyNow = () => String(new Date().getFullYear()).slice(-2);
 
 /** DataWrapper.GetNextAssetIDWRL (no transaction): the next asset tag, without taking it */
@@ -998,7 +1076,7 @@ export async function getNextSerialNo(fgMat, material, bu, dept, process) {
 /** AVProductionCapture.SaveQCFInalProcess: the FG stage's QC decision; an approval gives the barcode its FG serial,
  *  asset tag and green tag (and the plan's printed count), and a fully inspected lot completes the stage (with the
  *  next stage's label printed at indicator 10000). Returns "0", "1" or the printed barcode number. */
-export async function saveQCFinalProcess({ ud, defects, status, nextAction, barcode, ps, process, lot, parameterCode, station, controlId, printer, serial, assetTag, greenTag, otherPlant, dept, remark }, ctx) {
+export async function saveQCFinalProcess({ ud, defects, status, nextAction, barcode, ps, process, lot, parameterCode, station, controlId, printer, serial, assetTag, greenTag, tags, otherPlant, dept, remark }, ctx) {
   // the other plant's (Sanjan) database: its connection string is not configured at WRL
   if (otherPlant === 1) throw NRE();
   const tables = {};
@@ -1032,16 +1110,19 @@ export async function saveQCFinalProcess({ ud, defects, status, nextAction, barc
         const tSerial = str(tables.InspectionTrans.rows[0].get(tables.InspectionTrans.schema.col('Serial').name));
         const cond = `where BarCodeNo=${num(b.BarcodeNo)} and CurrentQty<=(Select sum(Qty) from InspectionTrans where Serial=${lit(tSerial)} and Status=${num(status)})`;
         if (approved) {
-          const logic = parseString(await sc(`select AssetTagType from Material where matcode=${num(first(bars).Material)}`, tx));
-          let tag = await genAssetIDWRL(str(first(bars).Material), String(ctx.businessUnit), dept, process, 1, logic, tx);
+          // owner, 1 Nov 2026 (tag-check.js): only a Generate logic takes a number; AssetLogic in the counter keeps a green
+          // tag's logic counting apart from the asset tag's
+          const take = (logic) => genAssetIDWRL(str(first(bars).Material), String(ctx.businessUnit), dept, process, 1, logic, tx);
+          let tag = tags.asset.mode === 'generate' ? await take(tags.asset.logic) : '';
           if (tag === '') tag = assetTag;
+          const green = tags.green.mode === 'generate' && greenTag === '' ? await take(tags.green.logic) : greenTag;
           const dup = str(await sc(`Select Vserial from MaterialBarcode where Vserial=${lit(assetTag)}`, tx));
           const dupRows = await q(`select mb.VSerial,m.Alias,mb.CreatedOn from MaterialBarcode mb inner join Material m on mb.Material = m.MatCode where mb.VSerial  = ${lit(assetTag)}`, tx);
           if (dupRows.length && (assetTag !== '' || dup !== '')) {
             const r = dupRows[0];
             throw new Error(`Duplicate Asset Tag :${str(Object.values(r)[0])} Material :${str(Object.values(r)[1])} Printed On :${dotnetDate('', Object.values(r)[2] instanceof Date ? Object.values(r)[2] : new Date(Object.values(r)[2]))}`);
           }
-          await ex(`Update MaterialBarcode Set Alias=${lit(b.Serial)}, Serial= ${lit(serial)},Vserial=${lit(tag)},Serial2=${lit(greenTag)}, QCStatus=${num(status)}  ${cond}`, tx);
+          await ex(`Update MaterialBarcode Set Alias=${lit(b.Serial)}, Serial= ${lit(serial)},Vserial=${lit(tag)},Serial2=${lit(green)}, QCStatus=${num(status)}  ${cond}`, tx);
         } else await ex(`Update MaterialBarcode Set  QCStatus=${num(status)} ${cond}`, tx);
       }
       if (!tables.InspectionTrans.rows.length) throw new Error('There is no row at position 0.');

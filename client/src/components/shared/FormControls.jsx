@@ -20,12 +20,12 @@ export function EngineField({ c, label, value, onChange }) {
   if (c.type === 'CheckBox') {
     return (
       <label htmlFor={id} className="flex min-h-10 cursor-pointer items-center gap-2.5 self-end text-sm text-foreground/80 select-none">
-        <input type="checkbox" id={id} className="h-5 w-5 rounded accent-primary cursor-pointer" checked={!!value} disabled={!c.enabled} onChange={(e) => onChange(e.target.checked)} />
+        <input type="checkbox" id={id} className="h-5 w-5 rounded accent-primary cursor-pointer" checked={!!value} disabled={c.enabled === false} onChange={(e) => onChange(e.target.checked)} />
         {label || c.text}
       </label>
     );
   }
-  const common = { id, disabled: !c.enabled, readOnly: c.readOnly, required: c.required };
+  const common = { id, disabled: c.enabled === false, readOnly: c.readOnly, required: c.required };
   let input;
   if (c.type === 'DropDownList') {
     input = (
@@ -70,7 +70,7 @@ export function ComboField({ path, c, label, value, onPick }) {
       <span className="text-sm leading-none font-medium">{label}</span>
       <div className="flex gap-2">
         <Input readOnly value={current ? current.text : ''} placeholder="Nothing chosen" aria-label={label || c.id} />
-        <Button variant="outline" disabled={!c.enabled} onClick={() => (open ? setOpen(false) : (setOpen(true), setSearch(''), setData(null), load(null)))}>Choose</Button>
+        <Button variant="outline" disabled={c.enabled === false} onClick={() => (open ? setOpen(false) : (setOpen(true), setSearch(''), setData(null), load(null)))}>Choose</Button>
       </div>
       {open && (
         <div className="animate-in fade-in-0 zoom-in-95 relative z-10 mt-2 rounded-xl border bg-card text-card-foreground shadow-sm p-3">
@@ -157,7 +157,7 @@ export function CheckList({ c, label, value, onChange, search }) {
         {shown.map((o) => (
           <li key={o.value}>
             <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground/80 hover:bg-muted/50">
-              <input type="checkbox" className="h-4 w-4 accent-primary" disabled={!c.enabled} checked={on.has(o.value)} onChange={(e) => toggle(o.value, e.target.checked)} /> {o.text}
+              <input type="checkbox" className="h-4 w-4 accent-primary" disabled={c.enabled === false} checked={on.has(o.value)} onChange={(e) => toggle(o.value, e.target.checked)} /> {o.text}
             </label>
           </li>
         ))}
@@ -194,7 +194,7 @@ export function RoleTree({ c, label, value, onChange }) {
   const Node = ({ n }) => (
     <li>
       <label className="flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-sm text-foreground/80 hover:bg-muted/50">
-        <input type="checkbox" className="h-4 w-4 accent-primary" disabled={!c.enabled} checked={on.has(n.value)} onChange={(e) => toggle(n, e.target.checked)} /> {n.text}
+        <input type="checkbox" className="h-4 w-4 accent-primary" disabled={c.enabled === false} checked={on.has(n.value)} onChange={(e) => toggle(n, e.target.checked)} /> {n.text}
       </label>
       {n.children.length > 0 && <ul className="ml-5 border-l-2 border-border pl-2">{n.children.map((x) => <Node key={x.value} n={x} />)}</ul>}
     </li>

@@ -351,7 +351,9 @@ async function newInspectionLot(fields, barcode, ctx, tx) {
 export async function validateBarcodeRRF(serial, action) {
   const bar = await query(`select BarcodeNo,Serial, PackQty,InspectionLotNo,UDID,Department,QCStatus from MaterialBarcode where Serial=@s and QCStatus=${STATUS.Rejected}`, { s: serial });
   if (!bar.length) throw new Error('BarcodeNo Does Not Exist');
-  const id = str(await scalar(`Select ID from InspectionTrans where not Status=${STATUS.Approved} and NextAction=${action} and SampleBarcode=${num(bar[0].BarcodeNo)}`));
+  // Rule fix (owner, 1 Nov): the newest unconfirmed inspection. The original took the first row, so a unit failed twice
+  // had its older inspection confirmed again, which released it with the new failure still open.
+  const id = str(await scalar(`Select top 1 ID from InspectionTrans where not Status=${STATUS.Approved} and NextAction=${action} and SampleBarcode=${num(bar[0].BarcodeNo)} order by case when ApprovedOn is null then 0 else 1 end, ID desc`));
   if (id === '') throw new Error('This is not for action');
   return { id, rtn: `${str(bar[0].BarcodeNo)}~${str(bar[0].Serial)}` };
 }

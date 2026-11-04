@@ -68,7 +68,7 @@ const ScanBox = forwardRef(function ScanBox(
       <Button
         onClick={go}
         variant={locked ? "outline" : "default"}
-        className={lg ? "h-16 px-6 text-base" : "h-11 min-w-20"}
+        className={lg ? "h-16 min-w-36 px-8 text-lg font-semibold" : "h-11 min-w-20"}
         loading={busy}
         disabled={disabled}
       >

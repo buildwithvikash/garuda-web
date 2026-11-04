@@ -2,7 +2,7 @@
 // label scan, every component, then the stage completing), comparing the screen, the alerts and every row the run
 // changes; the rows are put back after each side.
 // Usage: node --env-file=.env scripts/parity/wip-parity.js <originalBinDir> [comp|qc|fg] [--api]
-import { writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, writeFileSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
@@ -15,11 +15,17 @@ import { newFormState } from '../../src/modules/forms/state.js';
 import { PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
 import { validateVendorSerialNew } from '../../src/modules/production/production.service.js';
 import { capture, restore, state, differences } from './rowset.js';
-import { apiEvent } from './api.js';
+import { openStation, act, stationOf } from '../../src/modules/production/wip-capture/wip-capture.service.js';
+import { FIELDS } from '../../src/modules/production/wip-capture/wip-capture.station.js';
 
 const run = promisify(execFile);
 const [bin, ...args] = process.argv.slice(2);
-const viaApi = args.includes('--api'); // the new side through /api/production/wip-capture (./api.js)
+// the original bin folder first (PowerShell drops an empty "$B": the scenario would be read as the folder)
+if (!bin || !existsSync(join(bin, 'Yojak.dll'))) {
+  console.error(`The first argument must be the original site's bin folder (with Yojak.dll), got "${bin ?? ''}".\nIn PowerShell: $B = "<path>\\build\\Publish WRL\\bin" then: node --env-file=.env scripts/parity/wip-parity.js "$B" comp --api`);
+  process.exit(2);
+}
+const viaApi = args.includes('--api'); // the new side through the station's calls (modules/production/wip-capture)
 const [scenarioArg] = args.filter((a) => a !== '--api');
 const SPECS = JSON.parse(readFileSync(new URL('../../src/modules/forms/forms.json', import.meta.url), 'utf8'));
 await loadSettings();
@@ -40,6 +46,7 @@ async function original(c) {
 
 /** the new app: the steps as the browser would post them (values, ViewState, the page as shown) */
 async function runNew(ctx, steps) {
+  if (viaApi) return runStation(ctx, steps);
   const st = await newFormState(spec, ctx);
   const controls = structuredClone(st.controls);
   const byId = (id) => controls.find((c) => c.id === id);
@@ -64,6 +71,22 @@ async function runNew(ctx, steps) {
     else if (r.alert) alerts.push(r.alert);
   }
   return { controls, alerts, viewState: vs };
+}
+
+/** the new app through the station's calls: what the operator did and typed, the rest kept on the server */
+const ACTION = { DDLDepartment: 'department', BtnWorkStationScan: 'station', BtnWorderScan: 'unit', BtnINBarcode: 'component', DDLWIPQCStatus: 'status', btnQCSave: 'saveQC' };
+const NAME = Object.fromEntries(Object.entries(FIELDS).map(([name, id]) => [id, name]));
+async function runStation(ctx, steps) {
+  const { id } = await openStation(ctx);
+  const s = stationOf(ctx.userCode, id);
+  const alerts = [];
+  for (const step of steps) {
+    const body = Object.fromEntries(Object.entries(step.values).map(([k, x]) => [NAME[k], x]));
+    const r = await act(s, ctx, ACTION[step.control], body);
+    if (r.alert) alerts.push(r.alert);
+  }
+  const controls = [...s.controls.values()].map((c) => ({ ...c, value: c.type === 'GridView' ? c.value : s.values[c.id], rows: Array.isArray(s.values[c.id]) ? s.values[c.id] : c.rows }));
+  return { controls, alerts, viewState: s.viewState };
 }
 
 // what is compared on screen

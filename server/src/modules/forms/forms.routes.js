@@ -4,24 +4,35 @@ import { Router } from 'express';
 import { requireAuth } from '../../middlewares/auth.js';
 import { operatorMessages } from '../../middlewares/operatorMessages.js';
 import { clearSession, writeSession, sessionContext } from '../auth/sessions.js';
-import { log } from '../../config/logger.js';
 import { canOpen, userMenu } from '../menu/menu.service.js';
 import { netString } from '../../shared/net.js';
 import { displayState, copyState, engineControls } from './state.js';
 import { comboRows } from './children.js';
 import { PAGE_EVENTS, PAGE_POSTBACK, PAGE_LIST_TAG, PAGE_SAVE, PAGE_UPDATE, PAGE_CANCEL, PAGE_PRINT, CUSTOM_DISPLAY, eventHelpers } from './pages.js';
-import { cabinetByLabel, routeByLabel } from '../production/wip.service.js';
 import { listPage, distinctValues } from './lists.js';
 import { collect, insert, update, cancel } from './write.js';
 import { FORMS } from './specs.js';
 import { specPayload } from './resource.js';
-import { SCREEN as PRODUCTION_ORDER } from '../production-orders/production-orders.service.js';
-import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production-assignments/production-assignments.service.js';
+import { SCREEN as PRODUCTION_ORDER } from '../production/production-orders/production-orders.service.js';
+import { SCREEN as PRODUCTION_ASSIGNMENT } from '../production/production-assignments/production-assignments.service.js';
+import { SCREEN as RM_REPLACEMENT } from '../production/rm-replacements/rm-replacements.service.js';
+import { SCREEN as FG_SCRAP } from '../production/fg-scraps/fg-scraps.service.js';
+import { SCREEN as MODEL_TRANSFER } from '../production/model-transfers/model-transfers.service.js';
+import { SCREEN as PLAN_UPLOAD } from '../production/plan-uploads/plan-uploads.service.js';
+import { SCREEN as PROCESS_GUIDE } from '../production/process-guides/process-guides.service.js';
+import { SCREEN as REWORK } from '../quality/rework-confirmations/rework-confirmations.service.js';
+import { SCREEN as WIP_CAPTURE } from '../production/wip-capture/wip-capture.service.js';
+import { PLAIN } from '../masters/plain-masters.js';
 
 /** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
  *  (Production Order: no change or cancel after create, one business unit's orders only; Production Assignment: every
- *  choice checked, one print per click) cannot be gone around. */
-const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments' };
+ *  choice checked, one print per click; RM Replacement: the job card and row looked up by the server, one replacement per
+ *  scan; FG Scrap: all in one transaction, one scrap per click; Model Transfer: serials checked, each unit in one transaction)
+ *  cannot be gone around. */
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap', [MODEL_TRANSFER]: '/api/production/model-transfers', [PLAN_UPLOAD]: '/api/production/plan-uploads', [PROCESS_GUIDE]: '/api/production/process-guides', [REWORK]: '/api/quality/rework-confirmations', [WIP_CAPTURE]: '/api/production/wip-capture', '/production/wrlimagedisply': '/api/production/image-display',
+  // the setup screens with plain pages (masters/plain-masters.js)
+  ...Object.fromEntries(Object.entries(PLAIN).map(([n, d]) => [d.route, `/api/masters/${n}`])),
+};
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();
@@ -42,7 +53,8 @@ async function getSpec(req, res) {
   const spec = await load(req, res);
   if (!spec) return;
   try {
-    res.json(await specPayload(spec, ctxOf(req)));
+    const payload = await specPayload(spec, ctxOf(req));
+    res.json(payload);
   } catch (e) {
     fail(res, e);
   }
@@ -166,19 +178,6 @@ async function postSave(req, res) {
   }
 }
 
-// WIP Capture's unit view: the scanned label's route and cabinet details (read only; the WIP events are unchanged).
-// Each part fails on its own, so a missing table or column never hides the other.
-async function getUnit(req, res) {
-  if (netString(req.query.path).toLowerCase() !== '/production/wipcaptureform') return void res.status(404).json({ message: 'Form not found' });
-  const spec = await load(req, res);
-  if (!spec) return;
-  const label = netString(req.query.label).trim();
-  if (label === '' || label.length > 100) return void res.status(400).json({ message: 'Scan a unit serial' });
-  const [route, cabinet] = await Promise.allSettled([routeByLabel(label), cabinetByLabel(label)]);
-  for (const r of [route, cabinet]) if (r.status === 'rejected') log('error', `${req.id} forms/unit: ${r.reason?.message}`);
-  res.json({ route: route.value ?? null, cabinet: cabinet.value ?? null });
-}
-
 async function postUpdate(req, res) {
   const spec = await load(req, res);
   if (!spec) return;
@@ -224,7 +223,6 @@ router.post('/event', postEvent);
 router.post('/print', postPrint);
 router.get('/combo', getCombo);
 router.post('/save', postSave);
-router.get('/unit', getUnit);
 router.post('/update', postUpdate);
 router.post('/cancel', postCancel);
 

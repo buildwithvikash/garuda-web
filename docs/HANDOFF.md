@@ -50,7 +50,7 @@ server/src  (QMAS-style feature modules since 26 Oct; see README "Where things a
   modules/production/{wip,production,labels}.service.js, modules/quality/quality.service.js, modules/forms/qc.js
                                    ported Avatar.dll business logic (DB writes, labels)
   modules/forms/write.js           generic DataWrapper insert/update/cancel; state, lists, children: generic engine
-  modules/production-orders/, modules/production-assignments/   domain APIs: .routes / .service / .repo / .validation
+  modules/production/production-orders/, modules/production/production-assignments/   domain APIs: .routes / .service / .repo / .validation
   modules/forms/resource.js        a screen as a REST resource (field names = bound columns), the same page code
   modules/masters/                 /api/masters/<name>: the 32 setup screens through resource.js (docs/API.md,
                                    docs/MIGRATION-PLAN.md); the client still uses /api/forms for them

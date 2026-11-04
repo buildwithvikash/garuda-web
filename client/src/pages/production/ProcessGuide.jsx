@@ -1,187 +1,221 @@
-// ════════════════════════════════════════════════════════════════════════════════
-//  Process Guide
-//  Sidebar: Production › Process Guide
-//
-//  Change how this page works or looks in its three files: nothing in them is used by
-//  any other page. Only the UI pieces are shared (@/components/ui = shadcn,
-//  @/components/shared = Page, Section, DataTable, Modal ...).
-//
-//  This page is three files (the router opens this one; the folder beside it holds the views):
-//    ProcessGuide.jsx        1. SETTINGS   this page's layout and captions          <- start here
-//                            6. PAGE       loads the screen and switches between list and form
-//    ProcessGuide/List.jsx   4. LIST VIEW  saved records: search, table, paging
-//    ProcessGuide/Form.jsx   2. STATE      how the form's state is read and patched
-//                            3. ENGINE     sends events to the server and applies its reply
-//                            5. FORM VIEW  one record: fields, buttons, grids, print ...
-// ════════════════════════════════════════════════════════════════════════════════
-
+// Process Guide (sidebar: Production › Process Guide): a station's instructions and drawings for a job card, and who is
+// logged in at which station. Server: /api/production/process-guides.
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { openedRecord, useRememberView } from '@/lib/recordParam.js';
-import { RotateCw, Plus } from 'lucide-react';
+import { BookOpen, LogIn, LogOut, RotateCw, ScanLine, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { screenApi } from '@/lib/screenApi.js';
+import { api } from '@/api.js';
+import { GuideView } from '@/components/shared/FormControls.jsx';
+import { Select, TextInput } from '@/components/shared/FormField.jsx';
+import { Step } from '@/components/shared/FormStep.jsx';
 import Loader from '@/components/shared/Loader.jsx';
 import Page from '@/components/shared/Page.jsx';
+import ScanBox from '@/components/shopfloor/ScanBox.jsx';
 import { Button } from '@/components/ui/button.jsx';
-import { useMe } from '@/layouts/AppLayout.jsx';
-import { screenOf } from '@/layouts/Sidebar.jsx';
-import RecordList from './ProcessGuide/List.jsx';
-import RecordForm from './ProcessGuide/Form.jsx';
 
-// ────────────────────────────────────────────────────────────────────────────
-// 1. SETTINGS
-// Edit these for this page. `layout` arranges the fields in sections; `page` adds captions / search boxes.
-// ────────────────────────────────────────────────────────────────────────────
 export const route = '/production/processguideform';
 
-// const layout = { icon, subtitle, sections: [{ title, icon, ids: ['ControlId', { id: 'ControlId', label: 'Caption' }] }] };
-const layout = undefined;
+const BASE = '/production/process-guides';
+const enc = encodeURIComponent;
+const refuse = (e) => toast.error(e.message, { id: e.message, duration: 6000 });
 
-// const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = {};
-
-// ────────────────────────────────────────────────────────────────────────────
-// TEXTS
-// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
-// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
-// ────────────────────────────────────────────────────────────────────────────
-const texts = {
-  title: 'Process Guide',
-  // fields, buttons and panels: { label, hidden }
-  fields: {
-    DDLUser: { label: 'User', hidden: false }, // DropDownList
-    DDLDepartment: { label: 'Department', hidden: false }, // DropDownList
-    DDLBusinessUnit: { label: 'BusinessUnit', hidden: false }, // DropDownList · hidden by the screen until its logic shows it
-    TBWorkStation: { label: 'Station Machine', hidden: false }, // TextBox
-    TBJobCoard: { label: 'Order', hidden: false }, // TextBox
-    GV: { label: '', hidden: false }, // GridView
-    TbUserStation: { label: 'Station Machine', hidden: false }, // TextBox
-    DDLStation: { label: 'Station', hidden: false }, // DropDownList
-    DDLUserCode: { label: 'User', hidden: false }, // DropDownList
-    TbPass: { label: 'Password', hidden: false }, // TextBox
-    TbScanQrCode: { label: 'Scan QRCode', hidden: false }, // TextBox
-    GvUsers: { label: '', hidden: false }, // GridView
-    ScanPanel: { label: '', hidden: false }, // Panel
-    WorkStationPanel: { label: '', hidden: false }, // Panel
-    BtnWorkStationScan: { label: 'Go', hidden: false }, // Button
-    JobCardPanel: { label: '', hidden: false }, // Panel
-    BtnWorderScan: { label: 'Go', hidden: false }, // Button
-    Panel1: { label: '', hidden: false }, // Panel
-    Panel7: { label: '', hidden: false }, // Panel
-    btnStation: { label: 'Go', hidden: false }, // Button
-    Panel2: { label: '', hidden: false }, // Panel
-    Panel3: { label: '', hidden: false }, // Panel
-    Panel5: { label: '', hidden: false }, // Panel
-    Panel6: { label: '', hidden: false }, // Panel
-    Panel4: { label: '', hidden: false }, // Panel
-    btnLogin: { label: 'Login', hidden: false }, // Button
-    RightTopPanel: { label: '', hidden: false }, // Panel · hidden by the screen until its logic shows it
-    LBGuideFiles: { label: 'Guide Panel', hidden: false }, // DropDownList · hidden by the screen until its logic shows it
-    IMBGuideClose: { label: '', hidden: false }, // ImageButton
-    RightPanel: { label: '', hidden: false }, // Panel
-    RightTop: { label: '', hidden: false }, // Panel
-    BottomLeft: { label: '', hidden: false }, // Panel
-    GuideFileDisplayPanel: { label: '', hidden: false }, // Panel
-    RightBottom: { label: '', hidden: false }, // Panel
-    GVInstruction: { label: '', hidden: false }, // GridView
-    Footer: { label: '', hidden: false }, // Panel
-  },
-  // grids: each one's columns { header, hidden } (its rows keep every field)
-  grids: {
-    GV: {
-    },
-    GvUsers: {
-      Station: { header: 'Station', hidden: false },
-      UserName: { header: 'UserName', hidden: false },
-      Login: { header: 'Login', hidden: false },
-      UserCode: { header: 'UserCode', hidden: false },
-    },
-    GVInstruction: {
-    },
-  },
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// 6. PAGE
-// Loads the screen from the server and switches between the list and the form.
-// ────────────────────────────────────────────────────────────────────────────
-export default function ProcessGuide() {
-  const me = useMe();
-  const { pathname } = useLocation();
-  const path = route;
-  const screen = me ? screenOf(me.menu, pathname) : null;
-  const [spec, setSpec] = useState(null);
-  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  const [seq, setSeq] = useState(0);
-  const remember = useRememberView();
-  const [listFilter, setListFilter] = useState({});
-  const show = (v) => {
-    setError('');
-    setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
-    setView(v);
-    remember(v); // ?record=<key> | new: a refresh reopens this form
-  };
-
-  useEffect(() => {
-    setSpec(null);
-    screenApi(path).spec()
-      .then((s) => {
-        setSpec(s);
-        // the form the URL names (a refresh), else where the screen starts
-        const want = openedRecord();
-        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
-        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
-        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
-      })
-      .catch((e) => setError(e.message));
-  }, [path]);
-
-  const run = (p) => p.catch((e) => setError(e.message));
-  const open = (key, notice) => run(screenApi(path).record(key).then((state) => show({ kind: 'form', mode: 'edit', key, state, notice })));
-  // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
-  const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
-  const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
-
-  const title = texts.title || spec?.title || screen?.caption || 'Screen';
+const TH = 'px-3 py-2 font-medium';
+const TD = 'px-3 py-2';
+function Table({ headers, rows, empty }) {
   return (
-    <Page
-      icon={layout?.icon ?? screen?.group.icon}
-      title={title}
-      subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
-      actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
-    >
-        {!spec || view.kind === 'opening' ? (
-          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
-        ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
-        ) : (
-          <RecordForm
-            key={seq}
-            path={path}
-            state={view.state}
-            mode={view.mode}
-            notice={view.notice}
-            buttons={spec.buttons}
-            callNewOnSave={spec.callNewOnSave}
-            copyOptions={spec.copyOptions}
-            print={spec.print}
-            printers={spec.printers}
-            onReload={(key, notice) => open(key, notice)}
-            events={spec.events ?? []}
-            onCopy={copy}
-            onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}
-            onDone={(notice) => fresh(notice)}
-            onListFilter={setListFilter}
-            layout={layout}
-            page={{ ...page, texts }}
-          />
+    <div className="overflow-x-auto rounded-xl border">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-muted/50 text-xs text-muted-foreground">
+          <tr>{headers.map((h, i) => <th key={i} scope="col" className={TH}>{h}</th>)}</tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {rows.length === 0 && <tr><td colSpan={headers.length} className="px-3 py-6 text-center text-muted-foreground">{empty}</td></tr>}
+          {rows}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Guide({ options }) {
+  const [department, setDepartment] = useState(options.department);
+  const [stationBox, setStationBox] = useState('');
+  const [station, setStation] = useState(''); // the station found by the last scan
+  const [order, setOrder] = useState('');
+  const [guide, setGuide] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const run = async (step) => {
+    setBusy(true);
+    try {
+      await step();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const scanStation = () =>
+    run(async () => {
+      setStation('');
+      try {
+        const r = await api(`${BASE}/stations/${enc(stationBox.trim())}?department=${enc(department)}`);
+        setStation(r.station);
+        setStationBox(r.alias);
+        setDepartment(r.department);
+      } catch (e) {
+        refuse(e);
+        setStationBox('');
+      }
+    });
+  const scanOrder = () =>
+    run(async () => {
+      try {
+        setGuide(await api(`${BASE}/guide?serial=${enc(order.trim())}&station=${enc(station)}&department=${enc(department)}`));
+        setOpen(true);
+        setFile(0);
+      } catch (e) {
+        refuse(e);
+        setOrder('');
+      }
+    });
+  const clearOrder = () => (setOrder(''), setGuide(null), setOpen(false));
+
+  const shown = guide?.files[file];
+  return (
+    <>
+      <Step n={1} tone="blue" icon={ScanLine} title="Station and order" subtitle="Scan the station, then the order">
+        <div className="grid gap-4 md:grid-cols-2">
+          <TextInput label="User" value={options.user} disabled />
+          <Select label="Department" value={department} options={options.departments} disabled={options.departmentFixed} onChange={(v) => setDepartment(v ?? '')} />
+          {!guide && (
+            <div className="grid min-w-0 gap-2">
+              <span className="text-sm leading-none font-medium">Station Machine</span>
+              <ScanBox size="md" label="Station Machine" placeholder="Scan the station" value={stationBox} onChange={setStationBox} onScan={scanStation} busy={busy} />
+            </div>
+          )}
+          <div className="grid min-w-0 gap-2">
+            <span className="text-sm leading-none font-medium">Order</span>
+            <ScanBox size="md" label="Order" placeholder="Scan the order" value={order} onChange={setOrder} locked={!!guide} onScan={scanOrder} onClear={clearOrder} busy={busy} />
+          </div>
+        </div>
+        {guide && (
+          <div className="mt-4">
+            <Table headers={['Model', 'Material']} empty="No material on this order." rows={guide.materials.map((m, i) => <tr key={i}><td className={TD}>{m.model}</td><td className={TD}>{m.material}</td></tr>)} />
+          </div>
         )}
+      </Step>
+      {open && (
+        <Step n={2} tone="emerald" icon={BookOpen} title="Guide" subtitle="This station's instructions and drawings" actions={<Button size="sm" variant="outline" icon={X} onClick={() => setOpen(false)}>Close</Button>}>
+          <div className="space-y-4">
+            {guide.files.length > 0 && (
+              <Select className="max-w-xl" label="Guide Panel" value={String(file)} options={guide.files.map((f, i) => ({ value: String(i), label: f.label }))} onChange={(v) => setFile(v === null ? -1 : Number(v))} />
+            )}
+            {shown?.kind && <GuideView g={shown} />}
+            {guide.instructions.length > 0 && (
+              <Table headers={['Instruction']} rows={guide.instructions.map((t, i) => <tr key={i}><td className={TD}>{t}</td></tr>)} />
+            )}
+          </div>
+        </Step>
+      )}
+    </>
+  );
+}
+
+function Logins({ options }) {
+  const [stationBox, setStationBox] = useState('');
+  const [stationLocked, setStationLocked] = useState(false);
+  const [login, setLogin] = useState({ station: '', user: '', password: '', qr: '' });
+  const [rows, setRows] = useState(options.logins);
+  const [busy, setBusy] = useState(false);
+  const set = (field) => (v) => setLogin((x) => ({ ...x, [field]: v ?? '' }));
+
+  const scanStation = () => {
+    const want = stationBox.trim();
+    if (!options.stations.some((s) => s.value === want)) {
+      refuse(new Error('Invalid Station'));
+      return setStationBox('');
+    }
+    setLogin((x) => ({ ...x, station: want, qr: '' }));
+    return setStationLocked(true);
+  };
+  const clearStation = () => (setStationBox(''), setStationLocked(false), set('station')(''));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      const r = await api(`${BASE}/logins`, { method: 'POST', body: login });
+      setRows(r.logins);
+      toast.success('Done');
+      setLogin((x) => ({ ...x, station: '', password: '', qr: '' }));
+    } catch (err) {
+      refuse(err);
+      if (err.message !== 'Wrong Password') set('qr')('');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const logOut = async (userCode) => {
+    setBusy(true);
+    try {
+      setRows(await api(`${BASE}/logins/${enc(userCode)}`, { method: 'DELETE' }));
+    } catch (err) {
+      refuse(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Step n={3} tone="violet" icon={Users} title="Station logins" subtitle="Who is logged in at which station">
+      <form onSubmit={submit} className="grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4" autoComplete="off">
+        <div className="grid min-w-0 gap-2">
+          <span className="text-sm leading-none font-medium">Station Machine</span>
+          <ScanBox size="md" label="Station Machine" placeholder="Scan the station" value={stationBox} onChange={setStationBox} locked={stationLocked} onScan={scanStation} onClear={clearStation} />
+        </div>
+        <Select label="Station" value={login.station} options={options.stations} onChange={set('station')} />
+        <Select label="User" value={login.user} options={options.users} onChange={set('user')} />
+        <TextInput label="Password" type="password" autoComplete="new-password" value={login.password} onChange={(e) => set('password')(e.target.value)} />
+        <TextInput label="Scan QRCode" type="password" autoComplete="off" value={login.qr} onChange={(e) => set('qr')(e.target.value)} />
+        <div className="self-end"><Button type="submit" icon={LogIn} loading={busy}>Login</Button></div>
+      </form>
+      <div className="mt-4">
+        <Table
+          headers={['', 'Station', 'UserName', 'Login', 'UserCode']}
+          empty="Nobody is logged in."
+          rows={rows.map((r) => (
+            <tr key={r.userCode}>
+              <td className={TD}><Button size="sm" variant="outline" icon={LogOut} disabled={busy} onClick={() => logOut(r.userCode)}>Logout</Button></td>
+              <td className={TD}>{r.station}</td>
+              <td className={TD}>{r.userName}</td>
+              <td className={TD}>{r.login}</td>
+              <td className={TD}>{r.userCode}</td>
+            </tr>
+          ))}
+        />
+      </div>
+    </Step>
+  );
+}
+
+export default function ProcessGuide() {
+  const [options, setOptions] = useState(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    api(`${BASE}/options`).then(setOptions).catch((e) => (setError(true), refuse(e)));
+  }, []);
+  return (
+    <Page icon={BookOpen} title="Process Guide" subtitle="Scan a station and an order to see the guide">
+      {options ? (
+        <div className="space-y-2">
+          <Guide options={options} />
+          <Logins options={options} />
+        </div>
+      ) : error ? (
+        <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button>
+      ) : (
+        <Loader />
+      )}
     </Page>
   );
 }

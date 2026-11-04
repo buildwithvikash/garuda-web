@@ -20,9 +20,10 @@ import { PAGE_EVENTS } from '../../src/modules/forms/pages.js';
 import { collect, insert, update, cancel } from '../../src/modules/forms/write.js';
 import { formTables, tableSchema } from '../../src/modules/forms/schema.js';
 import { toText } from '../../src/shared/values.js';
-import * as ordersApi from '../../src/modules/production-orders/production-orders.service.js';
-import { NO_CHANGE_AFTER_CREATE, validateOrder } from '../../src/modules/production-orders/production-orders.validation.js';
+import * as ordersApi from '../../src/modules/production/production-orders/production-orders.service.js';
+import { NO_CHANGE_AFTER_CREATE, validateOrder } from '../../src/modules/production/production-orders/production-orders.validation.js';
 import { MASTERS } from '../../src/modules/masters/masters.routes.js';
+import { PLAIN_SERVICES } from '../../src/modules/masters/plain-masters.js';
 import { QUALITY } from '../../src/modules/quality/quality.routes.js';
 import { validateBody } from '../../src/modules/forms/resource.validation.js';
 import { screenResource } from '../../src/modules/forms/resource.js';
@@ -55,6 +56,10 @@ const API = {
 for (const route of [...Object.values(MASTERS), ...Object.values(QUALITY)]) {
   const m = screenResource(route);
   API[route] = { master: true, fields: m.FIELDS, validate: validateBody(m.FIELDS, m.NESTED), create: async (c, b) => ({ prodNo: (await m.create(c, b)).key }), save: m.save, cancel: m.cancel };
+}
+// the screens with plain pages save through their plain services (modules/masters/plain-masters.js), by their own names
+for (const s of Object.values(PLAIN_SERVICES)) {
+  API[s.SCREEN] = { master: true, fields: s.FIELDS, validate: validateBody(s.FIELDS, s.NESTED), create: async (c, b) => ({ prodNo: (await s.create(c, b)).key }), save: s.save, cancel: s.cancel };
 }
 /** the API's JSON for the values the harness would post (controls the API does not name are left to its defaults) */
 function apiBody(api, v) {

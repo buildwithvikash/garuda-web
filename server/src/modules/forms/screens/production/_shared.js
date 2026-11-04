@@ -5,15 +5,10 @@ import { digitsOrEmpty, lit } from '../../../../shared/sql.js';
 import { settingText } from '../../../settings/settings.service.js';
 import { dataTable } from '../../../../db/tables.js';
 import { validateWorkStation } from '../../../production/production.service.js';
-import * as assignRepo from '../../../production-assignments/production-assignments.repo.js';
+import * as assignRepo from '../../../production/production-assignments/production-assignments.repo.js';
 import { parseString, select } from '../_shared.js';
 
-/** AVProcess.RMComponetDetails: the components scanned into the serial's job card */
-export async function fgComponents(serial) {
-  const rows = await dataTable("Select mc.Type[Category]  , m.Name[Material],w.Name[Process],pb.Serial, pb.PsNo,pb.RowID,pb.ProcessCode ,m.matCode  from ProcessInputBOMScan pb inner join ProductionProcess w on pb.processCode  =w.ProcessCode  inner join Material m on pb.Material=m.MatCode  left join MaterialCategoryType mc on m.Type =mc.ID where pb.PSNo=(Select DocNo from MaterialBarcode where Serial=@s)", { s: serial });
-  if (!rows.length) throw new Error('Invaild Barcode Scanned');
-  return rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, x]) => [k, x ?? ''])));
-}
+export { fgComponents } from '../../../production/production.service.js';
 
 export const htmlCell = (x) => (netString(x) === '' ? '&nbsp;' : netString(x).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;'));
 

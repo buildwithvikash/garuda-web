@@ -1,7 +1,5 @@
-// How a screen page talks to the server: the screen engine (/api/forms) or, for the screens in API_SCREENS, the
-// screen's own REST API. Both give the page the same answers (control states and patches), so a page draws and
-// behaves the same either way; ./screenApiCore.js does the translation. A screen switches by adding its route here and
-// switches back by removing it (docs/CLIENT-SWITCH-PLAN.md).
+// How an engine-style control talks to a screen's own REST API (for the screens in API_SCREENS), answering as the old
+// screen engine (/api/forms) did; ./screenApiCore.js does the translation. The engine itself is gone from the client.
 import { api } from "@/api.js";
 import {
   eventOf,
@@ -14,63 +12,11 @@ import {
 
 /** route -> its API (under /api) */
 export const API_SCREENS = {
-  "/materialsetup/unitofmeasureform": "/masters/units-of-measure",
-  "/materialsetup/variantfieldform": "/masters/variant-fields",
-  "/materialsetup/variantfieldvalueform": "/masters/variant-values",
-  "/businesssetup/ledgerform": "/masters/ledgers",
-  "/productionsetup/productionlineform": "/masters/production-lines",
-  "/productionsetup/productionprocess": "/masters/production-processes",
-  "/settings/defectcodemasterform": "/masters/defect-codes",
-  "/settings/materialtagform": "/masters/material-tags",
-  "/settings/printerform": "/masters/printers",
-  "/settings/reworkresolutionform": "/masters/rework-resolutions",
-  "/settings/rootcauseform": "/masters/root-causes",
-  "/settings/scrapreasonform": "/masters/scrap-reasons",
-  "/businesssetup/businessunitform": "/masters/business-units",
-  "/businesssetup/departmentform": "/masters/departments",
-  "/productionsetup/workcenterform": "/masters/work-centers",
-  "/authorization/userroleform": "/masters/user-roles",
-  "/materialsetup/materialcategoryform": "/masters/material-categories",
-  "/settings/parametervaluelistform": "/masters/value-lists",
-  "/settings/shiftmasterform": "/masters/shifts",
-  "/materialsetup/modelform": "/masters/models",
-  "/authorization/usersform": "/masters/users",
-  "/materialsetup/materialform": "/masters/materials",
-  "/materialsetup/serialgenerationlogicform": "/masters/serial-logics",
-  "/materialsetup/billofmaterial": "/masters/bills-of-material",
-  "/productionsetup/routingform": "/masters/routings",
-  "/productionsetup/routingguideform": "/masters/routing-guides",
-  "/settings/parameterform": "/masters/check-lists",
   "/materialsetup/materialbarcode": "/masters/material-barcodes",
-  "/settings/employeeform": "/masters/employees",
-  "/businesssetup/companyform": "/masters/company",
-  "/authorization/resetpasswordform": "/masters/reset-password",
-  "/authorization/changepasswordform": "/masters/change-password",
-  "/quality/reworkconfirmationnew": "/quality/rework-confirmations",
 };
 
 const enc = encodeURIComponent;
 const post = (path, body) => api(path, { method: "POST", body });
-
-/** the screen engine, as the pages called it */
-function engine(path) {
-  const p = `path=${enc(path)}`;
-  return {
-    spec: () => api(`/forms/spec?${p}`),
-    record: (key) => api(`/forms/record?${p}&key=${enc(key)}`),
-    copy: (key) => api(`/forms/copy?${p}&key=${enc(key)}`),
-    list: (query) => api(`/forms/list?${p}${query}`),
-    distinct: (column) => api(`/forms/distinct?${p}&column=${enc(column)}`),
-    event: (body) => post("/forms/event", { path, ...body }),
-    write: (kind, body) => post(`/forms/${kind}`, { path, ...body }),
-    print: (body) => post("/forms/print", { path, ...body }),
-    combo: (id, search) =>
-      api(
-        `/forms/combo?${p}&id=${enc(id)}${search == null ? "" : `&search=${enc(search)}`}`,
-      ),
-    unit: (label) => api(`/forms/unit?${p}&label=${enc(label)}`),
-  };
-}
 
 /** the screen's REST API, answering as the engine does */
 function rest(base) {
@@ -141,15 +87,15 @@ function rest(base) {
         `${base}/pickers/${enc(maps.names[id] ?? id)}${search == null ? "" : `?search=${enc(search)}`}`,
       );
     },
-    // WIP Capture's unit view (route and cabinet of a scanned serial)
-    unit: (label) => api(`${base}/units/${enc(label)}`),
   };
 }
 
 const cache = new Map();
 /** the transport for a screen route (one per screen: the API's keeps the layout it fetched) */
 export function screenApi(path) {
-  if (!cache.has(path))
-    cache.set(path, API_SCREENS[path] ? rest(API_SCREENS[path]) : engine(path));
+  if (!cache.has(path)) {
+    if (!API_SCREENS[path]) throw new Error(`No API for ${path}`);
+    cache.set(path, rest(API_SCREENS[path]));
+  }
   return cache.get(path);
 }

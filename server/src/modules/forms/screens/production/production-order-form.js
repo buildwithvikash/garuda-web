@@ -1,7 +1,7 @@
 // Production Order (View/Production/ProductionOrderForm.aspx): the original page's code-behind, ported (registered in registry.js).
 import { netString, netInt } from '../../../../shared/net.js';
 import { newTrackId } from '../../../production/production.service.js';
-import * as ordersRepo from '../../../production-orders/production-orders.repo.js';
+import * as ordersRepo from '../../../production/production-orders/production-orders.repo.js';
 import { NRE, alertMsg, gridDelete, guard, select, selectedText } from '../_shared.js';
 import { CUSTOM_DISPLAY, PAGE_DISPLAY, PAGE_EVENTS, PAGE_LISTS } from '../registry.js';
 

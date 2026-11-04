@@ -1,7 +1,7 @@
 // Production order input: locked fields never taken from a request, coded values only from the screen's lists.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LOCKED, NO_CHANGE_AFTER_CREATE, unlistedChoices, unlocked, validateOrder } from '../src/modules/production-orders/production-orders.validation.js';
+import { LOCKED, NO_CHANGE_AFTER_CREATE, unlistedChoices, unlocked, validateOrder } from '../src/modules/production/production-orders/production-orders.validation.js';
 
 test('locked fields are dropped, the rest kept', () => {
   const sent = { prodNo: '9', alias: 'X', businessUnit: '2', orderDate: '2020-01-01', qty: '5', material: '22600118' };

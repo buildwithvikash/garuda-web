@@ -11,6 +11,14 @@ const ADDED = {
   '/materialsetup/materialform': [
     { type: 'Label', id: 'LblRoute', tag: ['Material', 'Route', '$', ''], text: 'Routing', attrs: {} },
     { type: 'DropDownList', id: 'DDLRoute', tag: ['Material', 'Route', '$', 'Select RouteCode, Name From RoutingHeader where [Type]=1 and Status=1'], attrs: {}, items: [] },
+    // the green tag's logic, as Asset Tag Type is the asset tag's (owner, 1 Nov 2026; production/tag-check.js): none, no green tag
+    { type: 'Label', id: 'LblGreenLogic', tag: ['Material', 'GreenTagLogic', '$', ''], text: 'Green Tag Logic', attrs: {} },
+    { type: 'DropDownList', id: 'DDLGreenLogic', tag: ['Material', 'GreenTagLogic', 'RESET', 'Select SerialCode, Name from SerialGenerationLogicHeader where Status=1 and Type=-1 order by Name'], attrs: {}, items: [] },
+  ],
+  // what a logic is for (owner, 1 Nov 2026): Generate fills the tag, Check takes a scanned tag and tests it against the logic
+  '/materialsetup/serialgenerationlogicform': [
+    { type: 'Label', id: 'LblUseFor', tag: ['SerialGenerationLogicHeader', 'UseFor', '$', ''], text: 'Use for', attrs: {} },
+    { type: 'DropDownList', id: 'DDLUseFor', tag: ['SerialGenerationLogicHeader', 'UseFor', '$', ''], attrs: {}, items: [{ value: '0', text: 'Generate', selected: false }, { value: '1', text: 'Check scanned tag', selected: false }] },
   ],
 };
 

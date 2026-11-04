@@ -48,3 +48,7 @@ test('the alerts list of a body is reworded too', () => {
   const b = friendlyBody({ message: 'Assigned Succefully', alerts: ['Select a BOM', 'as it was'] }, 'x', () => {});
   assert.deepEqual(b, { message: 'Job cards printed.', alerts: ['This order has no BOM: the job cards were printed without BOM lines.', 'as it was'] });
 });
+
+test('WIP Capture: a refused scan names the stage the unit is at', () => {
+  assert.equal(friendly('Pending Process- POST-FOAMING QA'), 'Not this stage: this unit is now at POST-FOAMING QA.');
+});

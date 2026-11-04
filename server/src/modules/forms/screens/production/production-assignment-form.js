@@ -8,7 +8,7 @@ import { insert, collect, generateKey, logEvent } from '../../write.js';
 import { fill } from '../../../../db/options.js';
 import { printerDetail, printerOnline, prodStartLabelData, printProdStart } from '../../../production/labels.service.js';
 import { generateSerialNo, generateSerialNoWRL } from '../../../production/production.service.js';
-import * as assignRepo from '../../../production-assignments/production-assignments.repo.js';
+import * as assignRepo from '../../../production/production-assignments/production-assignments.repo.js';
 import { NRE, errorMsg, guard, notInList, parseString, select } from '../_shared.js';
 import { deptPrinters } from './_shared.js';
 import { PAGE_EVENTS, PAGE_LOAD } from '../registry.js';

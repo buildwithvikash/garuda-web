@@ -1,34 +1,33 @@
 // Model To Model Transfer by a list of FG serials (owner, 29 Oct 2026): 1 scan or paste the complete FG serials, one a
 // line, Check: they are grouped by product (source material); 2 each product gets its destination; 3 a printer,
 // Transfer: each unit is moved and its label printed again, PART at a time per product, with progress and Stop.
-// Server: production/model-transfer-bulk.js (POST /api/production/model-transfers/bulk/check, …/bulk).
+// Server calls: ./transfersApi.js.
 import { useRef, useState } from 'react';
 import { ArrowRight, Boxes, ListChecks, Printer, ScanBarcode, Square, Trash2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '@/api.js';
 import { askConfirm } from '@/app/confirm.js';
 import { Step } from '@/components/shared/FormStep.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
+import { transfersApi } from './transfersApi.js';
 
 const MAX = 500; // as the server checks at a time
 const PART = 25; // units a request moves (the server takes up to 50)
 const STATE = { ready: ['neutral', 'Ready'], moving: ['info', 'Moving'], moved: ['success', 'Moved'], unprinted: ['warning', 'Moved, label not printed'], failed: ['danger', 'Failed'] };
 
 const serialsOf = (text) => [...new Set(text.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean))];
-const optionsOf = (spec, id) => spec?.controls?.find((c) => c.id === id)?.options ?? [];
+/** a key for one part (crypto.randomUUID needs https or localhost; the plant may open the app over http) */
+const newKey = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
-/** spec: the screen (its destination materials and printers, as the range form lists them) */
-export default function BulkTransfer({ spec }) {
-  const materials = optionsOf(spec, 'DDLDestiMaterial');
-  const printerList = optionsOf(spec, 'DDLPrinter');
+/** options: the FG materials and the printers */
+export default function BulkTransfer({ options: { materials, printers: printerList } }) {
   const [text, setText] = useState('');
   const [groups, setGroups] = useState(null); // [{ materialCode, material, materialAlias, destination, units: [{ serial, barcodeNo, state, error? }] }]
   const [refused, setRefused] = useState([]);
   const [checking, setChecking] = useState(false);
-  const [printer, setPrinter] = useState(() => (printerList.length === 2 ? printerList[1].value : ''));
+  const [printer, setPrinter] = useState(() => (printerList.length === 1 ? printerList[0].value : ''));
   const [progress, setProgress] = useState(null); // { done, total } while moving
   const stop = useRef(false);
 
@@ -44,7 +43,7 @@ export default function BulkTransfer({ spec }) {
     if (serials.length > MAX) return void toast.error(`Check at most ${MAX} serials at a time (${serials.length} given).`);
     setChecking(true);
     try {
-      const r = await api('/production/model-transfers/bulk/check', { method: 'POST', body: { serials } });
+      const r = await transfersApi.check(serials);
       setGroups(r.groups.map((g) => ({ ...g, destination: '', units: g.units.map((u) => ({ ...u, state: 'ready' })) })));
       setRefused(r.refused);
     } catch (e) {
@@ -72,7 +71,7 @@ export default function BulkTransfer({ spec }) {
     );
 
   async function transfer() {
-    const name = (v) => materials.find((o) => o.value === v)?.text ?? v;
+    const name = (v) => materials.find((o) => o.value === v)?.label ?? v;
     const lines = ready.map((g) => `${g.units.filter((u) => u.state !== 'moved' && u.state !== 'unprinted').length} × ${g.material} → ${name(g.destination)}`).join('\n');
     if (!(await askConfirm({ title: `Transfer ${todo.length} unit${todo.length === 1 ? '' : 's'}?`, message: `${lines}\n\nEach unit's material, stock, job card and location change, and its label is printed again.`, confirmLabel: 'Transfer', variant: 'danger' }))) return;
     stop.current = false;
@@ -87,7 +86,7 @@ export default function BulkTransfer({ spec }) {
           const part = list.slice(i, i + PART);
           markUnits(g.materialCode, part, 'moving');
           try {
-            const res = await api('/production/model-transfers/bulk', { method: 'POST', body: { source: g.materialCode, destination: g.destination, barcodeNos: part.map((u) => u.barcodeNo), printer } });
+            const res = await transfersApi.transfer({ source: g.materialCode, destination: g.destination, barcodeNos: part.map((u) => u.barcodeNo), printer }, newKey());
             markUnits(g.materialCode, part, 'failed', res);
             ok += res.filter((x) => x.ok).length;
           } catch (e) {
@@ -147,7 +146,7 @@ export default function BulkTransfer({ spec }) {
                     </div>
                     <ArrowRight className="hidden size-4 text-muted-foreground md:block" aria-hidden="true" />
                     <NativeSelect value={g.destination} onChange={(e) => setGroup(g.materialCode, { destination: e.target.value })} disabled={moving} aria-label={`Destination for ${g.material}`} placeholder="Move to … (type to search)">
-                      {materials.filter((o) => o.value !== g.materialCode).map((o, i) => <option key={i} value={o.value}>{o.text}</option>)}
+                      {materials.filter((o) => o.value !== g.materialCode).map((o, i) => <option key={i} value={o.value}>{o.label}</option>)}
                     </NativeSelect>
                     <Button type="button" size="icon-sm" variant="outline" icon={X} title="Leave this product out" aria-label={`Leave ${g.material} out`} disabled={moving} onClick={() => setGroups((gs) => gs.filter((x) => x.materialCode !== g.materialCode))} />
                   </div>
@@ -185,7 +184,8 @@ export default function BulkTransfer({ spec }) {
               <label className="grid max-w-md gap-1.5 text-sm font-medium">
                 Printer
                 <NativeSelect value={printer} onChange={(e) => setPrinter(e.target.value)} disabled={moving} aria-label="Printer">
-                  {printerList.map((o, i) => <option key={i} value={o.value}>{o.text}</option>)}
+                  <option value="">Choose a printer…</option>
+                  {printerList.map((o, i) => <option key={i} value={o.value}>{o.label}</option>)}
                 </NativeSelect>
               </label>
               <div className="flex flex-wrap items-center gap-2">

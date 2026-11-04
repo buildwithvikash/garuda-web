@@ -2,6 +2,8 @@
 // are read and put back, then the same on the new app; rows, alerts and results compared, everything restored after.
 // Usage: node --env-file=.env scripts/parity/production-writes-parity.js <originalBinDir> [--api] [section name part...]
 import { query, execute } from '../../src/db/pool.js';
+import { replace as replaceComponent } from '../../src/modules/production/rm-replacements/rm-replacements.service.js';
+import { scrap as scrapUnit } from '../../src/modules/production/fg-scraps/fg-scraps.service.js';
 import { loadSettings } from '../../src/modules/settings/settings.service.js';
 import { PAGE_EVENTS, eventHelpers } from '../../src/modules/forms/pages.js';
 import { SPECS, specOf, ctx, original as run } from './lib.js';
@@ -45,12 +47,13 @@ section('fg scrap', async () => {
     const afterO = await snap();
     await restore();
     const v = { TBBarcode: fg.Serial, TBRemark: ' ZZP scrap ', DDLScrapCategory: cat, GvDetails: [] };
-    const n = viaApi && apiOf(spec) ? await apiEvent(spec, ctx, 'btnSave', v, { viewState: { __Go: 'Clr' } }) : await PAGE_EVENTS[spec.file].btnSave(v, eventHelpers(spec, ctx, v, { viewState: { __Go: 'Clr' } }));
+    // the screen's own API (modules/production/fg-scraps): the data must match; it answers no error, where the original's last statement always fails
+    const n = viaApi ? ((await scrapUnit({ unit: fg.Serial, category: cat, remark: 'ZZP scrap' }, ctx)), {}) : await PAGE_EVENTS[spec.file].btnSave(v, eventHelpers(spec, ctx, v, { viewState: { __Go: 'Clr' } }));
     const afterN = await snap();
     const problems = [];
     if (!o.ok) problems.push(`original ERROR ${o.error}`);
     const oa = (o.result?.alerts ?? []).join('|');
-    if (o.ok && oa !== (n.alert ?? '')) problems.push(`alert "${oa}" vs "${n.alert ?? ''}"`);
+    if (!viaApi && o.ok && oa !== (n.alert ?? '')) problems.push(`alert "${oa}" vs "${n.alert ?? ''}"`);
     for (const k of Object.keys(afterO)) if (JSON.stringify(afterO[k]) !== JSON.stringify(afterN[k])) problems.push(`${k} ${JSON.stringify(afterO[k]).slice(0, 300)} vs ${JSON.stringify(afterN[k]).slice(0, 300)}`);
     results.push([`FG scrap (serial ${fg.Serial}, ${scans.length} components)`, problems.length ? problems.join(' | ') : `IDENTICAL (${oa ? `alert "${oa}"` : 'scrapped'})`]);
   } finally {
@@ -98,16 +101,19 @@ section('rm replacement', async () => {
     const [o] = original([{ id: 0, mode: 'event', key: null, viewState: {}, dataTables: tables, steps, ctx, spec: specOf(spec) }]);
     const afterO = await snap();
     await restore();
-    let vs = { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' };
-    let v = { TBBarcode: fg.Serial, GvDetails: [] };
-    for (const [id, patch] of [['Go', {}], ['btnexistScan', { TBExistingRM: comp.Serial }], ['btnNewScan', { TBNewRM: candidate }]]) {
-      v = { ...v, ...patch };
-      const r = viaApi && apiOf(spec) ? await apiEvent(spec, ctx, id, v, { viewState: vs }) : await PAGE_EVENTS[spec.file][id](v, eventHelpers(spec, ctx, v, { viewState: vs }));
-      for (const [k, p] of Object.entries(r.set ?? {})) {
-        if ('value' in p) v = { ...v, [k]: p.value };
-        if (p.rows) v = { ...v, [k]: p.rows };
+    if (viaApi) await replaceComponent({ unit: fg.Serial, existing: comp.Serial, replacement: candidate }, ctx); // the screen's own API (modules/production/rm-replacements)
+    else {
+      let vs = { __Go: 'Go', __ExistGo: 'Go', __NewGo: 'Go' };
+      let v = { TBBarcode: fg.Serial, GvDetails: [] };
+      for (const [id, patch] of [['Go', {}], ['btnexistScan', { TBExistingRM: comp.Serial }], ['btnNewScan', { TBNewRM: candidate }]]) {
+        v = { ...v, ...patch };
+        const r = await PAGE_EVENTS[spec.file][id](v, eventHelpers(spec, ctx, v, { viewState: vs }));
+        for (const [k, p] of Object.entries(r.set ?? {})) {
+          if ('value' in p) v = { ...v, [k]: p.value };
+          if (p.rows) v = { ...v, [k]: p.rows };
+        }
+        vs = r.viewState ?? vs;
       }
-      vs = r.viewState ?? vs;
     }
     const afterN = await snap();
     const problems = [];
