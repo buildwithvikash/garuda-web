@@ -1,4 +1,4 @@
-// The setup screens with plain pages (Authorization, Business Setup): each record as plain JSON by the screen's own field
+// The setup screens with plain pages (Authorization, Business Setup, Settings): each record as plain JSON by the screen's own field
 // names (roleName, expiryDays ...). The rules stay where parity proved them: the screen's handlers and the forms writer
 // (keys from IDMaster, EventLog, child rows, cancel = status 200), run through ./forms/resource.js; this only names the
 // fields, as production-orders does.
@@ -7,6 +7,8 @@
 //   GET    /new                       a blank record: { record, options, status, statusMessage, copyFrom?, tree? }
 //   GET    /:key                      a saved one; GET /:key/copy a new one filled from it (Department)
 //   POST   /  PUT /:key  DELETE /:key  save, update, cancel ({ record }; DELETE { remark })
+//   POST   /:key/print                a saved record's label ({ printer }; Employee), { alert } when refused
+//   POST   /events/:event             a row event ({ record, viewState, arg }; Check List, Check List Values, Shift)
 import { Router } from 'express';
 import { authorizeScreen, requireAuth } from '../../middlewares/auth.js';
 import { portedErrors } from '../../middlewares/errorHandler.js';
@@ -20,6 +22,7 @@ import { sessionContext as ctx } from '../auth/context.js';
 import { screenResource } from '../forms/resource.js';
 import { validateBody } from '../forms/resource.validation.js';
 import { roleTree } from '../forms/children.js';
+import { printerOptions } from '../production/labels.service.js';
 
 /** API name -> { route, fields: { field: the screen's control } }; tree: the field holding the role tree */
 export const PLAIN = {
@@ -51,22 +54,82 @@ export const PLAIN = {
     route: '/businesssetup/ledgerform',
     fields: { ledgerCode: 'PrimaryKey', department: 'DdlDept', businessUnit: 'DropDownList4', status: 'ddlStatus', ledgerGroup: 'DropDownList1', controlIndicator: 'DropDownList2', name: 'TextBox2', alias: 'Alias', prefix: 'TextBox1', webSite: 'TextBox11' },
   },
+  // Settings
+  'defect-codes': {
+    route: '/settings/defectcodemasterform',
+    fields: { code: 'PrimaryKey', status: 'ddlStatus', materialCategory: 'DdlMaterialCategory', defectCategory: 'DropDownList2', name: 'TextBox2', alias: 'TextBox1', process: 'DropDownList1' },
+  },
+  employees: {
+    route: '/settings/employeeform',
+    fields: {
+      empCode: 'PrimaryKey', businessUnit: 'DropDownList8', status: 'ddlStatus', name: 'TextBox2', alias: 'Alias', joinDate: 'TextBox4', empType: 'DropDownList1',
+      department: 'DropDownList9', designation: 'TextBox13', gender: 'DropDownList3', birthDate: 'TextBox6', married: 'DropDownList10', anniversary: 'TextBox5',
+      address1: 'TextBox9', address2: 'TextBox7', postalCode: 'TextBox3', city: 'TextBox1', state: 'DropDownList6', country: 'DropDownList7', email: 'TextBox10',
+      contactNo: 'TextBox12', altContactNo: 'TextBox15', accessCardNo: 'TextBox14', allowAccess: 'DropDownList2',
+    },
+  },
+  'material-tags': { route: '/settings/materialtagform', fields: { tagCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', tagType: 'DropDownList1', tagImage: 'UploadImage', prnCommand: 'TextBox1' } },
+  printers: {
+    route: '/settings/printerform',
+    fields: { printerId: 'PrimaryKey', businessUnit: 'DropDownList4', status: 'ddlStatus', department: 'DDLDepartment', area: 'DDLArea', station: 'DDLStation', name: 'TextBox3', ip: 'TextBox5', driver: 'DDLDriver' },
+  },
+  'rework-resolutions': { route: '/settings/reworkresolutionform', fields: { code: 'PrimaryKey', status: 'ddlStatus', reason: 'TextBox2' } },
+  'root-causes': { route: '/settings/rootcauseform', fields: { code: 'PrimaryKey', status: 'ddlStatus', reason: 'TextBox2' } },
+  'scrap-reasons': { route: '/settings/scrapreasonform', fields: { code: 'PrimaryKey', status: 'ddlStatus', reason: 'TextBox2' } },
+  // with rows added through the screen's own events: the rows' editor fields are fields too (not saved: the writer
+  // takes the rows), `events` the screen's handlers, `ui` the controls whose state the page follows
+  'check-lists': {
+    route: '/settings/parameterform',
+    fields: {
+      checklistCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'TextBox1', type: 'DDLType', parameters: 'GVTransData',
+      paramName: 'TbName', description: 'TbDescription', inputType: 'DdlInputType', minValue: 'TbMinValue', maxValue: 'TbMaxValue', passValue: 'TbPassValue',
+      unit: 'DdlUom', resultDefined: 'DdlResultDefined', list: 'DdlList', instrument: 'DDLInstrument', guideImage: 'UploadImage',
+    },
+    events: { inputType: 'ddlInputType', add: 'btnAdd', edit: 'gvTransDataSelect', remove: 'gvTransDataDelete', cancelEdit: 'gvTransDataCancel' },
+    ui: { minMax: 'MinMaxPanel', listPanel: 'ListPanel', add: 'BtnAdd' },
+  },
+  'value-lists': {
+    route: '/settings/parametervaluelistform',
+    fields: { code: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox2', values: 'GVTransData', value: 'TbValue', result: 'DDLPass' },
+    events: { add: 'btnAdd', remove: 'gvTransDataDelete' },
+  },
+  shifts: {
+    route: '/settings/shiftmasterform',
+    fields: {
+      shiftCode: 'PrimaryKey', businessUnit: 'DropDownList2', status: 'ddlStatus', department: 'DropDownList8', name: 'TextBox3', startTime: 'TextBox1',
+      endTime: 'TextBox2', breakPeriod: 'TextBox4', breaks: 'GVTransData', breakName: 'TBBreakName', breakStart: 'TBStart', breakEnd: 'TBEnd',
+    },
+    events: { add: 'btnAdd', remove: 'gvTransDataDelete' },
+  },
 };
 
 /** one screen as a plain service: its fields by name over the screen's own resource */
-export function plainMaster({ route, fields, tree }) {
+export function plainMaster({ route, fields, tree, events = {}, ui = {} }) {
   const m = screenResource(route);
   const auto = Object.fromEntries(Object.entries(m.FIELDS).map(([a, id]) => [id, a])); // control -> the resource's name
   for (const [f, id] of Object.entries(fields)) if (!auto[id]) throw new Error(`${route}: no control ${id} for ${f}`);
+  for (const [e, id] of Object.entries(events)) if (!m.EVENTS[id]) throw new Error(`${route}: no event ${id} for ${e}`);
+  const fieldOf = Object.fromEntries(Object.entries(fields).map(([f, id]) => [auto[id], f])); // the resource's name -> field
   const NESTED = new Set(Object.keys(fields).filter((f) => m.NESTED.has(auto[fields[f]])));
   /** { field: value } -> the resource's { record } */
   const toResource = (record = {}) => ({ record: Object.fromEntries(Object.entries(record).filter(([f]) => fields[f]).map(([f, v]) => [auto[fields[f]], v])) });
+  const lists = (o) => Object.fromEntries(Object.entries(o ?? {}).filter(([a]) => fieldOf[a]).map(([a, x]) => [fieldOf[a], x.filter((i) => i.value !== '')]));
+  /** what the screen shows or hides of the controls named in `ui` (a panel, the Add button's text) */
+  const shown = (u = {}) =>
+    Object.fromEntries(
+      Object.entries(ui).flatMap(([n, id]) => {
+        const s = u[m.NAMES[id]];
+        return s ? [[n, Object.fromEntries(['visible', 'text'].filter((k) => s[k] !== undefined).map((k) => [k, s[k]]))]] : [];
+      }),
+    );
   /** the resource's answer -> { record, options } by field; a list's blank "Select" item is the page's own placeholder */
   const plain = (r) => ({
     record: Object.fromEntries(Object.entries(fields).map(([f, id]) => [f, r.record[auto[id]] ?? ''])),
-    options: Object.fromEntries(Object.entries(fields).filter(([, id]) => r.options[auto[id]]).map(([f, id]) => [f, r.options[auto[id]].filter((o) => o.value !== '')])),
+    options: lists(r.options),
     status: r.status,
     statusMessage: r.statusMessage,
+    // a screen with row events: what its rows' editor shows, and the screen's own state between events
+    ...(Object.keys(events).length && { ui: shown(r.ui), viewState: r.viewState ?? {} }),
   });
   const withTree = async (r) => (tree ? { ...r, tree: await roleTree() } : r);
   const answer = (r) => ({ key: netString(r.key), message: r.message, alert: r.alert ?? null, ...(r.logout && { logout: true }) });
@@ -82,11 +145,22 @@ export function plainMaster({ route, fields, tree }) {
     },
     get: async (c, key) => {
       const r = await m.get(c, key);
-      return r && withTree(plain(r));
+      // a screen that prints (Employee) prints a saved record, on one of the unit's printers
+      return r && withTree({ ...plain(r), ...(m.print && { printers: await printerOptions(c.businessUnit) }) });
     },
+    /** TitleControl Print of a saved record; { alert } when the screen refused (no printer chosen ...) */
+    print: m.print && (async (c, key, printer) => ({ alert: (await m.printRecord(c, { record: { [auto.PrimaryKey]: key }, printer })).alert })),
     copyOf: async (c, key) => {
       const r = await m.copyOf(c, key);
       return r && plain(r);
+    },
+    EVENTS: events,
+    /** a row event (add, remove, edit a line ...) run by the screen's own handler on the record the page holds:
+     *  { record (only what changed), options, ui, viewState, alert } */
+    event: async (c, name, body) => {
+      const r = await m.event(c, events[name], { ...toResource(body.record), viewState: body.viewState, arg: body.arg });
+      const record = Object.fromEntries(Object.entries(r.record).filter(([a]) => fieldOf[a]).map(([a, v]) => [fieldOf[a], v]));
+      return { record, options: lists(r.options), ui: shown(r.ui), viewState: r.viewState ?? {}, alert: r.alert ?? null };
     },
     list: (c, q) => m.list(c, q),
     searchFields: (c) => m.searchFields(c),
@@ -135,6 +209,11 @@ function plainRouter(s) {
   router.post('/', body, async (req, res) => created(res, signOut(res, await s.create(ctx(req), req.valid.body))));
   router.put('/:key', body, async (req, res) => ok(res, found(await s.save(ctx(req), keyOf(req), req.valid.body), req.params.key)));
   router.delete('/:key', body, async (req, res) => ok(res, found(await s.cancel(ctx(req), keyOf(req), req.valid.body.remark), req.params.key)));
+  router.post('/events/:event', body, async (req, res) => {
+    if (!s.EVENTS[req.params.event]) throw AppError.notFound(`Event ${req.params.event}`);
+    ok(res, await s.event(ctx(req), req.params.event, req.valid.body));
+  });
+  if (s.print) router.post('/:key/print', async (req, res) => ok(res, await s.print(ctx(req), keyOf(req), netString(req.body?.printer))));
   return router;
 }
 

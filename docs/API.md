@@ -79,9 +79,9 @@ the original's list query does.
 Send the whole `record` the API gave you back (with your changes), and the `viewState` of the last answer: the screen's
 code works on the full form, as the original page did.
 
-### Authorization and Business Setup: plain pages
+### Plain pages: Authorization, Business Setup, Settings
 
-These 8 screens have plain pages and their own field names (`modules/masters/plain-masters.js`); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` for Department); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (Department) and `tree` (User Roles: the pages, `pages` holds the ticked ones). Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
+These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, and the 10 of Settings (`modules/masters/plain-masters.js`); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` for Department); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (Department) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values and Shift add their table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, arg }` (arg: the line's key for `edit` / `remove`) answers `{ record (what changed), options, ui, viewState, alert }`; their records also bring `ui` (the editor's panels, the Add button's text) and `viewState`, sent back with the next event. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
 
 ### Change Password — `/api/masters/change-password`
 
@@ -191,13 +191,13 @@ Original: `View/ProductionSetup/WorkCenterForm.aspx`. Fields: `stationCode`, `bu
 
 ### Defect Code Master — `/api/masters/defect-codes`
 
-Original: `View/Settings/DefectCodeMasterForm.aspx`. Fields: `code`, `status`, `category`, `defectCategory`, `name`, `alias`, `process`.
+Original: `View/Settings/DefectCodeMasterForm.aspx`. Fields: `code`, `status`, `materialCategory`, `defectCategory`, `name`, `alias`, `process`.
 
 ### Employee — `/api/masters/employees`
 
-Original: `View/Settings/EmployeeForm.aspx`. Fields: `empCode`, `businessUnit`, `status`, `name`, `alias`, `joinDate`, `empType`, `department`, `designation`, `gender`, `birthDate`, `married`, `anniversary`, `address1`, `address2`, `postalCode`, `city`, `state`, `country`, `email`, `mobileNo`, `altMobileNo`, `accessCardNo`, `allowAccess`.
+Original: `View/Settings/EmployeeForm.aspx`. Fields: `empCode`, `businessUnit`, `status`, `name`, `alias`, `joinDate`, `empType`, `department`, `designation`, `gender`, `birthDate`, `married`, `anniversary`, `address1`, `address2`, `postalCode`, `city`, `state`, `country`, `email`, `contactNo`, `altContactNo`, `accessCardNo`, `allowAccess`.
 
-Print: yes.
+Print: `POST /:key/print` `{ printer }`.
 
 ### Identification Tag Designs — `/api/masters/material-tags`
 
@@ -205,37 +205,37 @@ Original: `View/Settings/MaterialTagForm.aspx`. Fields: `tagCode`, `status`, `na
 
 ### CheckList Master — `/api/masters/check-lists`
 
-Original: `View/Settings/ParameterForm.aspx`. Fields: `parameterCode`, `status`, `name`, `alias`, `type`, `ddlUom`, `ddlList`, `ddlInstrument`, `uploadImage`, `parameterTran`, `tbName`, `tbDescription`, `ddlInputType`, `tbMinValue`, `tbMaxValue`, `tbPassValue`, `ddlResultDefined`.
+Original: `View/Settings/ParameterForm.aspx`. Fields: `checklistCode`, `status`, `name`, `alias`, `type`, `parameters` (rows); the line editor: `paramName`, `description`, `inputType`, `minValue`, `maxValue`, `passValue`, `unit`, `resultDefined`, `list`, `instrument`, `guideImage`.
 
-Events: `ddlInputType`, `btnAdd`, `gvTransDataSelect`, `gvTransDataDelete`.
+Events: `inputType`, `add` (adds, or saves the line being edited), `edit`, `remove`, `cancelEdit`. Copy: `GET /:key/copy`.
 
 ### Parameter Value List — `/api/masters/value-lists`
 
-Original: `View/Settings/ParameterValueListForm.aspx`. Fields: `code`, `status`, `name`, `ddlPass`, `parameterListTran`, `tbValue`.
+Original: `View/Settings/ParameterValueListForm.aspx`. Fields: `code`, `status`, `name`, `values` (rows); the editor: `value`, `result`.
 
-Events: `btnAdd`, `gvTransDataDelete`.
+Events: `add`, `remove`.
 
 ### Printer Master — `/api/masters/printers`
 
-Original: `View/Settings/PrinterForm.aspx`. Fields: `rowID`, `businessUnit`, `status`, `department`, `area`, `station`, `name`, `ip`, `driver`.
+Original: `View/Settings/PrinterForm.aspx`. Fields: `printerId`, `businessUnit`, `status`, `department`, `area`, `station`, `name`, `ip`, `driver`.
 
 ### Rework Resolution Master — `/api/masters/rework-resolutions`
 
-Original: `View/Settings/ReworkResolutionForm.aspx`. Fields: `id`, `status`, `type`.
+Original: `View/Settings/ReworkResolutionForm.aspx`. Fields: `code`, `status`, `reason`.
 
 ### Root Cause Master — `/api/masters/root-causes`
 
-Original: `View/Settings/RootCauseForm.aspx`. Fields: `id`, `status`, `type`.
+Original: `View/Settings/RootCauseForm.aspx`. Fields: `code`, `status`, `reason`.
 
 ### Material Scrap Reason Master — `/api/masters/scrap-reasons`
 
-Original: `View/Settings/ScrapReasonForm.aspx`. Fields: `id`, `status`, `type`.
+Original: `View/Settings/ScrapReasonForm.aspx`. Fields: `code`, `status`, `reason`.
 
 ### Shift — `/api/masters/shifts`
 
-Original: `View/Settings/ShiftMasterForm.aspx`. Fields: `shiftCode`, `businessUnit`, `status`, `department`, `name`, `startTime`, `endTime`, `breakPeriod`, `shiftBreaks`, `tbBreakName`, `tbStart`, `tbEnd`.
+Original: `View/Settings/ShiftMasterForm.aspx`. Fields: `shiftCode`, `businessUnit`, `status`, `department`, `name`, `startTime`, `endTime`, `breakPeriod`, `breaks` (rows); the editor: `breakName`, `breakStart`, `breakEnd`.
 
-Events: `btnAdd`, `gvTransDataDelete`.
+Events: `add`, `remove`.
 
 ### Rework Confirmation — `/api/quality/rework-confirmations`
 

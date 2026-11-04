@@ -6,18 +6,19 @@
 // locked), checks (a tick list), tree (the role tree), image (a PNG). The record keeps every field the server gave, shown
 // or not, and is sent back whole. After Save / Update the form starts a new record, as the original's did.
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Copy, Plus, RotateCw, Save } from 'lucide-react';
+import { ArrowLeft, Copy, Plus, Printer, RotateCw, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '@/api.js';
 import { askConfirm } from '@/app/confirm.js';
 import { openedRecord, useRememberView } from '@/lib/recordParam.js';
 import { cn } from '@/lib/utils';
 import { CheckList, ImageField, RoleTree } from '@/components/shared/FormControls.jsx';
-import { Select, TextInput } from '@/components/shared/FormField.jsx';
+import { Select, TextArea, TextInput } from '@/components/shared/FormField.jsx';
 import { LockedValue, STEP_COLS, Step, TONE_CYCLE } from '@/components/shared/FormStep.jsx';
 import Loader from '@/components/shared/Loader.jsx';
 import Page from '@/components/shared/Page.jsx';
 import RecordsList from '@/components/shared/RecordsList.jsx';
+import RowFormGrid from '@/components/shared/RowFormGrid.jsx';
 import { Badge } from '@/components/ui/badge.jsx';
 import { Button } from '@/components/ui/button.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
@@ -36,6 +37,8 @@ export function masterApi(name) {
     copy: (key) => api(`${base}/${enc(key)}/copy`),
     create: (record) => api(base, { method: 'POST', body: { record } }),
     update: (key, record) => api(`${base}/${enc(key)}`, { method: 'PUT', body: { record } }),
+    print: (key, printer) => api(`${base}/${enc(key)}/print`, { method: 'POST', body: { printer } }),
+    event: (event, body) => api(`${base}/events/${enc(event)}`, { method: 'POST', body }),
   };
 }
 
@@ -70,6 +73,7 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
   const [loadError, setLoadError] = useState('');
   const [busy, setBusy] = useState(false);
   const [copyKey, setCopyKey] = useState('');
+  const [printer, setPrinter] = useState('');
   const saved = useRef('');
   const isNew = !initial.key;
 
@@ -83,6 +87,7 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
         const f = b ? { ...b, record: r.record } : r;
         saved.current = JSON.stringify(f.record);
         setForm(f);
+        if (f.printers) setPrinter(f.printers.value);
         if (f.statusMessage) toast.error(f.statusMessage, { id: f.statusMessage, duration: 6000 });
       })
       .catch((e) => live && setLoadError(e.message));
@@ -124,6 +129,43 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
     }
   }
 
+  /** a row event (Add, Edit, Delete ... of a table, an input type picked) run by the screen on the record as it is now;
+   *  its answer merged in. rec: the record with a change not yet in the state. */
+  async function run(event, arg, rec = form.record) {
+    setBusy(true);
+    try {
+      const r = await m.event(event, { record: rec, viewState: form.viewState, arg });
+      setForm((x) => ({
+        ...x,
+        record: { ...x.record, ...r.record },
+        options: { ...x.options, ...r.options },
+        ui: Object.fromEntries([...new Set([...Object.keys(x.ui ?? {}), ...Object.keys(r.ui)])].map((k) => [k, { ...x.ui?.[k], ...r.ui[k] }])),
+        viewState: r.viewState,
+      }));
+      if (r.alert) toast.error(r.alert, { id: r.alert, duration: 6000 });
+      return r;
+    } catch (err) {
+      toast.error(err.alert ?? err.message, { id: err.message, duration: 6000 });
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** TitleControl Print: the saved record's label on the chosen printer */
+  async function print() {
+    setBusy(true);
+    try {
+      const r = await m.print(initial.key, printer);
+      if (r.alert) toast.error(r.alert, { id: r.alert, duration: 6000 });
+      else toast.success('Sent to printer');
+    } catch (err) {
+      toast.error(err.message, { id: err.message, duration: 6000 });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const shell = (children, actions) => (
     <Page icon={icon} title={title} subtitle={subtitle} actions={actions}>
       {children}
@@ -148,8 +190,14 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
   const opts = (f) => (options[f] ?? []).map((o) => ({ value: o.value, label: o.text }));
 
   function field(x) {
-    const { f, label, kind = 'text', required, max, type, span, selectAll } = x;
+    const { f, label, kind = 'text', required, max, type, span, selectAll, rows, render, on } = x;
     const cls = cn('min-w-0', span === 'full' ? 'col-span-full' : span === 2 && 'sm:col-span-2');
+    if (kind === 'rows') return <div key={f} className="col-span-full min-w-0">{grid(x)}</div>;
+    // a pick the screen answers (Check List's input type shows its editors)
+    if (kind === 'select' && on)
+      return <Select key={f} label={label} required={required} value={record[f]} options={opts(f)} onChange={(v) => { set(f)(v ?? ''); run(on, undefined, { ...record, [f]: v ?? '' }); }} className={cls} />;
+    if (kind === 'custom') return <div key={f} className={cls}>{render(record)}</div>; // something the page draws from the record (Tag Design's PRN preview)
+    if (kind === 'textarea') return <TextArea key={f} label={label} required={required} rows={rows} maxLength={max} value={record[f] ?? ''} onChange={(e) => set(f)(e.target.value)} className={cls} />;
     if (kind === 'key') return <LockedValue key={f} label={label} value={/^0?$/.test(String(record[f] ?? '').trim()) ? '' : record[f]} placeholder="Auto-generated" className={cls} />;
     if (kind === 'select') return <Select key={f} label={label} required={required} value={record[f]} options={opts(f)} onChange={(v) => set(f)(v ?? '')} className={cls} />;
     if (kind === 'image') return <div key={f} className={cls}><ImageField c={{ id: f }} label={label} value={record[f]} onChange={set(f)} /></div>;
@@ -186,6 +234,31 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
     );
   }
 
+  /** a table whose lines are added, edited and deleted by the screen's events, in the table itself (shared RowFormGrid).
+   *  x = { f, rowKey, columns: [{ col, header, editor?: field }], more: [fields under the editors], events: { add,
+   *  select?, delete, cancel? } }; an editor with `panel` shows while the screen shows that panel */
+  function grid(x) {
+    const inCells = x.columns.filter((k) => k.editor);
+    const editors = Object.fromEntries([...inCells.map((k) => k.editor), ...(x.more ?? [])].map((e) => [e.f, e]));
+    const ev = x.events;
+    const byId = { add: ev.add, [`${x.f}:select`]: ev.select, [`${x.f}:delete`]: ev.delete, cancel: ev.cancel };
+    return (
+      <RowFormGrid
+        c={{ id: x.f, keyName: x.rowKey, columns: x.columns.map((k) => ({ kind: 'boundfield', dataField: k.col, header: k.header })) }}
+        cfg={{ fields: Object.fromEntries(inCells.map((k) => [k.col, k.editor.f])), more: (x.more ?? []).map((e) => e.f), add: 'add', cancel: ev.cancel && 'cancel' }}
+        rows={record[x.f] ?? []}
+        fire={(id, _values, arg) => run(byId[id], arg)}
+        values={record}
+        events={Object.keys(byId).filter((id) => byId[id])}
+        busy={busy}
+        cancelled={cancelled}
+        // in a cell an editor has no caption (the column header is one); under the editors it keeps its own
+        field={(n) => field({ ...editors[n], label: inCells.some((k) => k.editor.f === n) ? undefined : editors[n].label })}
+        onScreen={(n) => !editors[n]?.panel || form.ui?.[editors[n].panel]?.visible !== false}
+      />
+    );
+  }
+
   const showStatus = !isNew && 'status' in record && options.status;
   const actions = (
     <div className="flex flex-wrap items-end gap-3">
@@ -196,6 +269,14 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
       {backButton}
       {/* a new record takes the default status (Active); it shows once the record is saved */}
       {showStatus && <div className="w-56"><Select label="Record status" value={record.status} options={opts('status')} onChange={(v) => set('status')(v ?? '')} disabled={cancelled} /></div>}
+      {form.printers && !isNew && !cancelled && (
+        <span className="flex items-center gap-2">
+          <NativeSelect className="h-10 w-auto" aria-label="Printer" value={printer} onChange={(e) => setPrinter(e.target.value)}>
+            {form.printers.options.map((o) => <option key={o.value} value={o.value}>{o.text}</option>)}
+          </NativeSelect>
+          <Button type="button" variant="outline" icon={Printer} loading={busy} className="h-10" onClick={print}>Print</Button>
+        </span>
+      )}
       {form.copyFrom && (
         <span className="flex items-center gap-2">
           <NativeSelect className="h-10 w-auto max-w-56" aria-label="Record to copy" value={copyKey} onChange={(e) => setCopyKey(e.target.value)}>

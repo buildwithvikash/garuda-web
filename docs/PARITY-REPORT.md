@@ -409,3 +409,17 @@ Intended differences:
 Checked on TEST against the original DLLs, through the new services: `forms-write-parity.js --api` for User Master, Business Unit, Department and Ledger Master: identical; User Roles fails alike on cancel (UserRoles has no Status column). `page-writes-parity.js --api`: the 10 Change / Reset Password cases and the Company update identical. Built pages run in a browser with a TEST system-user session: every page opens, lists name coded values (Company's licence type), the role tree and the tick lists show the saved choices, a department created, updated and copied through the page (removed afterwards), and the old engine path answers 410.
 
 Not run: Change / Reset Password through the page (the comparison runs them on a temporary user), a user's photo or a logo uploaded through the page.
+
+# Settings on plain pages (owner, approved 4 Nov 2026)
+
+Defect Codes, Employee, Identification Tag Designs, Barcode Printer, Rework Resolution, Root Cause and Material Scrap Reason are plain pages on `/api/masters/<name>` the same way (`plain-masters.js`, API.md), fields grouped in sections; `/api/forms` answers 410 for them. Saves run the same writer. Employee keeps its Print (a saved, not cancelled record, on one of the unit's printers: `POST /:key/print`, the screen's own print handler); Tag Design keeps its PRN preview beside the command. Check List, Check List Values and Shift (owner, 4 Nov 2026) add, edit and delete their rows through the screen's own handlers (`POST /events/:event`), in the table itself with the shared row editor (RowFormGrid, as Bill of Material): duplicate checks, line numbers, the input type's Min / Max and List editors and the editor's Cancel are the screen's.
+
+Intended differences:
+
+- **Dates are date pickers** on Employee (Join, Birth, Anniversary); they were plain text boxes holding the same yyyy-mm-dd.
+- **Delete stays hidden**, as on the old form.
+- **Check List's line editors not in a column** (Min, Max, Pass Value, Unit, Result Defined By, List Items, Instrument, Guide Image) sit under the line being added or edited, shown as the input type asks.
+
+Checked on TEST against the original DLLs: `forms-write-parity.js --api` for the 10 screens: identical, except Scrap Reason's cancel, which fails alike on both sides (ScrapReasons has no Status column). `events-parity.js --api` for the 3 table screens: 7 of 10 cases identical, 2 fail alike, 1 is the original host's known `ctl00` error. Built pages run in a browser with a TEST system-user session: Shift adds a break, refuses a duplicate ("Value Already Added") and deletes it; Check List edits a line, shows the numeric and list editors as the input type changes, and cancels the edit; Check List Values adds a value on a new record (nothing saved); each page opens a saved record with its values, the lists open, Tag Design draws the preview, Print without a printer is refused ("Choose a printer first."), the old engine path answers 410 and Shift is still served.
+
+Not run: a label actually printed, a tag image uploaded through the page.
