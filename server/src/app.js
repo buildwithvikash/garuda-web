@@ -6,7 +6,6 @@ import { requestLog } from './middlewares/requestLog.js';
 import { securityHeaders } from './middlewares/securityHeaders.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import authRoutes from './modules/auth/auth.routes.js';
-import formsRoutes from './modules/forms/forms.routes.js';
 import productionAssignmentsRoutes from './modules/production/production-assignments/production-assignments.routes.js';
 import productionOrdersRoutes from './modules/production/production-orders/production-orders.routes.js';
 import rmReplacementsRoutes from './modules/production/rm-replacements/rm-replacements.routes.js';
@@ -29,10 +28,9 @@ app.use(requestLog);
 app.use(securityHeaders(`${dist}/index.html`));
 
 // screens send whole forms (grids, images, picked files) as the original pages posted them
-for (const p of ['/api/forms', '/api/masters', '/api/quality', '/api/production/plan-uploads', '/api/production/wip-capture', ...Object.keys(PRODUCTION).map((n) => `/api/production/${n}`)]) app.use(p, express.json({ limit: '100mb' }));
+for (const p of ['/api/masters', '/api/quality', '/api/production/plan-uploads', '/api/production/wip-capture', ...Object.keys(PRODUCTION).map((n) => `/api/production/${n}`)]) app.use(p, express.json({ limit: '100mb' }));
 app.use('/api', express.json({ limit: '1mb' }));
 app.use('/api/auth', authRoutes);
-app.use('/api/forms', formsRoutes);
 app.use('/api/production/orders', productionOrdersRoutes);
 app.use('/api/production/assignments', productionAssignmentsRoutes);
 app.use('/api/production/rm-replacements', rmReplacementsRoutes);

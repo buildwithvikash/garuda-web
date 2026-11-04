@@ -1,4 +1,4 @@
-// The screen registries the engine reads (forms routes, state, events): each screen file adds its page's code-behind
+// The screen registries the engine reads (resource.js, state, events): each screen file adds its page's code-behind
 // to them. eventHelpers is what every handler gets as `h`.
 import { netString } from '../../../shared/net.js';
 import { newFormState } from '../state.js';

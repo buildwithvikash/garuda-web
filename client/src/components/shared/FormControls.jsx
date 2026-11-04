@@ -1,15 +1,12 @@
-// The engine's input controls in the QMAS style: text/number/date inputs, dropdowns, checkboxes, the ComboBox picker,
+// The engine's input controls in the QMAS style: text/number/date inputs, dropdowns, checkboxes,
 // image/file uploads, the searchable CheckBoxList, the role TreeView and the guide-file viewer.
-import { BookOpen, Loader2, Search, X } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { screenApi } from '@/lib/screenApi.js';
-import { Button } from '@/components/ui/button.jsx';
 import Section from '@/components/shared/Section.jsx';
 import { Field } from '@/components/shared/FormField.jsx';
 import { NativeSelect } from '@/components/ui/native-select.jsx';
 import { Input } from '@/components/ui/input.jsx';
 import { Textarea } from '@/components/ui/textarea.jsx';
-import toast from 'react-hot-toast';
 
 const maxLen = (c) => (c.maxLength > 0 && c.maxLength < 100000 ? c.maxLength : undefined);
 const fileCls = 'block w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary/5 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10 cursor-pointer';
@@ -47,67 +44,6 @@ export function EngineField({ c, label, value, onChange }) {
     </Field>
   );
 }
-
-/** ComboBoxControl: shows the one item picked; "Choose" opens a searchable picker whose rows are value + the other
- *  columns; picking one makes it the list's only item. */
-export function ComboField({ path, c, label, value, onPick }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const load = (q) => {
-    setLoading(true);
-    screenApi(path)
-      .combo(c.id, q)
-      .then((d) => setData(d))
-      .catch((e) => toast.error(e.message, { id: e.message, duration: 6000 }))
-      .finally(() => setLoading(false));
-  };
-  const current = c.options?.find((o) => o.value === value);
-  const pick = (r) => (setOpen(false), onPick({ value: r[0], text: r.length > 1 ? r[1] : r[0] }));
-  return (
-    <div className="min-w-0">
-      <span className="text-sm leading-none font-medium">{label}</span>
-      <div className="flex gap-2">
-        <Input readOnly value={current ? current.text : ''} placeholder="Nothing chosen" aria-label={label || c.id} />
-        <Button variant="outline" disabled={c.enabled === false} onClick={() => (open ? setOpen(false) : (setOpen(true), setSearch(''), setData(null), load(null)))}>Choose</Button>
-      </div>
-      {open && (
-        <div className="animate-in fade-in-0 zoom-in-95 relative z-10 mt-2 rounded-xl border bg-card text-card-foreground shadow-sm p-3">
-          {/* No <form>: this renders inside RecordForm's form, and a nested form would submit the record instead. */}
-          <div className="mb-2 flex gap-2">
-            <Input placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), load(search))} autoFocus />
-            <Button variant="outline" icon={Search} aria-label="Search" onClick={() => load(search)} />
-            <Button variant="ghost" icon={X} aria-label="Close" onClick={() => setOpen(false)} />
-          </div>
-          {loading ? (
-            <div className="flex items-center gap-2 p-3 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin text-primary" /> Loading…</div>
-          ) : (
-            <div className="max-h-72 overflow-auto">
-              {data?.rows?.length === 0 && <p className="p-3 text-sm text-muted-foreground">No matches.</p>}
-              <table className="w-full text-left text-sm">
-                <tbody className="divide-y divide-border">
-                  {(data?.rows ?? []).map((r, i) => (
-                    <tr key={i} tabIndex={0} className="cursor-pointer hover:bg-muted/50 focus:bg-primary/5 focus:outline-none" onClick={() => pick(r)} onKeyDown={(e) => e.key === 'Enter' && pick(r)}>
-                      {r.slice(1).map((x, j) => <td key={j} className="px-2 py-2 text-foreground">{x}</td>)}
-                      {r.length === 1 && <td className="px-2 py-2 text-foreground">{r[0]}</td>}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-const readAsDataUrl = (file, then) => {
-  const r = new FileReader();
-  r.onload = () => then(String(r.result));
-  r.readAsDataURL(file);
-};
 
 /** UploadImage user control: a PNG read into a data URL (what its hidden TBImage held). */
 export function ImageField({ c, label, value, onChange }) {

@@ -1,5 +1,4 @@
-// Column headers as people read them (display only: export and search keep the list's own names). Plain JS (no React),
-// so the page scripts (scripts/page-texts.mjs) write the same texts a table shows.
+// Column headers as people read them (display only: export and search keep the list's own names). Plain JS (no React).
 const ACRONYMS = new Set(["QC", "BU", "UOM", "SO", "ID", "IP", "FG", "HSN", "ERP", "BOM", "RM", "PO", "NCMR", "SR"]);
 const WHOLE = new Set(["BARCODE", "PASSCODE", "ZIPCODE"]); // words that only look like name + ending
 const SUFFIXES = ["STATUS", "NAME", "CODE", "DATE", "TIME", "TYPE", "DESC", "QTY", "NO", "ID"];

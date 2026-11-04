@@ -54,7 +54,9 @@ const router = Router();
 router.use(materialImages);
 router.use(routingStageImages); // the Routing screen's "Images on WIP Capture" (not part of its record either)
 router.use(serialLogicPreview); // before the screen's /:key routes ('preview' is not a key)
-router.use(materialBarcodeReprint); // before the screen's /:key routes ('reprint' is not a barcode number)
+// Material Barcode is reprint only (owner, 29 Oct 2026): its reprint calls, not the screen's list / save / delete
+router.use(materialBarcodeReprint);
 router.use(plainMasters); // the screens with plain pages (plain-masters.js): their own field names
-router.use(screensRouter(Object.fromEntries(Object.entries(MASTERS).filter(([n]) => !PLAIN[n]))));
+const UNMOUNTED = new Set(['material-barcodes']);
+router.use(screensRouter(Object.fromEntries(Object.entries(MASTERS).filter(([n]) => !PLAIN[n] && !UNMOUNTED.has(n)))));
 export default router;

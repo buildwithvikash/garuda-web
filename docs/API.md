@@ -30,7 +30,7 @@ such record / event; 500 `{ message }` with the request reference that is in the
 | `PUT /:prodNo` · `DELETE /:prodNo` | refused, 409: an order cannot be changed or cancelled once it is created (owner, 31 Oct 2026) |
 
 Only the user's business unit: the list, its filter values, a single order and its serials show that unit's orders;
-another unit's order answers 404. The screen engine (`/api/forms`) no longer serves this screen (410), so none of this
+another unit's order answers 404. The screen engine (`/api/forms`) is gone, so none of this
 can be gone around.
 
 `POST /` takes an `Idempotency-Key` header: the same key again (a double click, a retry) gets the first answer, not a
@@ -49,8 +49,7 @@ priority, unit, sales order, material, and a BOM of the chosen material), and ig
 Every call replays the choices made before it (department, order, routing, process, station) through the screen's own
 handlers and refuses one the server did not offer, so another department's or business unit's order cannot be looked
 at or started. `POST /print` takes an `Idempotency-Key` header: the same key again (a double click, a retry) gets the
-first answer, not a second batch of job cards and labels. The screen engine (`/api/forms`) no longer serves this
-screen (410).
+first answer, not a second batch of job cards and labels. The screen engine (`/api/forms`) is gone.
 
 ## Setup and quality screens — /api/masters/<name>, /api/quality/<name>
 
@@ -81,7 +80,7 @@ code works on the full form, as the original page did.
 
 ### Plain pages: Authorization, Business Setup, Settings, Material Setup, Production Setup
 
-These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, the 10 of Settings, 8 of Material Setup and the 5 of Production Setup (`modules/masters/plain-masters.js`; Material Barcode is its reprint page, below); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` where the screen copies: Department, Variant Field, Model, Material, Serial Generation Logic, Bill of Material, Work Center, Routing); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). Routing Guide's page has no Add, as the screen had none (routings are made on Routing). A picked file (Routing Guide's `guideFile`) is `{ name, data }` (base64). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (the screens that copy) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values, Shift, Model, Material, Serial Generation Logic, Bill of Material, Routing and Routing Guide run their option changes and table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, ui, arg, index }` (arg: the line's key for `edit` / `remove`; index: the line's position, for a row command such as BOM's `openAlternatives`; ui: `{ field: { options } }`, the `lists` the page holds) answers `{ record (what changed), options, lists, ui, viewState, alert, success? }`; their records also bring `ui` (the panels the screen shows or hides, the Add button's text), `viewState` and `lists` (the lists the screen's code filled, as the screen has them, "Select" item included), sent back with the next event. Fields the page does not show (Material's batch / FIFO / inspection settings, Material Category's tag design and inspection, BOM's weight and business unit, Production Process's cost / tag / serial logic ..., Work Center's group and cost, the business unit Production Line and Work Center keep hidden) are not fields: a saved record keeps them, a new one gets the screen's defaults. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
+These screens have plain pages and their own field names: the 8 of Authorization and Business Setup, the 10 of Settings, 8 of Material Setup and the 5 of Production Setup (`modules/masters/plain-masters.js`; Material Barcode is its reprint page, below); the old screen engine is gone. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` where the screen copies: Department, Variant Field, Model, Material, Serial Generation Logic, Bill of Material, Work Center, Routing); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). Routing Guide's page has no Add, as the screen had none (routings are made on Routing). A picked file (Routing Guide's `guideFile`) is `{ name, data }` (base64). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (the screens that copy) and `tree` (User Roles: the pages, `pages` holds the ticked ones); a saved Employee also brings `printers` (`{ options, value }`) and prints with `POST /:key/print` `{ printer }`, answering `{ alert }` when refused (no printer chosen). Check List, Check List Values, Shift, Model, Material, Serial Generation Logic, Bill of Material, Routing and Routing Guide run their option changes and table rows through the screen's own handlers: `POST /events/:event` `{ record, viewState, ui, arg, index }` (arg: the line's key for `edit` / `remove`; index: the line's position, for a row command such as BOM's `openAlternatives`; ui: `{ field: { options } }`, the `lists` the page holds) answers `{ record (what changed), options, lists, ui, viewState, alert, success? }`; their records also bring `ui` (the panels the screen shows or hides, the Add button's text), `viewState` and `lists` (the lists the screen's code filled, as the screen has them, "Select" item included), sent back with the next event. Fields the page does not show (Material's batch / FIFO / inspection settings, Material Category's tag design and inspection, BOM's weight and business unit, Production Process's cost / tag / serial logic ..., Work Center's group and cost, the business unit Production Line and Work Center keep hidden) are not fields: a saved record keeps them, a new one gets the screen's defaults. The rows' editor fields are fields of the record; only the rows are saved. Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
 
 ### Change Password — `/api/masters/change-password`
 
@@ -117,63 +116,59 @@ Original: `View/BusinessSetup/LedgerForm.aspx`. Fields: `ledgerCode`, `departmen
 
 ### Bill of Material — `/api/masters/bills-of-material`
 
-Original: `View/MaterialSetup/BillOfMaterial.aspx`. Plain page; the screen engine answers 410. Fields: `bomCode`, `status`, `name`, `version`, `remark`, `model`, `material`, `baseQty`, `baseUom`, `process`, `inputs`, `inputType`, `inputMaterial`, `inputQty`, `inputUom`, `inputScan`, `outputScan`, `subRouting`, `alternatives`, `lineAlternatives`, `alternative`, `outputs`, `outputType`, `outputMaterial`, `outputQty`, `outputUom`.
+Original: `View/MaterialSetup/BillOfMaterial.aspx`. Plain page; the old screen engine is gone. Fields: `bomCode`, `status`, `name`, `version`, `remark`, `model`, `material`, `baseQty`, `baseUom`, `process`, `inputs`, `inputType`, `inputMaterial`, `inputQty`, `inputUom`, `inputScan`, `outputScan`, `subRouting`, `alternatives`, `lineAlternatives`, `alternative`, `outputs`, `outputType`, `outputMaterial`, `outputQty`, `outputUom`.
 
 Events: `material`, `inputType`, `inputMaterial`, `outputType`, `outputMaterial`, `addInput`, `editInput`, `cancelInput`, `removeInput`, `addOutput`, `editOutput`, `cancelOutput`, `removeOutput`, `openAlternatives`, `closeAlternatives`, `addAlternative`, `updateAlternatives`, `removeAlternative`. `ui`: `subRoutingPanel`, `outputScanPanel`, `alternativesPanel` (the pop-up of a line's alternates).
 
 ### Material Barcode — `/api/masters/material-barcodes`
 
-Original: `View/MaterialSetup/MaterialBarcode.aspx`. Fields: `barcodeNo`, `createdOn`, `businessUnit`, `status`, `serial`, `tbReprint`, `department`, `area`, `storageCode`, `material`, `uom`, `docType`, `docNo`, `processCode`, `tbRemark`.
-
-Events: `department`, `area`, `material`.
-
-Print: yes.
+Original: `View/MaterialSetup/MaterialBarcode.aspx`. Reprint only: the reprint calls below; the screen's list, save and delete are not served.
 
 ### Material Category — `/api/masters/material-categories`
 
-Original: `View/MaterialSetup/MaterialCategoryForm.aspx`. Plain page; the screen engine answers 410. Fields: `categoryCode`, `status`, `name`, `alias`, `prefix`, `categoryType`.
+Original: `View/MaterialSetup/MaterialCategoryForm.aspx`. Plain page; the old screen engine is gone. Fields: `categoryCode`, `status`, `name`, `alias`, `prefix`, `categoryType`.
 
 ### Material — `/api/masters/materials`
 
-Original: `View/MaterialSetup/MaterialForm.aspx`. Plain page; the screen engine answers 410. Fields: `matCode`, `status`, `type`, `ledger`, `category`, `model`, `tagDesign`, `name`, `itemCode`, `alias`, `baseUom`, `mrp`, `routing`, `track`, `fgSerialLogic`, `assetTagLogic`, `greenTagLogic`, `purchaseTax`, `purchaseRate`, `purchaseUom`, `purchaseConvQty`, `salesTax`, `wholesaleRate`, `salesUom`, `salesConvQty`, `variants`, `variantGroup`, `variantField`, `variantValue`, `newValue`, `image`.
+Original: `View/MaterialSetup/MaterialForm.aspx`. Plain page; the old screen engine is gone. Fields: `matCode`, `status`, `type`, `ledger`, `category`, `model`, `tagDesign`, `name`, `itemCode`, `alias`, `baseUom`, `mrp`, `routing`, `track`, `fgSerialLogic`, `assetTagLogic`, `greenTagLogic`, `purchaseTax`, `purchaseRate`, `purchaseUom`, `purchaseConvQty`, `salesTax`, `wholesaleRate`, `salesUom`, `salesConvQty`, `variants`, `variantGroup`, `variantField`, `variantValue`, `newValue`, `image`.
 
 Events: `type`, `category`, `model`, `baseUom`, `variantGroup`, `variantField`, `add`, `remove`. `ui`: `purchasePanel`, `salesPanel`, `variantPanel`.
 
 ### Model — `/api/masters/models`
 
-Original: `View/MaterialSetup/ModelForm.aspx`. Plain page; the screen engine answers 410. Fields: `modelCode`, `status`, `name`, `alias`, `category`, `prefix`, `beeCode`, `variants`, `variantGroup`, `variantField`, `variantValue`, `newValue`.
+Original: `View/MaterialSetup/ModelForm.aspx`. Plain page; the old screen engine is gone. Fields: `modelCode`, `status`, `name`, `alias`, `category`, `prefix`, `beeCode`, `variants`, `variantGroup`, `variantField`, `variantValue`, `newValue`.
 
 Events: `variantGroup`, `variantField`, `add`, `remove`.
 
 ### Serial Generation Logic — `/api/masters/serial-logics`
 
-Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Plain page; the screen engine answers 410. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `barcodeLength`, `useFor`, `parts`, `sequenceField`, `description`, `seqNo`, `separator`, `startingNo`, `seed`, `length`, `endingNo`, `format`, `value`.
+Original: `View/MaterialSetup/SerialGenerationLogicForm.aspx`. Plain page; the old screen engine is gone. Fields: `serialCode`, `status`, `name`, `alias`, `type`, `barcodeLength`, `useFor`, `parts`, `sequenceField`, `description`, `seqNo`, `separator`, `startingNo`, `seed`, `length`, `endingNo`, `format`, `value`.
 
 Events: `type`, `sequenceField`, `add`, `edit`, `cancelEdit`, `remove`. `ui`: `serialPanel`, `datePanel`, `valuePanel`.
 
 ### Unit of Measure — `/api/masters/units-of-measure`
 
-Original: `View/MaterialSetup/UnitOfMeasureForm.aspx`. Plain page; the screen engine answers 410. Fields: `uomCode`, `status`, `name`, `alias`, `uomType`.
+Original: `View/MaterialSetup/UnitOfMeasureForm.aspx`. Plain page; the old screen engine is gone. Fields: `uomCode`, `status`, `name`, `alias`, `uomType`.
 
 ### Variant Field — `/api/masters/variant-fields`
 
-Original: `View/MaterialSetup/VariantFieldForm.aspx`. Plain page; the screen engine answers 410. Fields: `fieldCode`, `status`, `name`.
+Original: `View/MaterialSetup/VariantFieldForm.aspx`. Plain page; the old screen engine is gone. Fields: `fieldCode`, `status`, `name`.
 
 ### Variant Field Value — `/api/masters/variant-values`
 
-Original: `View/MaterialSetup/VariantFieldValueForm.aspx`. Plain page; the screen engine answers 410. Fields: `code`, `status`, `field`, `value`, `prefix`.
+Original: `View/MaterialSetup/VariantFieldValueForm.aspx`. Plain page; the old screen engine is gone. Fields: `code`, `status`, `field`, `value`, `prefix`.
 
 ### Production Line — `/api/masters/production-lines`
 
-Original: `View/ProductionSetup/ProductionLineForm.aspx`. Plain page; the screen engine answers 410. Fields: `lineCode`, `status`, `department`, `name`, `alias`.
+Original: `View/ProductionSetup/ProductionLineForm.aspx`. Plain page; the old screen engine is gone. Fields: `lineCode`, `status`, `department`, `name`, `alias`.
 
 ### Production Process — `/api/masters/production-processes`
 
-Original: `View/ProductionSetup/ProductionProcess.aspx`. Plain page; the screen engine answers 410. Fields: `processCode`, `status`, `name`, `alias`, `stage`, `showInHistory`.
+Original: `View/ProductionSetup/ProductionProcess.aspx`. Plain page; the old screen engine is gone. Fields: `processCode`, `status`, `name`, `alias`, `stage`, `showInHistory`.
 
 ### Routing — `/api/masters/routings`
 
-Original: `View/ProductionSetup/RoutingForm.aspx`. Plain page; the screen engine answers 410. Fields: `routeCode`, `status`, `name`, `alias`, `type`, `model`, `material`, `lines`, `seqNo`, `process`, `concession`, `materialSeq`, `inspection`, `stageLabel`, `stageQc`, `nextStageLabel`, `autoProcess`, `copies`, `grouping`, `inputQcStatus`, `processTime`, `setupTime`, `minHold`, `maxHold`, `validateSeq`, `palletScan`, `drawingNo`, `setupChecklist`, `batchFrequency` (the line editors after `lines`; a line's ✏ fills them, Update writes them back).
+Original: `View/ProductionSetup/RoutingForm.aspx`. Plain page; the old screen engine is gone. Fields: `routeCode`, `status`, `name`, `alias`, `type`, `model`, `material`, `lines`, `seqNo`, `process`, `concession`, `materialSeq`, `inspection`, `stageLabel`, `stageQc`, `nextStageLabel`, `autoProcess`, `copies`, `grouping`, `inputQcStatus`, `processTime`, `setupTime`, `minHold`, `maxHold`, `validateSeq`, `palletScan`, `drawingNo`, `setupChecklist`, `batchFrequency` (the line editors after `lines`; a line's ✏ fills them, Update writes them back).
 
 Events: `model`, `add`, `edit`, `cancelEdit`, `remove`.
 
@@ -181,13 +176,13 @@ Routing also has its images per stage on WIP Capture: `/api/masters/routings/:ro
 
 ### Routing Guide — `/api/masters/routing-guides`
 
-Original: `View/ProductionSetup/RoutingGuideForm.aspx`. Plain page; the screen engine answers 410. Fields: `routeCode`, `status`, `name`, `alias`, `model`, `material`, `lines`, `instructions`, `instruction`, `guides`, `guideType`, `existingGuide`, `guideDescription`, `guideFile`, `guidePath`.
+Original: `View/ProductionSetup/RoutingGuideForm.aspx`. Plain page; the old screen engine is gone. Fields: `routeCode`, `status`, `name`, `alias`, `model`, `material`, `lines`, `instructions`, `instruction`, `guides`, `guideType`, `existingGuide`, `guideDescription`, `guideFile`, `guidePath`.
 
 Events: `model`, `openInstructions`, `closeInstructions`, `addInstruction`, `removeInstruction`, `openGuides`, `closeGuides`, `guideType`, `existingGuide`, `addGuide`, `removeGuide` (`openInstructions` / `openGuides` take the line's `index`). `ui`: `instructionsPanel`, `guidesPanel`, `instructionLine` / `guideLine` (the line's "Seq No." text).
 
 ### Work Center — `/api/masters/work-centers`
 
-Original: `View/ProductionSetup/WorkCenterForm.aspx`. Plain page; the screen engine answers 410. Fields: `stationCode`, `status`, `department`, `name`, `alias`, `line`, `jobWork`, `processes` (the ticked process codes).
+Original: `View/ProductionSetup/WorkCenterForm.aspx`. Plain page; the old screen engine is gone. Fields: `stationCode`, `status`, `department`, `name`, `alias`, `line`, `jobWork`, `processes` (the ticked process codes).
 
 ### Defect Code Master — `/api/masters/defect-codes`
 
@@ -239,7 +234,7 @@ Events: `add`, `remove`.
 
 ### Rework Confirmation — `/api/quality/rework-confirmations`
 
-Original: `View/Quality/ReworkConfirmationNew.aspx`. Its own module (`modules/quality/rework-confirmations`); the screen engine answers 410.
+Original: `View/Quality/ReworkConfirmationNew.aspx`. Its own module (`modules/quality/rework-confirmations`); the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -252,7 +247,7 @@ Original: `View/Quality/ReworkConfirmationNew.aspx`. Its own module (`modules/qu
 
 ### WIP Capture — `/api/production/wip-capture`
 
-Original: `View/Production/WIPCaptureForm.aspx`. Its own module (`modules/production/wip-capture`); the screen engine answers 410. A station's state (scanned station, process, unit, scan result, QC lot, checklist) stays on the server for a shift; each opened screen has its own. The scan rules are the original page's ported code, unchanged.
+Original: `View/Production/WIPCaptureForm.aspx`. Its own module (`modules/production/wip-capture`); the old screen engine is gone. A station's state (scanned station, process, unit, scan result, QC lot, checklist) stays on the server for a shift; each opened screen has its own. The scan rules are the original page's ported code, unchanged.
 
 Every call below on `/sessions/:id` answers `{ station, alert?, success?, explain?, model? }`: `station` is the screen to draw; `alert` a refusal (status 200: the scan is answered, and a box may be cleared); `explain` `{ title, text }` where a refused unit is now. A station that is gone answers `{ restarted: true, alert }`.
 
@@ -278,7 +273,7 @@ The QC calls also take what was typed: `status`, `nextAction`, `defectCategory`,
 
 ### FG Scrap — `/api/production/fg-scrap`
 
-Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/production/fg-scraps`), not a screen resource; the screen engine answers 410.
+Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/production/fg-scraps`), not a screen resource; the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -291,7 +286,7 @@ Original: `View/Production/FGScrapForm.aspx`. Its own module (`modules/productio
 
 ### Component Replacement — `/api/production/rm-replacements`
 
-Original: `View/Production/RMReplacementForm.aspx`. Its own module (`modules/production/rm-replacements`), not a screen resource; the screen engine answers 410.
+Original: `View/Production/RMReplacementForm.aspx`. Its own module (`modules/production/rm-replacements`), not a screen resource; the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -303,7 +298,7 @@ The request carries serials only: the job card and row come from the server's ow
 
 ### Image Display — `/api/production/image-display`
 
-Original: `View/Production/WRLImageDisply.aspx`. Its own module (`modules/production/image-display`); the screen engine answers 410.
+Original: `View/Production/WRLImageDisply.aspx`. Its own module (`modules/production/image-display`); the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -311,7 +306,7 @@ Original: `View/Production/WRLImageDisply.aspx`. Its own module (`modules/produc
 
 ### Plan Upload — `/api/production/plan-uploads`
 
-Original: `View/Production/ProdPlanUpload.aspx`. Its own module (`modules/production/plan-uploads`); the screen engine answers 410.
+Original: `View/Production/ProdPlanUpload.aspx`. Its own module (`modules/production/plan-uploads`); the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -321,7 +316,7 @@ Original: `View/Production/ProdPlanUpload.aspx`. Its own module (`modules/produc
 
 ### Process Guide — `/api/production/process-guides`
 
-Original: `View/Production/ProcessGuideForm.aspx`. Its own module (`modules/production/process-guides`); the screen engine answers 410.
+Original: `View/Production/ProcessGuideForm.aspx`. Its own module (`modules/production/process-guides`); the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -334,7 +329,7 @@ Original: `View/Production/ProcessGuideForm.aspx`. Its own module (`modules/prod
 
 ### Model Transfer — `/api/production/model-transfers`
 
-Original: `View/Production/ModelToModelTransferForm.aspx`. Its own module (`modules/production/model-transfers`), not a screen resource; the screen engine answers 410.
+Original: `View/Production/ModelToModelTransferForm.aspx`. Its own module (`modules/production/model-transfers`), not a screen resource; the old screen engine is gone.
 
 | Call | Does |
 |---|---|
@@ -377,6 +372,6 @@ Serial Generation Logic also has `POST /api/masters/serial-logics/preview` (owne
 
 Both histories take an optional time range: `start` and `end` as `YYYY-MM-DDTHH:mm` (what a date-time box holds), each limit included. A value that is not a date and time, or a start after the end, answers 400.
 
-## Screen engine — /api/forms
+## Screen engine — /api/forms (removed)
 
-Every screen above also still answers through the screen engine (`spec`, `list`, `record`, `event`, `save`, `update`, `cancel`, `print`, `combo`, `unit`, `distinct`, `copy`, keyed by `?path=<route>`), which the client pages use today. Both run the same page code; a page moves to its API when that switch is approved.
+Removed on 4 Nov 2026: every screen has an API of its own (above) and the client no longer calls it, so `/api/forms` answers 404. The engine's code in `modules/forms` (state, writer, the pages' own code in `screens/`) stays: the screen resources run it.

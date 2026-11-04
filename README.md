@@ -105,16 +105,15 @@ server/
 client/src/                see client/STRUCTURE.md
 ```
 
-**Change a screen's look**: its page is three files (one set per sidebar tab): `client/src/pages/<group>/<Page>.jsx`
-(settings, e.g. the form's layout, and switching list / form), `<Page>/List.jsx` (the saved records) and
-`<Page>/Form.jsx` (create / update). `node client/scripts/split-page.mjs <file>` splits a one-file page the same way.
+**Change a screen's look**: its page is `client/src/pages/<group>/<Page>.jsx` (most are a list of sections
+for `components/shared/MasterScreen.jsx`), with any views of its own in the `<Page>/` folder beside it.
 **Change what a screen does**: its handlers are in `server/src/modules/forms/screens/<folder>/<screen>.js` (a screen
 with its own API also has a `server/src/modules/<feature>/` folder); keep
 the original's writes unless the change is intended, and run the parity scripts after.
 **Add or remove a screen**: the route in `server/src/modules/menu/keep.js`, then refresh `forms.json` from the
 original site's source (in `server/`:
 `node scripts/extract-forms.js ../../source/Garuda src/modules/menu/menu.json src/modules/forms/forms.json`), and
-`npm run page -w client -- <route> "<Title>"` for its page file.
+a page file that exports the route (`export const route = '<route>'`).
 **Operator messages**: the wording rules are in `server/src/shared/messages.js` (the original text is logged as
 `[message] …`).
 **Logs**: one line per API call (`<request id> <method> <path> <status> <ms> user=…`); an error shown to an operator

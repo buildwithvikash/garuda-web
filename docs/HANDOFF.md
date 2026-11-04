@@ -43,7 +43,7 @@ server/src  (QMAS-style feature modules since 26 Oct; see README "Where things a
   modules/menu/keep.js             THE keep-list of 47 screens (forms routes + menu read it)
   modules/menu/menu.service.js     menu.json pruned to keep-list, per-user role filter
   modules/forms/forms.json         specs of the 47 kept screens (scripts/extract-forms.js regenerates, filtered by KEEP)
-  modules/forms/forms.routes.js    /spec /list /record /event /save /update /cancel /print (handlers inline)
+  modules/forms/forms.routes.js    removed 4 Nov 2026 (/api/forms): every screen has its own API
   modules/forms/screens/           per-screen ported code-behind, one file per screen (31 + 5 shared helper files),
                                    registered in screens/registry.js (PAGE_EVENTS[file][control], PAGE_LOAD ...);
                                    modules/forms/pages.js only loads them and re-exports the registries

@@ -1,6 +1,6 @@
 // The original pages' code-behind (TitleControl handlers, AutoPostBack events, Page_Load ...), one file per screen in
 // ./screens/<folder>/<screen>.js, registered in ./screens/registry.js. Importing this module loads them all.
-// Domain services run these handlers (events.service.js); the generic /forms routes read the registries.
+// Domain services run these handlers (events.service.js); the screen resources (resource.js) read the registries.
 import './screens/authorization/change-password-form.js';
 import './screens/authorization/reset-password-form.js';
 import './screens/authorization/users-form.js';

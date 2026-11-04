@@ -5,10 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "page": "node scripts/pages.mjs",
-    "pages:sync": "node scripts/pages.mjs --menu menu.json",
-    "page-texts": "node scripts/page-texts.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.4.1",
