@@ -17,7 +17,6 @@ export const API_SCREENS = {
   "/materialsetup/unitofmeasureform": "/masters/units-of-measure",
   "/materialsetup/variantfieldform": "/masters/variant-fields",
   "/materialsetup/variantfieldvalueform": "/masters/variant-values",
-  "/businesssetup/ledgerform": "/masters/ledgers",
   "/productionsetup/productionlineform": "/masters/production-lines",
   "/productionsetup/productionprocess": "/masters/production-processes",
   "/settings/defectcodemasterform": "/masters/defect-codes",
@@ -26,15 +25,11 @@ export const API_SCREENS = {
   "/settings/reworkresolutionform": "/masters/rework-resolutions",
   "/settings/rootcauseform": "/masters/root-causes",
   "/settings/scrapreasonform": "/masters/scrap-reasons",
-  "/businesssetup/businessunitform": "/masters/business-units",
-  "/businesssetup/departmentform": "/masters/departments",
   "/productionsetup/workcenterform": "/masters/work-centers",
-  "/authorization/userroleform": "/masters/user-roles",
   "/materialsetup/materialcategoryform": "/masters/material-categories",
   "/settings/parametervaluelistform": "/masters/value-lists",
   "/settings/shiftmasterform": "/masters/shifts",
   "/materialsetup/modelform": "/masters/models",
-  "/authorization/usersform": "/masters/users",
   "/materialsetup/materialform": "/masters/materials",
   "/materialsetup/serialgenerationlogicform": "/masters/serial-logics",
   "/materialsetup/billofmaterial": "/masters/bills-of-material",
@@ -43,9 +38,6 @@ export const API_SCREENS = {
   "/settings/parameterform": "/masters/check-lists",
   "/materialsetup/materialbarcode": "/masters/material-barcodes",
   "/settings/employeeform": "/masters/employees",
-  "/businesssetup/companyform": "/masters/company",
-  "/authorization/resetpasswordform": "/masters/reset-password",
-  "/authorization/changepasswordform": "/masters/change-password",
 };
 
 const enc = encodeURIComponent;

@@ -22,13 +22,17 @@ import { SCREEN as PLAN_UPLOAD } from '../production/plan-uploads/plan-uploads.s
 import { SCREEN as PROCESS_GUIDE } from '../production/process-guides/process-guides.service.js';
 import { SCREEN as REWORK } from '../quality/rework-confirmations/rework-confirmations.service.js';
 import { SCREEN as WIP_CAPTURE } from '../production/wip-capture/wip-capture.service.js';
+import { PLAIN } from '../masters/plain-masters.js';
 
 /** Screens switched to an API of their own: the engine no longer serves them (none of its routes), so their rules
  *  (Production Order: no change or cancel after create, one business unit's orders only; Production Assignment: every
  *  choice checked, one print per click; RM Replacement: the job card and row looked up by the server, one replacement per
  *  scan; FG Scrap: all in one transaction, one scrap per click; Model Transfer: serials checked, each unit in one transaction)
  *  cannot be gone around. */
-const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap', [MODEL_TRANSFER]: '/api/production/model-transfers', [PLAN_UPLOAD]: '/api/production/plan-uploads', [PROCESS_GUIDE]: '/api/production/process-guides', [REWORK]: '/api/quality/rework-confirmations', [WIP_CAPTURE]: '/api/production/wip-capture', '/production/wrlimagedisply': '/api/production/image-display' };
+const MOVED = { [PRODUCTION_ORDER]: '/api/production/orders', [PRODUCTION_ASSIGNMENT]: '/api/production/assignments', [RM_REPLACEMENT]: '/api/production/rm-replacements', [FG_SCRAP]: '/api/production/fg-scrap', [MODEL_TRANSFER]: '/api/production/model-transfers', [PLAN_UPLOAD]: '/api/production/plan-uploads', [PROCESS_GUIDE]: '/api/production/process-guides', [REWORK]: '/api/quality/rework-confirmations', [WIP_CAPTURE]: '/api/production/wip-capture', '/production/wrlimagedisply': '/api/production/image-display',
+  // the setup screens with plain pages (masters/plain-masters.js)
+  ...Object.fromEntries(Object.entries(PLAIN).map(([n, d]) => [d.route, `/api/masters/${n}`])),
+};
 
 async function load(req, res) {
   const path = netString(req.query.path ?? req.body?.path).toLowerCase();

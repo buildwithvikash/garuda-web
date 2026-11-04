@@ -392,3 +392,20 @@ Kept: every message, the sound, the large refused-scan flash, the saved printer 
 Checked on TEST: `wip-parity.js comp | qc | fg --api` against the original, every row and label identical, except the unit's scan answer at inspection showing Change (owner, 1 Nov 2026). The built screen run in a browser on a throw-away copy of the app with a test session, each run's rows put back: wrong station and serial refused; components with three scans sent straight after each other, all fitted in order, stage completed; QC reject (defect category, add, duplicate refused, remove, remark kept), approve, no printer refused, saved with 2 labels; FG with serial and asset tag locked, saved with 3 labels.
 
 Not run: a real station with a scanner, a real printer, two stations at once, a server restart in a shift, the checklist panel and the guide on a real unit (the test units have none; the guide's view has a unit test), a rejected save through the screen.
+
+# Authorization and Business Setup on plain pages (owner, approved 3 Nov 2026)
+
+User Master, User Roles, Change Password, Reset Password, Business Unit, Company, Department and Ledger Master are plain React pages on `/api/masters/<name>` with their own field names (`modules/masters/plain-masters.js`, API.md); `/api/forms` answers 410 for them. Their fields are grouped in numbered sections (owner, 3 Nov 2026), as Production Order's are. Saves still run the screens' parity-tested code (the forms writer and the password handlers), so keys, EventLog, child rows and messages are unchanged.
+
+Intended differences:
+
+- **Retype Password is masked** on both password pages (it was plain text).
+- **Business Unit's "Combo trial" picker and its empty tree are gone**: the picker listed nothing and neither was saved.
+- **User Master's "Select all"** ticks every process in the page itself; before, the server's event did the same.
+- **Delete stays hidden** on every page, as on the old form.
+- **Department's Control Indicator is required** on the page (owner, 3 Nov 2026): left empty it saved as 0 and failed on
+  FK_Department_DeptControlIndicator, on the original too. The server still takes what it is sent, as before.
+
+Checked on TEST against the original DLLs, through the new services: `forms-write-parity.js --api` for User Master, Business Unit, Department and Ledger Master: identical; User Roles fails alike on cancel (UserRoles has no Status column). `page-writes-parity.js --api`: the 10 Change / Reset Password cases and the Company update identical. Built pages run in a browser with a TEST system-user session: every page opens, lists name coded values (Company's licence type), the role tree and the tick lists show the saved choices, a department created, updated and copied through the page (removed afterwards), and the old engine path answers 410.
+
+Not run: Change / Reset Password through the page (the comparison runs them on a temporary user), a user's photo or a logo uploaded through the page.

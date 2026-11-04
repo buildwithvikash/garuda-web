@@ -79,31 +79,33 @@ the original's list query does.
 Send the whole `record` the API gave you back (with your changes), and the `viewState` of the last answer: the screen's
 code works on the full form, as the original page did.
 
+### Authorization and Business Setup: plain pages
+
+These 8 screens have plain pages and their own field names (`modules/masters/plain-masters.js`); the screen engine answers 410 for them. Saves still run the screen's parity-tested code (the forms writer: keys, EventLog, child rows). Calls: `GET /` (list, `?page=&column=&op=&value=`), `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key` (and `/:key/copy` for Department); `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }`, plus `copyFrom` (Department) and `tree` (User Roles: the pages, `pages` holds the ticked ones). Create / update answer `{ key, message, alert }`, and `logout: true` when a password was changed (the session cookie is cleared).
+
 ### Change Password — `/api/masters/change-password`
 
-Original: `View/Authorization/ChangePasswordForm.aspx`. Fields: `buCode`, `tbUser`, `tbCurPass`, `tbNewPass`, `tbRetypePass`.
+Original: `View/Authorization/ChangePasswordForm.aspx`. Fields: `user`, `current`, `next`, `retype`.
 
 ### Reset Password — `/api/masters/reset-password`
 
-Original: `View/Authorization/ResetPasswordForm.aspx`. Fields: `buCode`, `ddlUser`, `tbNewPass`, `tbRetypePass`.
+Original: `View/Authorization/ResetPasswordForm.aspx`. Fields: `user`, `next`, `retype`.
 
 ### User Roles — `/api/masters/user-roles`
 
-Original: `View/Authorization/UserRoleForm.aspx`. Fields: `roleCode`, `status`, `roleName`, `expiryDays`, `userRoleForm`.
+Original: `View/Authorization/UserRoleForm.aspx`. Fields: `roleCode`, `status`, `roleName`, `expiryDays`, `pages`.
 
 ### User Master — `/api/masters/users`
 
-Original: `View/Authorization/UsersForm.aspx`. Fields: `userCode`, `status`, `userID`, `userName`, `employee`, `erpEmployee`, `statrtOn`, `userRole`, `defaultForm`, `userBusinessUnits`, `userProcess`, `photo`, `cbAllProcess`.
-
-Events: `cbAllProcess`.
+Original: `View/Authorization/UsersForm.aspx`. Fields: `userCode`, `status`, `userId`, `userName`, `employee`, `erpEmployee`, `startOn`, `userRole`, `defaultPage`, `businessUnits`, `processes`, `photo`.
 
 ### Business Unit — `/api/masters/business-units`
 
-Original: `View/BusinessSetup/BusinessUnitForm.aspx`. Fields: `buCode`, `status`, `name`, `alias`, `buType`, `prefix`, `isVirtual`, `parentBu`, `controlIndicator`, `address1`, `address2`, `postalCode`, `city`, `state`, `country`, `email`, `contactNo`, `webSite`, `taxRegNo`, `licence`, `gS1Prefix`, `completeAddress`, `otherDetails`, `businessUnits`, `logo`, `treeView1`.
+Original: `View/BusinessSetup/BusinessUnitForm.aspx`. Fields: `buCode`, `status`, `name`, `alias`, `buType`, `prefix`, `isVirtual`, `parentBu`, `controlIndicator`, `address1`, `address2`, `postalCode`, `city`, `state`, `country`, `email`, `contactNo`, `webSite`, `taxRegNo`, `licence`, `gs1Prefix`, `completeAddress`, `otherDetails`, `logo`.
 
 ### Company — `/api/masters/company`
 
-Original: `View/BusinessSetup/CompanyForm.aspx`. Fields: `code`, `companyName`, `licenceType`, `expiryBy`, `unqiueID`, `licenceID`, `logo`.
+Original: `View/BusinessSetup/CompanyForm.aspx`. Fields: `code`, `companyName`, `licenceType`, `expiryBy`, `uniqueId`, `licenceId`, `logo`.
 
 ### Department — `/api/masters/departments`
 

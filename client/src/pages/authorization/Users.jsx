@@ -1,163 +1,33 @@
-// ════════════════════════════════════════════════════════════════════════════════
-//  Users
-//  Sidebar: Authorization › Users
-//
-//  Change how this page works or looks in its three files: nothing in them is used by
-//  any other page. Only the UI pieces are shared (@/components/ui = shadcn,
-//  @/components/shared = Page, Section, DataTable, Modal ...).
-//
-//  This page is three files (the router opens this one; the folder beside it holds the views):
-//    Users.jsx        1. SETTINGS   this page's layout and captions          <- start here
-//                     6. PAGE       loads the screen and switches between list and form
-//    Users/List.jsx   4. LIST VIEW  saved records: search, table, paging
-//    Users/Form.jsx   2. STATE      how the form's state is read and patched
-//                     3. ENGINE     sends events to the server and applies its reply
-//                     5. FORM VIEW  one record: fields, buttons, grids, print ...
-// ════════════════════════════════════════════════════════════════════════════════
+// User Master (sidebar: Authorization › User Master): the users, or one open. Plain page on /api/masters/users.
+import { Building2, Factory, IdCard, UserRound, Users as UsersIcon } from 'lucide-react';
+import MasterScreen from '@/components/shared/MasterScreen.jsx';
 
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { openedRecord, useRememberView } from '@/lib/recordParam.js';
-import { RotateCw, Plus } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { screenApi } from '@/lib/screenApi.js';
-import Loader from '@/components/shared/Loader.jsx';
-import Page from '@/components/shared/Page.jsx';
-import { Button } from '@/components/ui/button.jsx';
-import { useMe } from '@/layouts/AppLayout.jsx';
-import { screenOf } from '@/layouts/Sidebar.jsx';
-import RecordList from './Users/List.jsx';
-import RecordForm from './Users/Form.jsx';
-
-// ────────────────────────────────────────────────────────────────────────────
-// 1. SETTINGS
-// Edit these for this page. `layout` arranges the fields in sections; `page` adds captions / search boxes.
-// ────────────────────────────────────────────────────────────────────────────
 export const route = '/authorization/usersform';
 
-// const layout = { icon, subtitle, sections: [{ title, icon, ids: ['ControlId', { id: 'ControlId', label: 'Caption' }] }] };
-const layout = undefined;
-
-// const page = { labels: { ControlId: 'Caption' }, checkSearch: { SearchTextBoxId: 'CheckBoxListId' } };
-const page = {};
-
-// ────────────────────────────────────────────────────────────────────────────
-// TEXTS
-// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
-// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
-// ────────────────────────────────────────────────────────────────────────────
-const texts = {
-  title: 'User Master',
-  // fields, buttons and panels: { label, hidden }
-  fields: {
-    PrimaryKey: { label: 'User ID', hidden: false }, // TextBox · Users.UserCode
-    ddlStatus: { label: 'Record Status', hidden: false }, // DropDownList · Users.Status
-    TextBox1: { label: 'User Code', hidden: false }, // TextBox · Users.UserID
-    TextBox3: { label: 'User Name', hidden: false }, // TextBox · Users.UserName
-    DropDownList1: { label: 'Employee', hidden: false }, // DropDownList · Users.Employee
-    TextBox5: { label: 'Oracle Employee ID', hidden: false }, // TextBox · Users.ERPEmployee
-    TextBox4: { label: 'Start Date', hidden: false }, // TextBox · Users.StatrtOn
-    DropDownList5: { label: 'User Role', hidden: false }, // DropDownList · Users.UserRole
-    DDLPage: { label: 'Default Page', hidden: false }, // DropDownList · Users.DefaultForm
-    CBBusinessUnit: { label: 'Business Unit', hidden: false }, // CheckBoxList · UserBusinessUnits.BusinessUnit
-    CheckBoxList1: { label: 'Production Process', hidden: false }, // CheckBoxList · UserProcess.ProcessCode
-    UploadImage: { label: 'User Photo', hidden: false }, // Image · Users.Photo
-    CBAllProcess: { label: 'Select All', hidden: false }, // CheckBox
+const sections = [
+  {
+    title: 'User', subtitle: 'Who the user is and how they sign in', icon: UserRound,
+    fields: [
+      { f: 'userCode', label: 'User ID', kind: 'key' },
+      { f: 'userId', label: 'User Code', required: true, max: 50 },
+      { f: 'userName', label: 'User Name', required: true, max: 150 },
+      { f: 'startOn', label: 'Start Date', type: 'date' },
+    ],
   },
-  // grids: each one's columns { header, hidden } (its rows keep every field)
-  grids: {
+  {
+    title: 'Role and employee', subtitle: 'What the user may open, and the employee behind the login', icon: IdCard,
+    fields: [
+      { f: 'userRole', label: 'User Role', kind: 'select' },
+      { f: 'defaultPage', label: 'Default Page', kind: 'select' },
+      { f: 'employee', label: 'Employee', kind: 'select' },
+      { f: 'erpEmployee', label: 'Oracle Employee ID' },
+      { f: 'photo', label: 'User Photo', kind: 'image' },
+    ],
   },
-  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
-  list: {
-    RECNO: { header: 'Rec No', hidden: false },
-    USERCODE: { header: 'User Code', hidden: false },
-    USERID: { header: 'User ID', hidden: false },
-    USERNAME: { header: 'User Name', hidden: false },
-    EMPLOYEE: { header: 'Employee', hidden: false },
-    ROLENAME: { header: 'Role Name', hidden: false },
-  },
-};
+  { title: 'Business units', subtitle: 'The units the user can sign in to', icon: Building2, fields: [{ f: 'businessUnits', label: 'Business Unit', kind: 'checks' }] },
+  { title: 'Production processes', subtitle: 'The processes the user works at', icon: Factory, fields: [{ f: 'processes', label: 'Production Process', kind: 'checks', selectAll: true }] },
+];
 
-// ────────────────────────────────────────────────────────────────────────────
-// 6. PAGE
-// Loads the screen from the server and switches between the list and the form.
-// ────────────────────────────────────────────────────────────────────────────
 export default function Users() {
-  const me = useMe();
-  const { pathname } = useLocation();
-  const path = route;
-  const screen = me ? screenOf(me.menu, pathname) : null;
-  const [spec, setSpec] = useState(null);
-  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  const [seq, setSeq] = useState(0);
-  const remember = useRememberView();
-  const [listFilter, setListFilter] = useState({});
-  const show = (v) => {
-    setError('');
-    setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
-    setView(v);
-    remember(v); // ?record=<key> | new: a refresh reopens this form
-  };
-
-  useEffect(() => {
-    setSpec(null);
-    screenApi(path).spec()
-      .then((s) => {
-        setSpec(s);
-        // the form the URL names (a refresh), else where the screen starts
-        const want = openedRecord();
-        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
-        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
-        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
-      })
-      .catch((e) => setError(e.message));
-  }, [path]);
-
-  const run = (p) => p.catch((e) => setError(e.message));
-  const open = (key, notice) => run(screenApi(path).record(key).then((state) => show({ kind: 'form', mode: 'edit', key, state, notice })));
-  // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
-  const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
-  const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
-
-  const title = texts.title || spec?.title || screen?.caption || 'Screen';
-  return (
-    <Page
-      icon={layout?.icon ?? screen?.group.icon}
-      title={title}
-      subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
-      actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
-    >
-        {!spec || view.kind === 'opening' ? (
-          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
-        ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
-        ) : (
-          <RecordForm
-            key={seq}
-            path={path}
-            state={view.state}
-            mode={view.mode}
-            notice={view.notice}
-            buttons={spec.buttons}
-            callNewOnSave={spec.callNewOnSave}
-            copyOptions={spec.copyOptions}
-            print={spec.print}
-            printers={spec.printers}
-            onReload={(key, notice) => open(key, notice)}
-            events={spec.events ?? []}
-            onCopy={copy}
-            onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}
-            onDone={(notice) => fresh(notice)}
-            onListFilter={setListFilter}
-            layout={layout}
-            page={{ ...page, texts }}
-          />
-        )}
-    </Page>
-  );
+  return <MasterScreen name="users" title="User Master" icon={UsersIcon} subtitle="A user's login, role, business units and processes" sections={sections} />;
 }

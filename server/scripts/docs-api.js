@@ -8,6 +8,7 @@ const { MASTERS } = await imp('modules/masters/masters.routes.js');
 const { QUALITY } = await imp('modules/quality/quality.routes.js');
 const { PRODUCTION } = await imp('modules/production/production.routes.js');
 const { screenResource } = await imp('modules/forms/resource.js');
+const { PLAIN_SERVICES } = await imp('modules/masters/plain-masters.js');
 const { FORMS } = await imp('modules/forms/specs.js');
 const md = [];
 md.push(`# Garuda WRL API
@@ -75,8 +76,15 @@ Send the whole \`record\` the API gave you back (with your changes), and the \`v
 code works on the full form, as the original page did.
 `);
 for (const [base, screens] of [['masters', MASTERS], ['quality', QUALITY], ['production', PRODUCTION]]) for (const [n, r] of Object.entries(screens)) {
-  const m = screenResource(r);
+  const plain = base === 'masters' && PLAIN_SERVICES[n];
+  const m = plain || screenResource(r);
   md.push(`### ${FORMS[r].title} — \`/api/${base}/${n}\``, '');
+  if (plain) {
+    // a plain page's screen (modules/masters/plain-masters.js): its own field names, no events or layout
+    md.push(`Original: \`${FORMS[r].file}\`. Plain page; the screen engine answers 410. Fields: ${Object.keys(m.FIELDS).map((f) => `\`${f}\``).join(', ')}.`);
+    md.push('', 'Calls: `GET /`, `/search-fields`, `/search-fields/:column/values`, `/new`, `/:key`' + (m.copy ? ', `/:key/copy`' : '') + '; `POST /`, `PUT /:key`, `DELETE /:key` with `{ record }` (DELETE `{ remark }`). A record comes as `{ record, options, status, statusMessage }` (plus `copyFrom`, `tree` where the screen has them); create answers `{ key, message, alert }`, and `logout: true` when a password was changed.', '');
+    continue;
+  }
   md.push(`Original: \`${FORMS[r].file}\`. Fields: ${Object.keys(m.FIELDS).map((f) => `\`${f}\``).join(', ')}.`);
   if (Object.keys(m.EVENTS).length) md.push('', `Events: ${Object.keys(m.EVENTS).map((f) => `\`${f}\``).join(', ')}.`);
   if (m.print) md.push('', 'Print: yes.');

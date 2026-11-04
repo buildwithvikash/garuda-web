@@ -21,12 +21,15 @@ import { MASTERS } from '../../src/modules/masters/masters.routes.js';
 import { QUALITY } from '../../src/modules/quality/quality.routes.js';
 import { validateBody } from '../../src/modules/forms/resource.validation.js';
 import { screenResource } from '../../src/modules/forms/resource.js';
+import { PLAIN_SERVICES } from '../../src/modules/masters/plain-masters.js';
 import { apiEvent, apiOf, apiSave } from './api.js'; // a screen with no API (taken off the app) runs its page code
 
 const [bin, ...args] = process.argv.slice(2);
 const viaApi = args.includes('--api');
 const [jobArg] = args.filter((a) => a !== '--api');
 const RES = Object.fromEntries([...Object.values(MASTERS), ...Object.values(QUALITY)].map((r) => [r, screenResource(r)]));
+// the screens with plain pages: through their plain services, by their own field names
+for (const p of Object.values(PLAIN_SERVICES)) RES[p.SCREEN] = p;
 /** the control values as the API's body; a refusal (400) as the page's { ok: false, message } */
 async function viaResource(route, v, call) {
   const m = RES[route];
