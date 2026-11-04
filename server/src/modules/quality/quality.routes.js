@@ -4,10 +4,10 @@
 import { screensRouter } from '../forms/resource.routes.js';
 
 /** API name -> screen */
-// (Final Inspection, NCMR, Repair, Finishing and Self Inspection were taken off the app, owner 28 Oct 2026; to restore:
-//  'final-inspections': '/quality/qualityinspectionform', 'ncmr-confirmations': '/quality/ncmrconfirmation',
-//  'repair-confirmations': '/quality/repairconfirmation', 'finishing-confirmations': '/quality/finishingconfirmation',
-//  'self-inspections': '/ceat/ceatinselfinspectionform', with the routes in menu/keep.js)
+// (Final Inspection, NCMR, Repair, Finishing and Self Inspection were taken off the app, owner 28 Oct 2026, and their
+//  code removed, 4 Nov 2026: to restore one, take back its handler from git history (forms/screens/quality/ or ceat/,
+//  and its quality.service.js functions), then its entry here, e.g. 'final-inspections': '/quality/qualityinspectionform',
+//  and its route in menu/keep.js)
 // Rework Confirmation has a module of its own (rework-confirmations/).
 export const QUALITY = {};
 

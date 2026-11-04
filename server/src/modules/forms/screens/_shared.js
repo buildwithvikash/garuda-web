@@ -80,14 +80,3 @@ export function withQC(file, close, id = 'QC') {
     return { ...out, set: { ...(out.set ?? {}), [id]: { visible: false, value: s } } };
   };
 }
-
-/** DDLStatus_SelectedIndexChanged: the defect panel for a rejection when there are defect codes */
-export async function qiStatusChanged(v, h, out) {
-  const defects = out.set.DDLDefectCodes?.options ?? (await h.options('DDLDefectCodes'));
-  const status = out.set.DDLStatus?.value ?? v.DDLStatus;
-  if (defects.length === 0) out.set.DefectPanel = { visible: false };
-  else {
-    out.set.DDLNextAction = { index: 0 };
-    out.set.DefectPanel = { visible: status !== '12' };
-  }
-}

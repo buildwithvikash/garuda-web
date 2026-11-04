@@ -1,11 +1,9 @@
 // QCValueCaptureControl: the checklist popup (one parameter at a time: value by input type, remark, pass/fail, tool
 // scan; a grid of all with Pass/Fail buttons for yes/no items). Its state travels as the "QC" control's value:
 // { rows (its ViewState DataTable: cell text, null = DBNull), index, f (the child controls) }.
-import { queryTable, query } from '../../db/pool.js';
+import { query } from '../../db/pool.js';
 import { netInt, netDouble, exceptionAlert } from '../../shared/net.js';
-import { toText } from '../../shared/values.js';
 import { fill } from '../../db/options.js';
-import { dataTable } from '../../db/tables.js';
 
 /** DataRow[name] (column names are case-insensitive) */
 export const cell = (row, name) => {
