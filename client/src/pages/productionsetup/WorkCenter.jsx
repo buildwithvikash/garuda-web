@@ -1,179 +1,28 @@
-// ════════════════════════════════════════════════════════════════════════════════
-//  Work Center
-//  Sidebar: Productionsetup › Work Center
-//
-//  Change how this page works or looks in its three files: nothing in them is used by
-//  any other page. Only the UI pieces are shared (@/components/ui = shadcn,
-//  @/components/shared = Page, Section, DataTable, Modal ...).
-//
-//  This page is three files (the router opens this one; the folder beside it holds the views):
-//    WorkCenter.jsx        1. SETTINGS   this page's layout and captions          <- start here
-//                          6. PAGE       loads the screen and switches between list and form
-//    WorkCenter/List.jsx   4. LIST VIEW  saved records: search, table, paging
-//    WorkCenter/Form.jsx   2. STATE      how the form's state is read and patched
-//                          3. ENGINE     sends events to the server and applies its reply
-//                          5. FORM VIEW  one record: fields, buttons, grids, print ...
-// ════════════════════════════════════════════════════════════════════════════════
+// Work Center (sidebar: Production Setup › Work Center): the stations of a line and the processes each runs, or one open;
+// a new one can be copied from a saved one. Plain page on /api/masters/work-centers. Group and Cost[Hr] were already
+// hidden, the business unit by the screen: a saved station keeps them, a new one gets the screen's defaults.
+import { ClipboardList, Factory, ListChecks } from 'lucide-react';
+import MasterScreen from '@/components/shared/MasterScreen.jsx';
 
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { openedRecord, useRememberView } from '@/lib/recordParam.js';
-import { ClipboardList, Factory, ListChecks, RotateCw, Plus } from 'lucide-react';
-import toast from 'react-hot-toast';
-import { screenApi } from '@/lib/screenApi.js';
-import Loader from '@/components/shared/Loader.jsx';
-import Page from '@/components/shared/Page.jsx';
-import { Button } from '@/components/ui/button.jsx';
-import { useMe } from '@/layouts/AppLayout.jsx';
-import { screenOf } from '@/layouts/Sidebar.jsx';
-import RecordList from './WorkCenter/List.jsx';
-import RecordForm from './WorkCenter/Form.jsx';
-
-// ────────────────────────────────────────────────────────────────────────────
-// 1. SETTINGS
-// Edit these for this page. `layout` arranges the fields in sections; `page` adds captions / search boxes.
-// ────────────────────────────────────────────────────────────────────────────
 export const route = '/productionsetup/workcenterform';
 
-// the work center beside the processes it runs (`width` in tenths of the row); department and status in the header
-const layout = {
-  icon: Factory,
-  subtitle: 'A station on a line and the processes it runs',
-  header: ['DDLDepartment', 'ddlStatus'],
-  sections: [
-    {
-      title: 'Work Center', subtitle: 'The station and its line', icon: ClipboardList, tone: 'blue', width: 5, cols: 2,
-      // Business Unit, Group and Cost[Hr]: hidden (the screen, or texts below)
-      ids: ['PrimaryKey', 'TextBox3', 'TextBox4', 'DDLLine', 'DropDownList3', 'DropDownList4', 'DropDownList1', 'TextBox1'],
-    },
-    // the list has its own search (page.checkSearch below)
-    { title: 'Processes', subtitle: 'Tick the processes this station runs', icon: ListChecks, tone: 'violet', width: 5, ids: ['CBProcess'] },
-  ],
-};
-
-
-const page = {
-  checkSearch: { TBCheckListSearch: 'CBProcess' },
-  
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// TEXTS
-// Every text this page shows: change one here; `hidden: true` takes it off the page (the screen's logic still has it).
-// Written from the screen (scripts/page-texts.mjs); the layout above places the fields.
-// ────────────────────────────────────────────────────────────────────────────
-const texts = {
-  title: 'Work Center',
-  // fields, buttons and panels: { label, hidden }
-  fields: {
-    PrimaryKey: { label: 'Center Code', hidden: false }, // TextBox · WorkCenter.StationCode
-    DropDownList4: { label: 'Business Unit', hidden: false }, // DropDownList · WorkCenter.BusinessUnit · hidden by the screen until its logic shows it
-    ddlStatus: { label: 'Record Status', hidden: false }, // DropDownList · WorkCenter.Status
-    DDLDepartment: { label: 'Department', hidden: false }, // DropDownList · WorkCenter.Department
-    DropDownList1: { label: 'Group', hidden: true }, // DropDownList · WorkCenter.GroupID
-    TextBox3: { label: 'Name', hidden: false }, // TextBox · WorkCenter.Name
-    TextBox4: { label: 'Alias', hidden: false }, // TextBox · WorkCenter.Alias
-    TBCheckListSearch: { label: '', hidden: true }, // TextBox · the Process List's own search is used
-    CBProcess: { label: 'Process List', hidden: false }, // CheckBoxList · WorkCenterProcesses.ProcessCode
-    DDLLine: { label: 'Manf. Line', hidden: false }, // DropDownList · WorkCenter.ManfLine
-    TextBox1: { label: 'Cost[Hr]', hidden: true }, // TextBox · WorkCenter.Cost
-    DropDownList3: { label: 'Is Job Work Center', hidden: false }, // DropDownList · WorkCenter.JobWork
+// the work center beside the processes it runs (`width` in tenths of the row)
+const sections = [
+  {
+    title: 'Work Center', subtitle: 'The station and its line', icon: ClipboardList, tone: 'blue', width: 5, cols: 2,
+    fields: [
+      { f: 'stationCode', label: 'Center Code', kind: 'key' },
+      { f: 'department', label: 'Department', kind: 'select' },
+      { f: 'name', label: 'Name' },
+      { f: 'alias', label: 'Alias' },
+      { f: 'line', label: 'Manf. Line', kind: 'select' },
+      { f: 'jobWork', label: 'Is Job Work Center', kind: 'select' },
+    ],
   },
-  // grids: each one's columns { header, hidden } (its rows keep every field)
-  grids: {
-  },
-  // the list of saved records: its columns { header, hidden } (RECNO is the # column)
-  list: {
-    RECNO: { header: 'Rec No', hidden: false },
-    STATIONCODE: { header: 'Station Code', hidden: false },
-    ALIAS: { header: 'Alias', hidden: false },
-    WORKCENETER: { header: 'Workceneter', hidden: false },
-    PROCESS: { header: 'Process', hidden: false },
-    LINE: { header: 'Line', hidden: false },
-  },
-};
+  // the list has its own search (more than 12 processes)
+  { title: 'Processes', subtitle: 'Tick the processes this station runs', icon: ListChecks, tone: 'violet', width: 5, fields: [{ f: 'processes', label: 'Process List', kind: 'checks' }] },
+];
 
-// ────────────────────────────────────────────────────────────────────────────
-// 6. PAGE
-// Loads the screen from the server and switches between the list and the form.
-// ────────────────────────────────────────────────────────────────────────────
 export default function WorkCenter() {
-  const me = useMe();
-  const { pathname } = useLocation();
-  const path = route;
-  const screen = me ? screenOf(me.menu, pathname) : null;
-  const [spec, setSpec] = useState(null);
-  const [view, setView] = useState(() => (openedRecord() ? { kind: 'opening' } : { kind: 'list' })); // opening: the record the URL names, loading
-  const [error, setErrorState] = useState('');
-  const setError = (message) => {
-    setErrorState(message);
-    if (message) toast.error(message, { id: message, duration: 6000 });
-  };
-  const [seq, setSeq] = useState(0);
-  const remember = useRememberView();
-  const [listFilter, setListFilter] = useState({});
-  const show = (v) => {
-    setError('');
-    setSeq((n) => n + 1); // a fresh form each time, never on unrelated re-renders
-    setView(v);
-    remember(v); // ?record=<key> | new: a refresh reopens this form
-  };
-
-  useEffect(() => {
-    setSpec(null);
-    screenApi(path)
-      .spec()
-      .then((s) => {
-        setSpec(s);
-        // the form the URL names (a refresh), else where the screen starts
-        const want = openedRecord();
-        if (want === 'new') show({ kind: 'form', mode: 'new', state: s });
-        else if (want) open(want).finally(() => setView((v) => (v.kind === 'opening' ? { kind: 'list' } : v))); // not found: the list
-        else show(s.startOnList ? { kind: 'list' } : { kind: 'form', mode: 'new', state: s });
-      })
-      .catch((e) => setError(e.message));
-  }, [path]);
-
-  const run = (p) => p.catch((e) => setError(e.message));
-  const open = (key, notice) => run(screenApi(path).record(key).then((state) => show({ kind: 'form', mode: 'edit', key, state, notice })));
-  // the "new" state is rebuilt each time (ClearForm: today's date, refreshed lists)
-  const fresh = (notice) => run(screenApi(path).spec().then((state) => show({ kind: 'form', mode: 'new', state, notice })));
-  const copy = (key) => run(screenApi(path).copy(key).then((state) => show({ kind: 'form', mode: 'new', state })));
-
-  const title = texts.title || spec?.title || screen?.caption || 'Screen';
-  return (
-    <Page
-      icon={layout?.icon ?? screen?.group.icon}
-      title={title}
-      subtitle={view.kind === 'list' && spec ? 'Saved records — click one to open it' : layout?.subtitle}
-      actions={spec && view.kind === 'list' && spec.buttons.add && <Button size="sm" icon={Plus} onClick={() => fresh()}>Add new</Button>}
-    >
-        {!spec || view.kind === 'opening' ? (
-          (error ? <Button variant="outline" icon={RotateCw} onClick={() => window.location.reload()}>Try again</Button> : <Loader />)
-        ) : view.kind === 'list' ? (
-          <RecordList path={path} spec={spec} onOpen={open} filter={listFilter} texts={texts} />
-        ) : (
-          <RecordForm
-            key={seq}
-            path={path}
-            state={view.state}
-            mode={view.mode}
-            notice={view.notice}
-            buttons={spec.buttons}
-            callNewOnSave={spec.callNewOnSave}
-            copyOptions={spec.copyOptions}
-            print={spec.print}
-            printers={spec.printers}
-            onReload={(key, notice) => open(key, notice)}
-            events={spec.events ?? []}
-            onCopy={copy}
-            onBack={spec.hasList ? () => show({ kind: 'list' }) : undefined}
-            onDone={(notice) => fresh(notice)}
-            onListFilter={setListFilter}
-            layout={layout}
-            page={{ ...page, texts }}
-          />
-        )}
-    </Page>
-  );
+  return <MasterScreen name="work-centers" title="Work Center" icon={Factory} subtitle="A station on a line and the processes it runs" sections={sections} />;
 }

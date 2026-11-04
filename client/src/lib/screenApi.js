@@ -14,11 +14,6 @@ import {
 
 /** route -> its API (under /api) */
 export const API_SCREENS = {
-  "/productionsetup/productionlineform": "/masters/production-lines",
-  "/productionsetup/productionprocess": "/masters/production-processes",
-  "/productionsetup/workcenterform": "/masters/work-centers",
-  "/productionsetup/routingform": "/masters/routings",
-  "/productionsetup/routingguideform": "/masters/routing-guides",
   "/materialsetup/materialbarcode": "/masters/material-barcodes",
 };
 

@@ -4,7 +4,8 @@
 //     { f: 'name', label: 'Name', required: true, max: 100 }, { f: 'deptType', label: 'Type', kind: 'select' } ] }]} />
 // Field kinds: text (default; `type` number / date / password), select (the server's list), key (the record's number,
 // locked), checks (a tick list), tree (the role tree), image (a PNG), textarea, custom (drawn by the page), rows (a table
-// edited in place, RowFormGrid), variants (Model's / Material's variant table, VariantGrid), button (runs a screen event).
+// edited in place, RowFormGrid), variants (Model's / Material's variant table, VariantGrid), button (runs a screen event),
+// file (a picked file, { name, data }; cleared after each event, as a postback cleared the browser's file input).
 // A section can follow one of the screen's panels (`panel`: shown while the screen shows it), be a pop-up (`dialog`), or
 // take part of the row (`width` in tenths). The record keeps every field the server gave, shown or not, and is sent
 // back whole. After Save / Update the form starts a new record, as the original's did.
@@ -15,7 +16,7 @@ import { api } from '@/api.js';
 import { askConfirm } from '@/app/confirm.js';
 import { openedRecord, useRememberView } from '@/lib/recordParam.js';
 import { cn } from '@/lib/utils';
-import { CheckList, ImageField, RoleTree } from '@/components/shared/FormControls.jsx';
+import { CheckList, FileField, ImageField, RoleTree } from '@/components/shared/FormControls.jsx';
 import { Select, TextArea, TextInput } from '@/components/shared/FormField.jsx';
 import { LockedValue, STEP_COLS, STEP_SPAN, Step, TONE_CYCLE } from '@/components/shared/FormStep.jsx';
 import Loader from '@/components/shared/Loader.jsx';
@@ -71,7 +72,11 @@ function MasterList({ name, onOpen }) {
 }
 
 /** one record: new (key null) or saved; onDone(notice) after Save / Update starts a new one */
-function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, canUpdate, saveLabel, hasList, initial, onBack, onCopy, onDone }) {
+/** every field definition of the sections, those in tables included */
+const allFields = (sections) => sections.flatMap((s) => s.fields).flatMap((x) => [x, ...(x.columns ?? []).map((k) => k.editor).filter(Boolean), ...(x.more ?? [])]);
+
+function MasterForm({ name, title, icon, subtitle, sections, layout, footer, canAdd, canUpdate, saveLabel, hasList, initial, onBack, onCopy, onDone }) {
+  const fileFields = useMemo(() => allFields(sections).filter((x) => x.kind === 'file').map((x) => x.f), [sections]);
   const formId = useId();
   const m = useMemo(() => masterApi(name), [name]);
   const [form, setForm] = useState(null); // { record, options, status, statusMessage, copyFrom, tree }
@@ -147,6 +152,7 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
         record: { ...x.record, ...r.record },
         options: { ...x.options, ...r.options },
         lists: { ...x.lists, ...r.lists },
+        ...(fileFields.length && { record: { ...x.record, ...r.record, ...Object.fromEntries(fileFields.map((f) => [f, null])) } }),
         ui: Object.fromEntries([...new Set([...Object.keys(x.ui ?? {}), ...Object.keys(r.ui)])].map((k) => [k, { ...x.ui?.[k], ...r.ui[k] }])),
         viewState: r.viewState,
       }));
@@ -216,6 +222,7 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
     if (kind === 'textarea') return <TextArea key={f} label={label} required={required} rows={rows} maxLength={max} value={record[f] ?? ''} onChange={(e) => set(f)(e.target.value)} className={cls} />;
     if (kind === 'key') return <LockedValue key={f} label={label} value={/^0?$/.test(String(record[f] ?? '').trim()) ? '' : record[f]} placeholder="Auto-generated" className={cls} />;
     if (kind === 'select') return <Select key={f} label={label} required={required} value={record[f]} options={opts(f)} onChange={(v) => set(f)(v ?? '')} className={cls} />;
+    if (kind === 'file') return <div key={f} className={cls}><FileField c={{ id: f }} label={label} value={record[f]} onChange={set(f)} /></div>;
     if (kind === 'image') return <div key={f} className={cls}><ImageField c={{ id: f }} label={label} value={record[f]} onChange={set(f)} /></div>;
     if (kind === 'tree') return <div key={f} className="col-span-full min-w-0"><RoleTree c={{ nodes: form.tree ?? [], enabled: !cancelled }} label={label} value={record[f]} onChange={set(f)} /></div>;
     if (kind === 'checks') {
@@ -263,7 +270,7 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
     return (
       <RowFormGrid
         c={{ id: x.f, keyName: x.rowKey, columns: x.columns.map(column) }}
-        cfg={{ fields: Object.fromEntries(inCells.map((k) => [k.col, k.editor.f])), more: (x.more ?? []).map((e) => e.f), add: 'add', cancel: ev.cancel && 'cancel' }}
+        cfg={{ fields: Object.fromEntries(inCells.map((k) => [k.col, k.editor.f])), more: (x.more ?? []).map((e) => e.f), add: ev.add && 'add', cancel: ev.cancel && 'cancel' }}
         rows={record[x.f] ?? []}
         fire={(id, _values, arg, _controls, index) => run(byId[id], arg, undefined, index)}
         values={record}
@@ -358,11 +365,13 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
         {sections
           .filter((s) => s.dialog && form.ui?.[s.dialog.panel]?.visible)
           .map((s) => (
-            <Modal key={s.title} title={s.title} subtitle={s.subtitle} size="lg" onClose={() => run(s.dialog.close)}>
+            <Modal key={s.title} title={s.title} subtitle={(s.dialog.note && form.ui?.[s.dialog.note]?.text) || s.subtitle} size="lg" onClose={() => run(s.dialog.close)}>
               <div className={STEP_COLS[s.cols ?? 1]}>{s.fields.map(field)}</div>
             </Modal>
           ))}
       </fieldset>
+      {/* something the page draws under the form from the record (Routing's images per stage) */}
+      {footer?.(record, { isNew })}
     </form>,
     actions,
   );
@@ -370,7 +379,7 @@ function MasterForm({ name, title, icon, subtitle, sections, layout, canAdd, can
 
 /** the screen: its saved records, or one record open. hasList false: the form only (Change / Reset Password).
  *  canAdd false: records are only changed (Company). layout: grid classes placing the sections (default one under another). */
-export default function MasterScreen({ name, title, icon, subtitle, sections, layout, hasList = true, canAdd = true, canUpdate = true, saveLabel = 'Save' }) {
+export default function MasterScreen({ name, title, icon, subtitle, sections, layout, footer, hasList = true, canAdd = true, canUpdate = true, saveLabel = 'Save' }) {
   const remember = useRememberView();
   const [view, setView] = useState(() => {
     const r = hasList ? openedRecord() : 'new';
@@ -400,6 +409,7 @@ export default function MasterScreen({ name, title, icon, subtitle, sections, la
       subtitle={subtitle}
       sections={sections}
       layout={layout}
+      footer={footer}
       canAdd={canAdd}
       canUpdate={canUpdate}
       saveLabel={saveLabel}

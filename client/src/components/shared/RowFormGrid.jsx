@@ -65,7 +65,7 @@ export default function RowFormGrid({ c, cfg, rows = [], fire, values, controls,
         <table className="w-full text-xs">
           <thead className="bg-muted/50">
             {/* the add row first, above the column headers (owner, 29 Oct 2026) */}
-            {editing === null && !cancelled && (
+            {cfg.add && editing === null && !cancelled && (
               <>
                 <tr className="border-b border-border bg-muted/20">
                   {editorCells(true)}

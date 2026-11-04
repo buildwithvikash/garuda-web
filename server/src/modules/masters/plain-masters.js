@@ -160,6 +160,44 @@ export const PLAIN = {
     },
     ui: { subRoutingPanel: 'SubRoutingPanel', outputScanPanel: 'OutputScanPanel', alternativesPanel: 'AltMaterialPanel' },
   },
+  // Production Setup
+  'production-lines': { route: '/productionsetup/productionlineform', fields: { lineCode: 'PrimaryKey', status: 'ddlStatus', department: 'DropDownList8', name: 'TextBox3', alias: 'TextBox4' } },
+  'production-processes': {
+    route: '/productionsetup/productionprocess',
+    fields: { processCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'Alias', stage: 'DropDownList1', showInHistory: 'DropDownList5' },
+  },
+  'work-centers': {
+    route: '/productionsetup/workcenterform',
+    fields: { stationCode: 'PrimaryKey', status: 'ddlStatus', department: 'DDLDepartment', name: 'TextBox3', alias: 'TextBox4', line: 'DDLLine', jobWork: 'DropDownList3', processes: 'CBProcess' },
+  },
+  // the line editors the page does not show (process / setup time, hold periods, checklist, drawing no ...) are fields
+  // all the same: a line's ✏ puts its values there and Update writes them back
+  routings: {
+    route: '/productionsetup/routingform',
+    fields: {
+      routeCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'Alias', type: 'DropDownList1', model: 'DDLModel', material: 'DDLMaterial',
+      lines: 'GVTransData', seqNo: 'TBSeq', process: 'DdlProcess', concession: 'DdlConsession', materialSeq: 'DDLMaterialSeq', inspection: 'DDLInspection',
+      stageLabel: 'DDLStageLabel', stageQc: 'DDLStageQC', nextStageLabel: 'DDLNextStageLabel', autoProcess: 'TBAutoProcess', copies: 'TbNoOfCopy',
+      grouping: 'DDLWorkStation', inputQcStatus: 'DDLQCStatus',
+      processTime: 'TbProcessTime', setupTime: 'TbSetupTime', minHold: 'TbMinHoldP', maxHold: 'TbMaxHoldP', validateSeq: 'DDLValidate', palletScan: 'DDLPallet',
+      drawingNo: 'TBDrawaingNo', setupChecklist: 'DDLCheckList', batchFrequency: 'ddlBatchFreq',
+    },
+    events: { model: 'model', add: 'btnAdd', edit: 'gvTransDataSelect', cancelEdit: 'gvTransDataCancel', remove: 'gvTransDataDelete' },
+  },
+  // a routing's instructions and guide files, per line (the screen has no Add: a routing is made on Routing)
+  'routing-guides': {
+    route: '/productionsetup/routingguideform',
+    fields: {
+      routeCode: 'PrimaryKey', status: 'ddlStatus', name: 'TextBox3', alias: 'Alias', model: 'DDLModel', material: 'DDLMaterial', lines: 'GVTransData',
+      instructions: 'GVInstruction', instruction: 'TBInstruction',
+      guides: 'GVGuide', guideType: 'DDLGuideFileType', existingGuide: 'DDLExistingGuide', guideDescription: 'TBGuideDesc', guideFile: 'FileUploadGuide', guidePath: 'TBGuideFilePath',
+    },
+    events: {
+      model: 'model', openInstructions: 'gvTransDataInstruction', closeInstructions: 'imbInstructionClose', addInstruction: 'btnInstructionAdd', removeInstruction: 'gvInstructionDelete',
+      openGuides: 'gvTransDataGuide', closeGuides: 'imbGuideClose', guideType: 'ddlGuideFileType', existingGuide: 'ddlExistingGuide', addGuide: 'btnGuideAdd', removeGuide: 'gvGuideDelete',
+    },
+    ui: { instructionsPanel: 'InsructionPanel', guidesPanel: 'GuidePanel', instructionLine: 'LblInstractionSeqNo', guideLine: 'LblGuideSeqNo' },
+  },
 };
 
 /** one screen as a plain service: its fields by name over the screen's own resource */
